@@ -19,7 +19,12 @@ class LoginActivity : AppCompatActivity() {
         val registerButton = findViewById<TextView>(R.id.buttonRegister)
 
         loginButton.setOnClickListener {
-            Toast.makeText(this, "Logowanie...", Toast.LENGTH_SHORT).show()
+            val emailText = email.text.toString()
+            val passwordText = password.text.toString()
+
+            NetworkUtils.sendUser(emailText, passwordText)
+
+            Toast.makeText(this, "Wysłano do serwera", Toast.LENGTH_SHORT).show()
         }
 
         registerButton.setOnClickListener {

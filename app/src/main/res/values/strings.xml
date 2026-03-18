@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">BazaDanych</string>
+    <string name="app_name">Rain Tech</string>
 
     //Ekran Logowanie
     <string name="zalogujSieDoKonta">Zaloguj się do konta</string>
