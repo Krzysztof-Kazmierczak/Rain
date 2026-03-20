@@ -1,13 +1,18 @@
 package com.example.bazadanych
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import com.example.bazadanych.viewModel.LoginViewModel
 
 class LoginActivity : AppCompatActivity() {
+
+    private val viewModel: LoginViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -18,13 +23,23 @@ class LoginActivity : AppCompatActivity() {
         val loginButton = findViewById<Button>(R.id.buttonLogin)
         val registerButton = findViewById<TextView>(R.id.buttonRegister)
 
+        // OBSERWUJEMY WYNIK LOGOWANIA
+        viewModel.loginResult.observe(this) { success ->
+            if (success) {
+                Toast.makeText(this, "Zalogowano ✅", Toast.LENGTH_SHORT).show()
+                // PRZEJŚCIE DO HOME
+                val intent = Intent(this, HomeActivity::class.java)
+                startActivity(intent)
+                finish() // zamyka LoginActivity
+            } else {
+                Toast.makeText(this, "Błąd połączenia ❌", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         loginButton.setOnClickListener {
             val emailText = email.text.toString()
             val passwordText = password.text.toString()
-
-            NetworkUtils.sendUser(emailText, passwordText)
-
-            Toast.makeText(this, "Wysłano do serwera", Toast.LENGTH_SHORT).show()
+            viewModel.login(emailText, passwordText)
         }
 
         registerButton.setOnClickListener {
