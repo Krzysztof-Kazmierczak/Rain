@@ -11,4 +11,15 @@ class UserRepository {
     ) {
         NetworkUtils.sendUser(email, password, callback)
     }
+
+    fun registerUser(email: String, password: String, callback: (Boolean) -> Unit) {
+        // TU ROBISZ REJESTRACJĘ
+
+        // na razie testowo:
+        if (email.isNotEmpty() && password.isNotEmpty()) {
+            callback(true)
+        } else {
+            callback(false)
+        }
+    }
 }

@@ -20,13 +20,15 @@ object NetworkUtils {
             .build()
 
         val request = Request.Builder()
-            .url("http://10.0.2.2:8080/raintech/save_user.php")
+            .url("https://rain-tech.pl/rain-tech/save_user.php")
             .post(requestBody)
             .build()
 
         client.newCall(request).enqueue(object : Callback {
 
             override fun onFailure(call: Call, e: IOException) {
+                e.printStackTrace()
+                println("ERROR: ${e.message}")
                 callback(false)
             }
 
