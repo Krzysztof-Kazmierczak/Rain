@@ -9,12 +9,12 @@ class RegisterViewModel : ViewModel() {
 
     private val repository = UserRepository()
 
-    private val _registerResult = MutableLiveData<Boolean>()
-    val registerResult: LiveData<Boolean> = _registerResult
+    private val _registerResult = MutableLiveData<String>()
+    val registerResult: LiveData<String> = _registerResult
 
     fun register(email: String, password: String) {
-        repository.registerUser(email, password) { success ->
-            _registerResult.postValue(success)
+        repository.registerUser(email, password) { result ->
+            _registerResult.postValue(result)
         }
     }
 }

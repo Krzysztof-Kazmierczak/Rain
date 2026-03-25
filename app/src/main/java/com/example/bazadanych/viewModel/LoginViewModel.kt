@@ -13,7 +13,7 @@ class LoginViewModel : ViewModel() {
     val loginResult: LiveData<Boolean> = _loginResult
 
     fun login(email: String, password: String) {
-        repository.sendUser(email, password) { success ->
+        repository.loginUser(email, password) { success ->
             _loginResult.postValue(success)
         }
     }

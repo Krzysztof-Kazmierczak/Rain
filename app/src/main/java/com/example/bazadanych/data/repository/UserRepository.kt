@@ -1,25 +1,68 @@
 package com.example.bazadanych.data.repository
 
-import com.example.bazadanych.data.network.NetworkUtils
+import java.net.HttpURLConnection
+import java.net.URL
 
 class UserRepository {
 
-    fun sendUser(
+    // ================= LOGIN =================
+    fun loginUser(
         email: String,
         password: String,
         callback: (Boolean) -> Unit
     ) {
-        NetworkUtils.sendUser(email, password, callback)
+
+        Thread {
+
+            try {
+                val url = URL("https://rain-tech.pl/login.php")
+                val connection = url.openConnection() as HttpURLConnection
+
+                connection.requestMethod = "POST"
+                connection.doOutput = true
+
+                val data = "email=$email&password=$password"
+
+                connection.outputStream.write(data.toByteArray())
+
+                val response =
+                    connection.inputStream.bufferedReader()
+                        .readText()
+                        .trim()
+
+                callback(response == "OK")
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                callback(false)
+            }
+
+        }.start()
     }
 
-    fun registerUser(email: String, password: String, callback: (Boolean) -> Unit) {
-        // TU ROBISZ REJESTRACJĘ
+    // ================= REGISTER =================
+    fun registerUser(
+        email: String,
+        password: String,
+        callback: (String) -> Unit
+    ) {
 
-        // na razie testowo:
-        if (email.isNotEmpty() && password.isNotEmpty()) {
-            callback(true)
-        } else {
-            callback(false)
-        }
+        Thread {
+
+            val url = URL("https://rain-tech.pl/register.php")
+            val connection = url.openConnection() as HttpURLConnection
+
+            connection.requestMethod = "POST"
+            connection.doOutput = true
+
+            val data = "email=$email&password=$password"
+            connection.outputStream.write(data.toByteArray())
+
+            val response =
+                connection.inputStream.bufferedReader().readText().trim()
+
+            callback(response)
+
+        }.start()
     }
 }
