@@ -15,6 +15,13 @@ class LoginActivity : AppCompatActivity() {
     private val viewModel: LoginViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val prefs = getSharedPreferences("user_session", MODE_PRIVATE)
+
+        if (prefs.getBoolean("logged_in", false)) {
+            startActivity(Intent(this, HomeActivity::class.java))
+            finish()
+        }
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
 
@@ -29,6 +36,11 @@ class LoginActivity : AppCompatActivity() {
                 Toast.makeText(this, "Zalogowano ✅", Toast.LENGTH_SHORT).show()
                 // PRZEJŚCIE DO HOME
                 val intent = Intent(this, HomeActivity::class.java)
+                val prefs = getSharedPreferences("user_session", MODE_PRIVATE)
+                prefs.edit()
+                    .putBoolean("logged_in", true)
+                    .apply()
+
                 startActivity(intent)
                 finish() // zamyka LoginActivity
             } else {
