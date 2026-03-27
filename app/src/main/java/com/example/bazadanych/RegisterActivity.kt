@@ -33,11 +33,17 @@ class RegisterActivity : AppCompatActivity() {
         val registerButton = findViewById<Button>(R.id.buttonRegister)
         val loginText = findViewById<TextView>(R.id.buttonLogin)
 
+        // OBSERWACJA WYNIKU REJESTRACJI
         viewModel.registerResult.observe(this) { result ->
 
-            when (result) {
+            // Logowanie odpowiedzi backendu
+            println("REGISTER RESULT: $result")
 
-                "OK" -> {
+            // Odblokowanie przycisku po odpowiedzi
+            registerButton.isEnabled = true
+
+            when (result) {
+                "SUCCESS" -> {
                     Toast.makeText(this, "Konto utworzone ✅", Toast.LENGTH_SHORT).show()
                     finish()
                 }
@@ -46,8 +52,24 @@ class RegisterActivity : AppCompatActivity() {
                     Toast.makeText(this, "Email już istnieje ❗", Toast.LENGTH_LONG).show()
                 }
 
+                "BAD_EMAIL" -> {
+                    Toast.makeText(this, "Nieprawidłowy email ❗", Toast.LENGTH_SHORT).show()
+                }
+
+                "BAD_PASSWORD" -> {
+                    Toast.makeText(this, "Hasło jest za słabe ❗", Toast.LENGTH_LONG).show()
+                }
+
+                "RATE_LIMIT" -> {
+                    Toast.makeText(this, "Za dużo prób rejestracji ❌", Toast.LENGTH_LONG).show()
+                }
+
+                "REGISTER_ERROR" -> {
+                    Toast.makeText(this, "Błąd serwera ❌", Toast.LENGTH_SHORT).show()
+                }
+
                 else -> {
-                    Toast.makeText(this, "Błąd rejestracji ❌", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Nieznany błąd ❌", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -79,6 +101,9 @@ class RegisterActivity : AppCompatActivity() {
                 Toast.makeText(this, "Hasła się nie zgadzają ❗", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+
+            // BLOKADA PRZYCISKU podczas oczekiwania na odpowiedź
+            registerButton.isEnabled = false
 
             viewModel.register(emailText, passwordText)
         }

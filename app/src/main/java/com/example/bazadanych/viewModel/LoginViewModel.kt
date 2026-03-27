@@ -9,12 +9,26 @@ class LoginViewModel : ViewModel() {
 
     private val repository = UserRepository()
 
-    private val _loginResult = MutableLiveData<Boolean>()
-    val loginResult: LiveData<Boolean> = _loginResult
+    // LiveData do obserwowania tokena
+    private val _loginResult = MutableLiveData<String?>()
+    val loginResult: LiveData<String?> = _loginResult
 
+    /**
+     * Funkcja logowania
+     * @param email email użytkownika
+     * @param password hasło użytkownika
+     */
     fun login(email: String, password: String) {
-        repository.loginUser(email, password) { success ->
-            _loginResult.postValue(success)
+
+        // Wywołanie repozytorium, które robi request HTTP
+        repository.loginUser(email, password) { token ->
+
+            // jeśli token nie jest pusty i wygląda sensownie, wysyłamy go do LiveData
+            if (token != null && token.length > 10) {
+                _loginResult.postValue(token)
+            } else {
+                _loginResult.postValue(null) // brak tokena → logowanie nieudane
+            }
         }
     }
 }

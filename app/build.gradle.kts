@@ -3,6 +3,7 @@ plugins {
 }
 
 android {
+
     namespace = "com.example.bazadanych"
     compileSdk {
         version = release(36) {
@@ -17,7 +18,13 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        buildConfigField(
+            "String",
+            "APP_KEY",
+            "\"RAINTECH_SUPER_PRIVATE_KEY_123\""
+        )
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
     }
 
     buildTypes {
@@ -29,6 +36,11 @@ android {
             )
         }
     }
+
+    buildFeatures {
+            buildConfig = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -48,4 +60,10 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+}
+
+tasks.register("printAppKey") {
+    doLast {
+        println("APP_KEY from project properties: ${project.findProperty("APP_KEY")}")
+    }
 }

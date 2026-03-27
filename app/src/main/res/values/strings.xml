@@ -8,4 +8,7 @@
     <string name="rejestracja">Nie masz konta? Zarejestruj się</string>
     <string name="zalogujSie">Zaloguj się</string>
 
+    <string name="open">Open</string>
+    <string name="close">Close</string>
+
 </resources>

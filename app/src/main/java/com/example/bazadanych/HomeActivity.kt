@@ -1,34 +1,58 @@
 package com.example.bazadanych
 
-import android.content.Intent
 import android.os.Bundle
-import android.widget.Button
-import androidx.activity.enableEdgeToEdge
+import android.widget.Toast
+import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.content.edit
-//test
+import androidx.drawerlayout.widget.DrawerLayout
+import com.google.android.material.navigation.NavigationView
+import com.google.android.material.appbar.MaterialToolbar
+
 class HomeActivity : AppCompatActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContentView(R.layout.activity_home)
-//test
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
+
+        val drawer = findViewById<DrawerLayout>(R.id.drawerLayout)
+        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
+        val navigationView =
+            findViewById<NavigationView>(R.id.navigationView)
+
+        setSupportActionBar(toolbar)
+
+        val toggle = ActionBarDrawerToggle(
+            this,
+            drawer,
+            toolbar,
+            R.string.open,
+            R.string.close
+        )
+
+        drawer.addDrawerListener(toggle)
+        toggle.syncState()
+
+        navigationView.setNavigationItemSelectedListener {
+
+            when (it.itemId) {
+
+                R.id.nav_home ->
+                    Toast.makeText(this,"Home",Toast.LENGTH_SHORT).show()
+
+                R.id.nav_profile ->
+                    Toast.makeText(this,"Profil",Toast.LENGTH_SHORT).show()
+
+                R.id.nav_logout ->
+                    logout()
+            }
+
+            drawer.closeDrawers()
+            true
         }
+    }
 
-        val logout = findViewById<Button>(R.id.buttonLogout)
-
-        logout.setOnClickListener {
-            val prefs = getSharedPreferences("user_session", MODE_PRIVATE)
-            prefs.edit { clear() }
-
-            startActivity(Intent(this, LoginActivity::class.java))
-            finish()
-        }
+    private fun logout() {
+        Toast.makeText(this,"Wylogowano",Toast.LENGTH_SHORT).show()
+        finish()
     }
 }
