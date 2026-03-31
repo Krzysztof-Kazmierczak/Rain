@@ -19,6 +19,10 @@ class CreateRainActivity : AppCompatActivity() {
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
+        toolbar.setNavigationOnClickListener {
+            finish()
+        }
+
         val nameInput = findViewById<EditText>(R.id.nameInput)
         val hoseInput = findViewById<EditText>(R.id.hoseInput)
         val commentInput = findViewById<EditText>(R.id.commentInput)
@@ -26,6 +30,7 @@ class CreateRainActivity : AppCompatActivity() {
         val addButton = findViewById<Button>(R.id.addButton)
 
         val rainList = listOf(
+            "Wybierz deszczownię",
             "RM180-R (300 m)",
             "RM200-S (450 m)"
         )
@@ -38,6 +43,7 @@ class CreateRainActivity : AppCompatActivity() {
 
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         rainSpinner.adapter = adapter
+        rainSpinner.setSelection(0)
 
         rainSpinner.onItemSelectedListener =
             object : AdapterView.OnItemSelectedListener {
@@ -49,12 +55,17 @@ class CreateRainActivity : AppCompatActivity() {
                     id: Long
                 ) {
                     when (position) {
-                        0 -> {
-                            nameInput.setText("RM180-R")
-                            hoseInput.setText("300")
+                        0 -> {// Wybierz deszczownię
+                            nameInput.setText("")
+                            hoseInput.setText("")
                         }
 
                         1 -> {
+                            nameInput.setText("RM180-R")
+                            hoseInput.setText("300")
+
+                        }
+                        2 -> {
                             nameInput.setText("RM200-S")
                             hoseInput.setText("450")
                         }
@@ -65,13 +76,16 @@ class CreateRainActivity : AppCompatActivity() {
             }
 
         addButton.setOnClickListener {
+            val name = nameInput.text.toString().trim()
+            val length = hoseInput.text.toString().trim()
+            val comment = commentInput.text.toString().trim()
 
-            val rain = Rain(
-                nameInput.text.toString(),
-                hoseInput.text.toString(),
-                commentInput.text.toString()
-            )
+            if (name.isEmpty() || length.isEmpty()) {
+                Toast.makeText(this, "Wypełnij nazwę i długość węża", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
 
+            val rain = Rain(name = name, hoseLength = length, comment = comment)
             RainStorage.saveRain(this, rain)
 
             setResult(RESULT_OK)

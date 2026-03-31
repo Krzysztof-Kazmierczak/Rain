@@ -1,57 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
-    android:padding="16dp"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- TOOLBAR (bez paddingu rodzica!) -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        app:title="Tworzenie deszczowni"/>
+        app:title="Tworzenie deszczowni"
+        android:background="?attr/colorPrimary"
+        android:titleTextColor="@android:color/white"/>
 
-    <Spinner
-        android:id="@+id/rainSpinner"
+    <!-- RESZTA Z PADDINGIEM -->
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"/>
+        android:layout_height="match_parent">
 
-    <TextView
-        android:text="Nazwa Deszczowni:"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"/>
-    <EditText
-        android:id="@+id/nameInput"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        <LinearLayout
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
 
-    <TextView
-        android:text="Długość węża:"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"/>
-    <EditText
-        android:id="@+id/hoseInput"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+            <Spinner
+                android:id="@+id/rainSpinner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"/>
 
-    <TextView
-        android:text="Komentarz:"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"/>
-    <EditText
-        android:id="@+id/commentInput"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="lub wpisz własne dane"
+                android:layout_marginTop="8dp"
+                android:textStyle="italic"
+                android:textColor="@android:color/darker_gray"/>
 
-    <Button
-        android:id="@+id/addButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Dodaj"
-        android:layout_marginTop="16dp"/>
+            <TextView
+                android:text="Nazwa Deszczowni:"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"/>
+
+            <EditText
+                android:id="@+id/nameInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+
+            <TextView
+                android:text="Długość węża:"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"/>
+
+            <EditText
+                android:id="@+id/hoseInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"/>
+
+            <TextView
+                android:text="Komentarz:"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"/>
+
+            <EditText
+                android:id="@+id/commentInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+
+            <Button
+                android:id="@+id/addButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Dodaj"
+                android:layout_marginTop="16dp"
+                android:layout_gravity="center_horizontal"
+                android:paddingStart="40dp"
+                android:paddingEnd="40dp"/>
+
+        </LinearLayout>
+    </ScrollView>
+
 </LinearLayout>

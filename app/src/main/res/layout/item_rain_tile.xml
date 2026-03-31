@@ -22,7 +22,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@android:drawable/ic_input_add"
-            android:tint="?attr/colorPrimary"/>
+            app:tint="?attr/colorPrimary" />
 
         <TextView
             android:id="@+id/tileTitle"
@@ -32,6 +32,22 @@
             android:textStyle="bold"
             android:textSize="16sp"
             android:layout_marginTop="10dp"/>
+
+        <TextView
+            android:id="@+id/tileLength"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="300 m"
+            android:textSize="14sp"
+            android:layout_marginTop="4dp"/>
+
+        <TextView
+            android:id="@+id/tileComment"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Komentarz"
+            android:textSize="12sp"
+            android:textColor="@android:color/darker_gray"/>
 
     </LinearLayout>
 

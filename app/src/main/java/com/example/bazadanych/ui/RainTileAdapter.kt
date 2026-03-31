@@ -16,6 +16,10 @@ class RainTileAdapter(
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val title: TextView = view.findViewById(R.id.tileTitle)
         val icon: ImageView = view.findViewById(R.id.tileIcon)
+
+        // 🔽 DODANE
+        val length: TextView = view.findViewById(R.id.tileLength)
+        val comment: TextView = view.findViewById(R.id.tileComment)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -32,9 +36,21 @@ class RainTileAdapter(
         holder.title.text = item.title
 
         if (item.isAddButton) {
+            // ➕ kafelek dodawania
             holder.icon.setImageResource(android.R.drawable.ic_input_add)
+
+            holder.length.visibility = View.GONE
+            holder.comment.visibility = View.GONE
+
         } else {
-            holder.icon.setImageResource(android.R.drawable.ic_menu_compass)
+            // 🌧 normalny kafelek
+            holder.icon.setImageResource(R.drawable.outline_agriculture_24)
+
+            holder.length.visibility = View.VISIBLE
+            holder.comment.visibility = View.VISIBLE
+
+            holder.length.text = item.hoseLength + " m"
+            holder.comment.text = item.comment
         }
 
         holder.itemView.setOnClickListener {

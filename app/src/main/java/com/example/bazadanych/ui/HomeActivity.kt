@@ -25,23 +25,26 @@ class HomeActivity : AppCompatActivity() {
 
         val drawer = findViewById<DrawerLayout>(R.id.drawerLayout)
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
-        recycler = findViewById(R.id.rainRecycler)
         val navigationView = findViewById<NavigationView>(R.id.navigationView)
+        recycler = findViewById(R.id.rainRecycler)
 
         setSupportActionBar(toolbar)
 
         recycler.layoutManager = GridLayoutManager(this, 2)
-
         tiles = mutableListOf()
 
         adapter = RainTileAdapter(tiles) { tile ->
             if (tile.isAddButton) {
+                // Przejście do tworzenia nowej deszczowni
                 val intent = Intent(this, CreateRainActivity::class.java)
                 startActivityForResult(intent, 100)
             } else {
+                // Przejście do szczegółów deszczowni
                 val intent = Intent(this, RainDetailsActivity::class.java)
+                intent.putExtra("id", tile.id)
                 intent.putExtra("name", tile.title)
                 intent.putExtra("length", tile.hoseLength)
+                intent.putExtra("comment", tile.comment)
                 startActivity(intent)
             }
         }
@@ -50,6 +53,7 @@ class HomeActivity : AppCompatActivity() {
 
         loadTiles()
 
+        // Drawer toggle
         val toggle = ActionBarDrawerToggle(
             this,
             drawer,
@@ -57,20 +61,14 @@ class HomeActivity : AppCompatActivity() {
             R.string.open,
             R.string.close
         )
-
         drawer.addDrawerListener(toggle)
         toggle.syncState()
 
         navigationView.setNavigationItemSelectedListener {
             when (it.itemId) {
-                R.id.nav_home ->
-                    Toast.makeText(this, "Home", Toast.LENGTH_SHORT).show()
-
-                R.id.nav_profile ->
-                    Toast.makeText(this, "Profil", Toast.LENGTH_SHORT).show()
-
-                R.id.nav_logout ->
-                    logout()
+                R.id.nav_home -> Toast.makeText(this, "Home", Toast.LENGTH_SHORT).show()
+                R.id.nav_profile -> Toast.makeText(this, "Profil", Toast.LENGTH_SHORT).show()
+                R.id.nav_logout -> logout()
             }
             drawer.closeDrawers()
             true
@@ -78,7 +76,6 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun loadTiles() {
-
         tiles.clear()
 
         val rains = RainStorage.loadRains(this)
@@ -86,22 +83,31 @@ class HomeActivity : AppCompatActivity() {
         rains.forEach {
             tiles.add(
                 RainTile(
+                    id = it.id,             // ID jest teraz przekazywane poprawnie
                     title = it.name,
                     hoseLength = it.hoseLength,
+                    comment = it.comment,
                     isAddButton = false
                 )
             )
         }
 
-        // przycisk dodawania zawsze na końcu
-        tiles.add(RainTile("Dodaj deszczownię", true))
+        // Przycisk dodawania zawsze na końcu
+        tiles.add(
+            RainTile(
+                id = "",                     // Brak ID dla przycisku dodawania
+                title = "Dodaj deszczownię",
+                hoseLength = "",
+                comment = "",
+                isAddButton = true
+            )
+        )
 
         adapter.notifyDataSetChanged()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-
         if (requestCode == 100 && resultCode == RESULT_OK) {
             loadTiles()
             Toast.makeText(this, "Dodano deszczownię", Toast.LENGTH_SHORT).show()
@@ -109,7 +115,21 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun logout() {
-        Toast.makeText(this, "Wylogowano", Toast.LENGTH_SHORT).show()
-        finish()
+        // 1️⃣ Usuń zapis sesji
+        val prefs = getSharedPreferences("user_session", MODE_PRIVATE)
+        prefs.edit().putBoolean("logged_in", false).apply()
+
+        // 2️⃣ Przejdź do ekranu logowania i wyczyść backstack
+        val intent = Intent(this, LoginActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+
+        // 3️⃣ Opcjonalnie pokaż Toast
+        Toast.makeText(this, "Wylogowano ✅", Toast.LENGTH_SHORT).show()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        loadTiles()
     }
 }
