@@ -1,4 +1,4 @@
-package com.example.bazadanych
+package com.example.bazadanych.ui
 
 import android.content.Intent
 import android.os.Bundle
@@ -8,6 +8,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import com.example.bazadanych.R
 import com.example.bazadanych.viewModel.LoginViewModel
 
 class LoginActivity : AppCompatActivity() {

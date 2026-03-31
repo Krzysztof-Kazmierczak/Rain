@@ -14,7 +14,7 @@
         android:theme="@style/Theme.BazaDanych">
 
         <activity
-            android:name=".LoginActivity"
+            android:name=".ui.LoginActivity"
             android:exported="true">
 
             <intent-filter>
@@ -25,11 +25,12 @@
         </activity>
 
         <activity
-            android:name=".HomeActivity"
+            android:name=".ui.HomeActivity"
             android:exported="false" />
 
-        <activity android:name=".RegisterActivity"/>
-
+        <activity android:name=".ui.RegisterActivity"/>
+        <activity android:name=".ui.CreateRainActivity"/>
+        <activity android:name=".ui.RainDetailsActivity"/>
     </application>
 
 </manifest>

@@ -1,12 +1,14 @@
-package com.example.bazadanych
+package com.example.bazadanych.ui
 
 import android.os.Bundle
+import android.util.Patterns
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import com.example.bazadanych.R
 import com.example.bazadanych.viewModel.RegisterViewModel
 
 class RegisterActivity : AppCompatActivity() {
@@ -14,7 +16,7 @@ class RegisterActivity : AppCompatActivity() {
     private val viewModel: RegisterViewModel by viewModels()
 
     private fun isValidEmail(email: String): Boolean {
-        return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+        return Patterns.EMAIL_ADDRESS.matcher(email).matches()
     }
 
     private fun isValidPassword(password: String): Boolean {
