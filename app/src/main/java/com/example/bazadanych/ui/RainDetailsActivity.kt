@@ -1,12 +1,13 @@
 package com.example.bazadanych.ui
 
 import android.os.Bundle
+import android.widget.Button
+import android.widget.EditText
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.bazadanych.R
-import android.widget.EditText
-import android.widget.Button
 import com.example.bazadanych.data.db.Rain
-import com.example.bazadanych.data.db.RainStorage
+import com.example.bazadanych.data.repository.RainRemoteRepository
 import com.google.android.material.appbar.MaterialToolbar
 
 class RainDetailsActivity : AppCompatActivity() {
@@ -19,7 +20,6 @@ class RainDetailsActivity : AppCompatActivity() {
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
-
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         toolbar.setNavigationOnClickListener {
@@ -32,33 +32,70 @@ class RainDetailsActivity : AppCompatActivity() {
         val saveButton = findViewById<Button>(R.id.saveButton)
         val deleteButton = findViewById<Button>(R.id.deleteButton)
 
-        // 📥 pobieranie danych
-        currentRainId = intent.getStringExtra("id") ?: java.util.UUID.randomUUID().toString()
+        // 📥 Pobieranie danych przekazanych z HomeActivity
+        currentRainId = intent.getStringExtra("id") ?: ""
         val name = intent.getStringExtra("name") ?: ""
         val length = intent.getStringExtra("length") ?: ""
         val comment = intent.getStringExtra("comment") ?: ""
 
-        // 📌 ustawienie w polach
+        // 📌 Ustawienie danych w polach edycyjnych
         nameEdit.setText(name)
         lengthEdit.setText(length)
         commentEdit.setText(comment)
 
-        // 💾 ZAPIS
+        val remoteRepo = RainRemoteRepository()
+
+        // Pobieramy email z SharedPreferences
+        val prefs = getSharedPreferences("user_session", MODE_PRIVATE)
+        val email = prefs.getString("user_email", "") ?: ""
+
+        // 💾 ZAPIS / EDYCJA
         saveButton.setOnClickListener {
+            val updatedName = nameEdit.text.toString().trim()
+            val updatedLength = lengthEdit.text.toString().trim()
+            val updatedComment = commentEdit.text.toString().trim()
+
+            if (updatedName.isEmpty() || updatedLength.isEmpty()) {
+                Toast.makeText(this, "Nazwa i długość nie mogą być puste", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            // Tworzymy obiekt z TYM SAMYM ID, żeby baza wiedziała, że robimy UPDATE
             val updatedRain = Rain(
                 id = currentRainId,
-                name = nameEdit.text.toString(),
-                hoseLength = lengthEdit.text.toString(),
-                comment = commentEdit.text.toString()
+                name = updatedName,
+                hoseLength = updatedLength,
+                comment = updatedComment
             )
-            RainStorage.saveRain(this, updatedRain)
-            finish()
+
+            remoteRepo.saveRain(email, updatedRain) { success ->
+                runOnUiThread {
+                    if (success) {
+                        Toast.makeText(this, "Zmiany zapisane ✅", Toast.LENGTH_SHORT).show()
+                        setResult(RESULT_OK)
+                        finish()
+                    } else {
+                        Toast.makeText(this, "Błąd zapisu na serwerze ❌", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
         }
 
         // 🗑 USUWANIE
         deleteButton.setOnClickListener {
-            RainStorage.deleteRain(this, currentRainId)
-            finish()
+            if (currentRainId.isEmpty()) return@setOnClickListener
+
+            remoteRepo.deleteRain(currentRainId) { success ->
+                runOnUiThread {
+                    if (success) {
+                        Toast.makeText(this, "Deszczownia usunięta 🗑️", Toast.LENGTH_SHORT).show()
+                        setResult(RESULT_OK)
+                        finish()
+                    } else {
+                        Toast.makeText(this, "Błąd podczas usuwania ❌", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
         }
     }
 }
