@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.bazadanych.R
 import com.example.bazadanych.data.db.RainStorage
+import com.example.bazadanych.data.repository.RainRemoteRepository
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.navigation.NavigationView
 
@@ -75,35 +76,21 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    private val remoteRepo = RainRemoteRepository()
+
     private fun loadTiles() {
-        tiles.clear()
+        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
 
-        val rains = RainStorage.loadRains(this)
-
-        rains.forEach {
-            tiles.add(
-                RainTile(
-                    id = it.id,             // ID jest teraz przekazywane poprawnie
-                    title = it.name,
-                    hoseLength = it.hoseLength,
-                    comment = it.comment,
-                    isAddButton = false
-                )
-            )
+        remoteRepo.getRains(email) { rains ->
+            runOnUiThread {
+                tiles.clear()
+                rains.forEach {
+                    tiles.add(RainTile(it.id, it.name, it.hoseLength, it.comment, false))
+                }
+                tiles.add(RainTile("", "Dodaj deszczownię", "", "", true))
+                adapter.notifyDataSetChanged()
+            }
         }
-
-        // Przycisk dodawania zawsze na końcu
-        tiles.add(
-            RainTile(
-                id = "",                     // Brak ID dla przycisku dodawania
-                title = "Dodaj deszczownię",
-                hoseLength = "",
-                comment = "",
-                isAddButton = true
-            )
-        )
-
-        adapter.notifyDataSetChanged()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

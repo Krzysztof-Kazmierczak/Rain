@@ -40,6 +40,7 @@ class LoginActivity : AppCompatActivity() {
                 val prefs = getSharedPreferences("user_session", MODE_PRIVATE)
                 prefs.edit()
                     .putBoolean("logged_in", true)
+                    .putString("user_email", email.text.toString())
                     .apply()
 
                 startActivity(intent)
