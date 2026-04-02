@@ -1,9 +1,10 @@
 package com.example.bazadanych.ui
 
 data class RainTile(
-    val id: String = "",      // dodajemy ID
+    val id: String,
     val title: String,
-    val hoseLength: String = "",
-    val comment: String = "",
-    val isAddButton: Boolean = false
+    val hoseLength: String,
+    val comment: String,
+    val isAddButton: Boolean,
+    val isWorking: Boolean
 )

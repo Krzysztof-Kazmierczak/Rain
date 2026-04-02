@@ -81,7 +81,13 @@ class CreateRainActivity : AppCompatActivity() {
             }
 
             // Tworzenie obiektu Rain
-            val rain = Rain(name = name, hoseLength = length, comment = comment)
+            val rain = Rain(
+                id = "",
+                name = name,
+                hoseLength = length,
+                comment = comment,
+                isWorking = false
+            )
 
             // Pobieranie e-maila zalogowanego użytkownika z SharedPreferences
             val prefs = getSharedPreferences("user_session", MODE_PRIVATE)

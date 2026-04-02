@@ -58,10 +58,11 @@ object RainStorage {
 
             list.add(
                 Rain(
-                    id = obj.getString("id"),        // 🔹 przywracamy ID
+                    id = obj.getString("id"),
                     name = obj.getString("name"),
-                    hoseLength = obj.getString("length"),
-                    comment = obj.getString("comment")
+                    hoseLength = obj.getString("hose_length"),
+                    comment = obj.getString("comment"),
+                    isWorking = obj.optBoolean("is_working", false)
                 )
             )
         }

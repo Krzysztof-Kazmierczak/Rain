@@ -9,17 +9,14 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.bazadanych.R
 
 class RainTileAdapter(
-    private val items: List<RainTile>,
-    private val onClick: (RainTile) -> Unit
+    private val tiles: List<RainTile>,
+    private val onTileClick: (RainTile) -> Unit
 ) : RecyclerView.Adapter<RainTileAdapter.ViewHolder>() {
 
-    inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val title: TextView = view.findViewById(R.id.tileTitle)
-        val icon: ImageView = view.findViewById(R.id.tileIcon)
-
-        // 🔽 DODANE
-        val length: TextView = view.findViewById(R.id.tileLength)
-        val comment: TextView = view.findViewById(R.id.tileComment)
+    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val titleText: TextView = view.findViewById(R.id.tileTitle)
+        val lengthText: TextView = view.findViewById(R.id.tileLength)
+        val statusDot: View = view.findViewById(R.id.statusDot) // 🔴 Mapujemy naszą kropkę
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -28,33 +25,47 @@ class RainTileAdapter(
         return ViewHolder(view)
     }
 
-    override fun getItemCount() = items.size
-
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val item = items[position]
+        val tile = tiles[position]
 
-        holder.title.text = item.title
+        // 1. USTAWIANIE TEKSTÓW Z BAZY
+        holder.titleText.text = tile.title
 
-        if (item.isAddButton) {
-            // ➕ kafelek dodawania
-            holder.icon.setImageResource(android.R.drawable.ic_input_add)
+        val commentText = holder.itemView.findViewById<TextView>(R.id.tileComment) // Pobieramy pole komentarza
+        val lengthText = holder.itemView.findViewById<TextView>(R.id.tileLength)
 
-            holder.length.visibility = View.GONE
-            holder.comment.visibility = View.GONE
+        if (tile.isAddButton) {
+
+            lengthText.visibility = View.GONE
+            commentText.visibility = View.GONE
+
+            // 🚜 ZMIANA IKONY NA PLUS (Żeby nie było traktora na przycisku DODAJ)
+            holder.itemView.findViewById<ImageView>(R.id.tileIcon).setImageResource(android.R.drawable.ic_input_add)
 
         } else {
-            // 🌧 normalny kafelek
-            holder.icon.setImageResource(R.drawable.outline_agriculture_24)
+            holder.lengthText.text = "Wąż: ${tile.hoseLength}m"
+            commentText.text = tile.comment // 👈 TUTAJ WPISUJEMY PRAWDZIWY KOMENTARZ Z BAZY!
 
-            holder.length.visibility = View.VISIBLE
-            holder.comment.visibility = View.VISIBLE
+            // 🚜 PRZYWRACAMY TRAKTORA/DESZCZOWNIĘ DLA ZWYKŁYCH KAFELKÓW
+            holder.itemView.findViewById<ImageView>(R.id.tileIcon).setImageResource(R.drawable.outline_agriculture_24)
+        }
 
-            holder.length.text = item.hoseLength + " m"
-            holder.comment.text = item.comment
+        // 2. LOGIKA KROPKI STATUSU (Zostaje bez zmian)
+        if (tile.isAddButton) {
+            holder.statusDot.visibility = View.GONE
+        } else {
+            holder.statusDot.visibility = View.VISIBLE
+            if (tile.isWorking) {
+                holder.statusDot.setBackgroundResource(R.drawable.circle_green)
+            } else {
+                holder.statusDot.setBackgroundResource(R.drawable.circle_red)
+            }
         }
 
         holder.itemView.setOnClickListener {
-            onClick(item)
+            onTileClick(tile)
         }
     }
+
+    override fun getItemCount(): Int = tiles.size
 }

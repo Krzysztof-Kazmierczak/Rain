@@ -8,8 +8,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.bazadanych.R
-import com.example.bazadanych.data.db.RainStorage
 import com.example.bazadanych.data.repository.RainRemoteRepository
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.navigation.NavigationView
@@ -20,7 +20,10 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var tiles: MutableList<RainTile>
     private lateinit var adapter: RainTileAdapter
 
+    private lateinit var swipeRefresh: SwipeRefreshLayout
+
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
@@ -28,6 +31,7 @@ class HomeActivity : AppCompatActivity() {
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         val navigationView = findViewById<NavigationView>(R.id.navigationView)
         recycler = findViewById(R.id.rainRecycler)
+        swipeRefresh = findViewById(R.id.swipeRefresh)
 
         setSupportActionBar(toolbar)
 
@@ -43,14 +47,15 @@ class HomeActivity : AppCompatActivity() {
                 // Przejście do szczegółów deszczowni
                 val intent = Intent(this, RainDetailsActivity::class.java)
                 intent.putExtra("id", tile.id)
-                intent.putExtra("name", tile.title)
-                intent.putExtra("length", tile.hoseLength)
-                intent.putExtra("comment", tile.comment)
                 startActivity(intent)
             }
         }
 
         recycler.adapter = adapter
+
+        swipeRefresh.setOnRefreshListener {
+            loadTiles()
+        }
 
         loadTiles()
 
@@ -81,14 +86,30 @@ class HomeActivity : AppCompatActivity() {
     private fun loadTiles() {
         val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
 
+        // Załóżmy, że w RainRemoteRepository zmieniłeś URL w getRains na get_rains_with_status.php
         remoteRepo.getRains(email) { rains ->
             runOnUiThread {
                 tiles.clear()
-                rains.forEach {
-                    tiles.add(RainTile(it.id, it.name, it.hoseLength, it.comment, false))
+
+                // 1. Dzielimy listę na pracujące i niepracujące
+                val workingRains = rains.filter { it.isWorking } // Zakładam, że do modelu Rain też dodałeś pole isWorking
+                val stoppedRains = rains.filter { !it.isWorking }
+
+                // 2. Dodajemy najpierw pracujące
+                workingRains.forEach {
+                    tiles.add(RainTile(it.id, it.name, it.hoseLength, it.comment, false, true))
                 }
-                tiles.add(RainTile("", "Dodaj deszczownię", "", "", true))
+
+                // 3. Potem dodajemy stojące
+                stoppedRains.forEach {
+                    tiles.add(RainTile(it.id, it.name, it.hoseLength, it.comment, false, false))
+                }
+
+                // 4. Na samym końcu przycisk DODAJ
+                tiles.add(RainTile("", "Dodaj deszczownię", "", "", true, false))
+
                 adapter.notifyDataSetChanged()
+                swipeRefresh.isRefreshing = false
             }
         }
     }
