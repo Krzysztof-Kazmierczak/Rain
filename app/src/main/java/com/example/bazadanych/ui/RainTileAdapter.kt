@@ -47,7 +47,7 @@ class RainTileAdapter(
             commentText.text = tile.comment // 👈 TUTAJ WPISUJEMY PRAWDZIWY KOMENTARZ Z BAZY!
 
             // 🚜 PRZYWRACAMY TRAKTORA/DESZCZOWNIĘ DLA ZWYKŁYCH KAFELKÓW
-            holder.itemView.findViewById<ImageView>(R.id.tileIcon).setImageResource(R.drawable.outline_agriculture_24)
+            holder.itemView.findViewById<ImageView>(R.id.tileIcon).setImageResource(R.drawable.ic_rain_reel)
         }
 
         // 2. LOGIKA KROPKI STATUSU (Zostaje bez zmian)
