@@ -31,6 +31,7 @@
         <activity android:name=".ui.RegisterActivity"/>
         <activity android:name=".ui.CreateRainActivity"/>
         <activity android:name=".ui.RainDetailsActivity"/>
+        <activity android:name=".ui.ProfileActivity" android:exported="false" />
     </application>
 
 </manifest>

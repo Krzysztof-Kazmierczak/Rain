@@ -20,6 +20,9 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var tiles: MutableList<RainTile>
     private lateinit var adapter: RainTileAdapter
 
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private lateinit var refreshRunnable: Runnable
+
     private lateinit var swipeRefresh: SwipeRefreshLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,7 +60,7 @@ class HomeActivity : AppCompatActivity() {
             loadTiles()
         }
 
-        loadTiles()
+        //loadTiles()
 
         // Drawer toggle
         val toggle = ActionBarDrawerToggle(
@@ -73,12 +76,21 @@ class HomeActivity : AppCompatActivity() {
         navigationView.setNavigationItemSelectedListener {
             when (it.itemId) {
                 R.id.nav_home -> Toast.makeText(this, "Home", Toast.LENGTH_SHORT).show()
-                R.id.nav_profile -> Toast.makeText(this, "Profil", Toast.LENGTH_SHORT).show()
+                R.id.nav_profile -> goProfile()
                 R.id.nav_logout -> logout()
             }
             drawer.closeDrawers()
             true
         }
+
+        // --- AUTO-ODŚWIEŻANIE CO 30 SEKUND ---
+        refreshRunnable = object : Runnable {
+            override fun run() {
+                loadTiles() // Odpalamy pobieranie danych
+                handler.postDelayed(this, 30000) // Planujemy kolejne wywołanie za 30000 ms (30 sekund)
+            }
+        }
+
     }
 
     private val remoteRepo = RainRemoteRepository()
@@ -136,8 +148,20 @@ class HomeActivity : AppCompatActivity() {
         Toast.makeText(this, "Wylogowano ✅", Toast.LENGTH_SHORT).show()
     }
 
+
+    private fun goProfile() {
+        val intent = Intent(this, ProfileActivity::class.java)
+        startActivity(intent)
+    }
+
+
     override fun onResume() {
         super.onResume()
-        loadTiles()
+        handler.post(refreshRunnable) // Uruchamia pętlę odświeżania od razu po wejściu na ekran
+    }
+
+    override fun onPause() {
+        super.onPause()
+        handler.removeCallbacks(refreshRunnable) // Zatrzymuje pętlę, gdy gasisz ekran lub wychodzisz z aplikacji
     }
 }
