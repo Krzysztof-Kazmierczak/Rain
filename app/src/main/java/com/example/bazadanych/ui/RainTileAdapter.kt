@@ -16,7 +16,9 @@ class RainTileAdapter(
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val titleText: TextView = view.findViewById(R.id.tileTitle)
         val lengthText: TextView = view.findViewById(R.id.tileLength)
+        val commentText: TextView = view.findViewById(R.id.tileComment)
         val statusDot: View = view.findViewById(R.id.statusDot) // 🔴 Mapujemy naszą kropkę
+        val icon: ImageView = view.findViewById(R.id.tileIcon)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -28,43 +30,32 @@ class RainTileAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val tile = tiles[position]
 
-        // 1. USTAWIANIE TEKSTÓW Z BAZY
-        holder.titleText.text = tile.title
-
-        val commentText = holder.itemView.findViewById<TextView>(R.id.tileComment) // Pobieramy pole komentarza
-        val lengthText = holder.itemView.findViewById<TextView>(R.id.tileLength)
-
         if (tile.isAddButton) {
-
-            lengthText.visibility = View.GONE
-            commentText.visibility = View.GONE
-
-            // 🚜 ZMIANA IKONY NA PLUS (Żeby nie było traktora na przycisku DODAJ)
-            holder.itemView.findViewById<ImageView>(R.id.tileIcon).setImageResource(android.R.drawable.ic_input_add)
-
+            holder.lengthText.visibility = View.GONE
+            holder.commentText.visibility = View.GONE
+            holder.titleText.text = "Dodaj nową"
+            holder.icon.setImageResource(android.R.drawable.ic_input_add)
         } else {
-            holder.lengthText.text = "Wąż: ${tile.hoseLength}m"
-            commentText.text = tile.comment // 👈 TUTAJ WPISUJEMY PRAWDZIWY KOMENTARZ Z BAZY!
+            holder.lengthText.visibility = View.VISIBLE
+            holder.commentText.visibility = View.VISIBLE
 
-            // 🚜 PRZYWRACAMY TRAKTORA/DESZCZOWNIĘ DLA ZWYKŁYCH KAFELKÓW
-            holder.itemView.findViewById<ImageView>(R.id.tileIcon).setImageResource(R.drawable.ic_rain_reel)
+            // Używamy pól z ViewHoldera!
+            holder.titleText.text = tile.title // Jeśli w klasie RainTile masz 'name' zamiast 'title'
+            holder.lengthText.text = "Wąż: ${tile.hoseLength}m"
+            holder.commentText.text = tile.comment
+            holder.icon.setImageResource(R.drawable.ic_rain_reel)
         }
 
-        // 2. LOGIKA KROPKI STATUSU (Zostaje bez zmian)
+        // Status kropki
         if (tile.isAddButton) {
             holder.statusDot.visibility = View.GONE
         } else {
             holder.statusDot.visibility = View.VISIBLE
-            if (tile.isWorking) {
-                holder.statusDot.setBackgroundResource(R.drawable.circle_green)
-            } else {
-                holder.statusDot.setBackgroundResource(R.drawable.circle_red)
-            }
+            val colorRes = if (tile.isWorking) R.drawable.circle_green else R.drawable.circle_red
+            holder.statusDot.setBackgroundResource(colorRes)
         }
 
-        holder.itemView.setOnClickListener {
-            onTileClick(tile)
-        }
+        holder.itemView.setOnClickListener { onTileClick(tile) }
     }
 
     override fun getItemCount(): Int = tiles.size

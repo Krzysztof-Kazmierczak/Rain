@@ -143,6 +143,7 @@ class HomeActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         handler.post(refreshRunnable)
+        loadTiles()
     }
 
     override fun onPause() {
