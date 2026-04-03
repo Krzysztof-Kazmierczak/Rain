@@ -1,146 +1,237 @@
 package com.example.bazadanych.data.repository
 
+import android.util.Log
+import com.example.bazadanych.data.db.FieldData
 import com.example.bazadanych.data.db.Rain
 import com.example.bazadanych.data.db.RainStatus
+import okhttp3.*
 import org.json.JSONArray
 import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLEncoder
+import java.io.IOException
 
 class RainRemoteRepository {
 
-    private val baseUrl = "https://rain-tech.pl"
+    // Dodany ukośnik na końcu!
+    private val baseUrl = "https://rain-tech.pl/"
+    private val client = OkHttpClient()
+    private val TAG = "RainRepo"
+
+    fun saveField(email: String, rainId: String, color: String, coords: String, callback: (Boolean) -> Unit) {
+        val formBody = FormBody.Builder()
+            .add("email", email)
+            .add("rain_id", rainId)
+            .add("color", color)
+            .add("coordinates", coords)
+            .build()
+
+        val request = Request.Builder()
+            .url(baseUrl + "save_field.php")
+            .post(formBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e(TAG, "saveField - Błąd połączenia: ${e.message}")
+                callback(false)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val result = response.body?.string()?.trim()
+                Log.d(TAG, "saveField - Odpowiedź serwera: $result")
+                callback(result == "OK")
+            }
+        })
+    }
+
+    fun getField(email: String, rainId: String, callback: (FieldData?) -> Unit) {
+        val url = "${baseUrl}get_field.php?email=$email&rain_id=$rainId"
+
+        val request = Request.Builder().url(url).get().build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e(TAG, "getField - Błąd połączenia: ${e.message}")
+                callback(null)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val jsonResponse = response.body?.string()
+                Log.d(TAG, "getField - Odpowiedź: $jsonResponse")
+                if (jsonResponse != null) {
+                    try {
+                        val json = JSONObject(jsonResponse)
+                        if (json.getString("status") == "OK") {
+                            val fieldData = FieldData(
+                                color = json.getString("color"),
+                                coordinates = json.getString("coordinates")
+                            )
+                            callback(fieldData)
+                        } else {
+                            callback(null)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "getField - Błąd parsowania JSON: ${e.message}")
+                        callback(null)
+                    }
+                } else {
+                    callback(null)
+                }
+            }
+        })
+    }
 
     fun getRains(email: String, callback: (List<Rain>) -> Unit) {
-        Thread {
-            try {
-                val url = URL("$baseUrl/get_rains_with_status.php?email=" + URLEncoder.encode(email, "UTF-8"))
-                val conn = url.openConnection() as HttpURLConnection
-                val response = conn.inputStream.bufferedReader().readText()
-                val jsonArray = JSONArray(response)
-                val list = mutableListOf<Rain>()
+        val url = "${baseUrl}get_rains_with_status.php?email=$email"
+        val request = Request.Builder().url(url).get().build()
 
-                for (i in 0 until jsonArray.length()) {
-                    val obj = jsonArray.getJSONObject(i)
-                    list.add(Rain(
-                        id = obj.optString("id", ""),
-                        name = obj.optString("name", "Brak nazwy"),
-                        hoseLength = obj.optString("hose_length", "0"),
-                        comment = obj.optString("comment", ""),
-                        isWorking = obj.optInt("is_working", 0) == 1
-                    ))
-                }
-                callback(list)
-            } catch (e: Exception) {
-                e.printStackTrace() // Warto zostawić printa do debugowania w konsoli
+        Log.d(TAG, "getRains - Pobieranie listy z URL: $url")
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e(TAG, "getRains - Błąd połączenia: ${e.message}")
                 callback(emptyList())
             }
-        }.start()
+
+            override fun onResponse(call: Call, response: Response) {
+                val jsonResponse = response.body?.string()
+                Log.d(TAG, "getRains - Odpowiedź serwera: $jsonResponse")
+
+                val list = mutableListOf<Rain>()
+                if (!jsonResponse.isNullOrEmpty()) {
+                    try {
+                        val jsonArray = JSONArray(jsonResponse)
+                        for (i in 0 until jsonArray.length()) {
+                            val obj = jsonArray.getJSONObject(i)
+                            list.add(Rain(
+                                id = obj.optString("id", ""),
+                                name = obj.optString("name", "Brak nazwy"),
+                                hoseLength = obj.optString("hose_length", "0"),
+                                comment = obj.optString("comment", ""),
+                                isWorking = obj.optInt("is_working", 0) == 1
+                            ))
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "getRains - Błąd parsowania JSON: ${e.message}")
+                    }
+                }
+                callback(list)
+            }
+        })
     }
 
     fun getRainDetails(id: String, callback: (Rain?) -> Unit) {
-        Thread {
-            try {
-                val url = URL("$baseUrl/get_rain_details.php?id=" + URLEncoder.encode(id, "UTF-8"))
-                val conn = url.openConnection() as HttpURLConnection
-                val response = conn.inputStream.bufferedReader().readText()
-                if (response == "ERROR") callback(null)
-                else {
-                    val obj = JSONObject(response)
-                    // 👇 Tutaj dodaliśmy piąty parametr: false
-                    callback(Rain(
-                        obj.getString("id"),
-                        obj.getString("name"),
-                        obj.getString("hose_length"),
-                        obj.getString("comment"),
-                        false
-                    ))
+        val url = "${baseUrl}get_rain_details.php?id=$id"
+        val request = Request.Builder().url(url).get().build()
+
+        Log.d(TAG, "Pobieranie detali z URL: $url")
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e(TAG, "getRainDetails - Błąd połączenia: ${e.message}")
+                callback(null)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val jsonResponse = response.body?.string()
+                Log.d(TAG, "getRainDetails - Odpowiedź serwera: $jsonResponse")
+
+                if (jsonResponse == "ERROR" || jsonResponse.isNullOrEmpty()) {
+                    callback(null)
+                } else {
+                    try {
+                        val obj = JSONObject(jsonResponse)
+                        val rain = Rain(
+                            id = obj.getString("id"),
+                            name = obj.getString("name"),
+                            hoseLength = obj.getString("hose_length"),
+                            comment = obj.getString("comment"),
+                            isWorking = false
+                        )
+                        callback(rain)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "getRainDetails - Błąd parsowania: ${e.message}")
+                        callback(null)
+                    }
                 }
-            } catch (e: Exception) { callback(null) }
-        }.start()
+            }
+        })
     }
 
     fun saveRain(email: String, rain: Rain, callback: (Boolean) -> Unit) {
-        Thread {
-            try {
-                // Jeśli rain.id jest puste, wysyłamy "0", żeby PHP wiedziało, że to nowa maszyna
-                val finalId = if (rain.id.isEmpty()) "0" else rain.id
+        val finalId = if (rain.id.isEmpty()) "0" else rain.id
 
-                val urlString = "$baseUrl/save_rain.php?" +
-                        "id=${finalId}&" +
-                        "name=${URLEncoder.encode(rain.name, "UTF-8")}&" +
-                        "length=${URLEncoder.encode(rain.hoseLength, "UTF-8")}&" +
-                        "comment=${URLEncoder.encode(rain.comment, "UTF-8")}&" +
-                        "email=${URLEncoder.encode(email, "UTF-8")}"
+        val formBody = FormBody.Builder()
+            .add("id", finalId)
+            .add("name", rain.name)
+            .add("length", rain.hoseLength)
+            .add("comment", rain.comment)
+            .add("email", email)
+            .build()
 
-                val url = URL(urlString)
-                val conn = url.openConnection() as HttpURLConnection
-                val response = conn.inputStream.bufferedReader().readText()
+        val request = Request.Builder()
+            .url(baseUrl + "save_rain.php")
+            .post(formBody)
+            .build()
 
-                // Jeśli PHP wypisze "OK", zwracamy sukces
-                callback(response.trim() == "OK")
-            } catch (e: Exception) {
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e(TAG, "saveRain - Błąd połączenia: ${e.message}")
                 callback(false)
             }
-        }.start()
+
+            override fun onResponse(call: Call, response: Response) {
+                val result = response.body?.string()?.trim()
+                Log.d(TAG, "saveRain - Odpowiedź: $result")
+                callback(result == "OK")
+            }
+        })
     }
 
     fun deleteRain(id: String, callback: (Boolean) -> Unit) {
-        Thread {
-            try {
-                val url = URL("$baseUrl/delete_rain.php")
-                val conn = url.openConnection() as HttpURLConnection
-                conn.requestMethod = "POST"
-                conn.doOutput = true
-                conn.outputStream.write("id=$id".toByteArray())
-                callback(conn.inputStream.bufferedReader().readText() == "OK")
-            } catch (e: Exception) { callback(false) }
-        }.start()
-    }
+        val formBody = FormBody.Builder().add("id", id).build()
+        val request = Request.Builder().url(baseUrl + "delete_rain.php").post(formBody).build()
 
-    // --- NOWE: OPERACJE NA STATUSIE I HISTORII ---
-
-    fun updateRainStatus(status: RainStatus, callback: (Boolean) -> Unit) {
-        Thread {
-            try {
-                val url = URL("$baseUrl/update_rain_status.php")
-                val conn = url.openConnection() as HttpURLConnection
-                conn.requestMethod = "POST"
-                conn.doOutput = true
-                val workingInt = if (status.isWorking) 1 else 0
-                val data = "rain_id=${status.rainId}&is_working=$workingInt&set_speed=${status.setSpeed}" +
-                        "&current_speed=${status.currentSpeed}&current_distance=${status.currentDistance}" +
-                        "&time_to_finish=${status.timeToFinish}"
-                conn.outputStream.write(data.toByteArray())
-                callback(conn.inputStream.bufferedReader().readText() == "OK")
-            } catch (e: Exception) { callback(false) }
-        }.start()
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) { callback(false) }
+            override fun onResponse(call: Call, response: Response) {
+                val result = response.body?.string()?.trim()
+                callback(result == "OK")
+            }
+        })
     }
 
     fun getRainHistory(rainId: String, callback: (List<RainStatus>) -> Unit) {
-        Thread {
-            try {
-                val url = URL("$baseUrl/get_rain_history.php?rain_id=" + URLEncoder.encode(rainId, "UTF-8"))
-                val conn = url.openConnection() as HttpURLConnection
-                val response = conn.inputStream.bufferedReader().readText()
-                val jsonArray = JSONArray(response)
+        val url = "${baseUrl}get_rain_history.php?rain_id=$rainId"
+        val request = Request.Builder().url(url).get().build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) { callback(emptyList()) }
+
+            override fun onResponse(call: Call, response: Response) {
+                val jsonResponse = response.body?.string()
                 val list = mutableListOf<RainStatus>()
-                for (i in 0 until jsonArray.length()) {
-                    val obj = jsonArray.getJSONObject(i)
-                    list.add(RainStatus(
-                        id = obj.getInt("id"),
-                        rainId = obj.getString("rain_id"),
-                        isWorking = obj.optBoolean("is_working", false),
-                        setSpeed = obj.getDouble("set_speed"),
-                        currentSpeed = obj.getDouble("current_speed"),
-                        currentDistance = obj.getDouble("current_distance"),
-                        timeToFinish = obj.getString("time_to_finish"),
-                        updatedAt = obj.getString("updated_at")
-                    ))
+                try {
+                    val jsonArray = JSONArray(jsonResponse)
+                    for (i in 0 until jsonArray.length()) {
+                        val obj = jsonArray.getJSONObject(i)
+                        list.add(RainStatus(
+                            id = obj.getInt("id"),
+                            rainId = obj.getString("rain_id"),
+                            isWorking = obj.optBoolean("is_working", false),
+                            setSpeed = obj.getDouble("set_speed"),
+                            currentSpeed = obj.getDouble("current_speed"),
+                            currentDistance = obj.getDouble("current_distance"),
+                            timeToFinish = obj.getString("time_to_finish"),
+                            updatedAt = obj.getString("updated_at"),
+                            lat = obj.getDouble("lat"),
+                            lng = obj.getDouble("lng")
+                        ))
+                    }
+                    callback(list)
+                } catch (e: Exception) {
+                    callback(emptyList())
                 }
-                callback(list)
-            } catch (e: Exception) { callback(emptyList()) }
-        }.start()
+            }
+        })
     }
 }

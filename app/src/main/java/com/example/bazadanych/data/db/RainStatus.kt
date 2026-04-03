@@ -8,5 +8,7 @@ data class RainStatus(
     val currentSpeed: Double,
     val currentDistance: Double,
     val timeToFinish: String,
-    val updatedAt: String = ""
+    val updatedAt: String = "",
+    val lat: Double,
+    val lng: Double
 )

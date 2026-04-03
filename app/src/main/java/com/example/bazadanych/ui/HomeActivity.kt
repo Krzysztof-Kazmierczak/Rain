@@ -24,9 +24,9 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var refreshRunnable: Runnable
 
     private lateinit var swipeRefresh: SwipeRefreshLayout
+    private val remoteRepo = RainRemoteRepository() // Przeniosłem tutaj dla porządku
 
     override fun onCreate(savedInstanceState: Bundle?) {
-
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
@@ -43,11 +43,9 @@ class HomeActivity : AppCompatActivity() {
 
         adapter = RainTileAdapter(tiles) { tile ->
             if (tile.isAddButton) {
-                // Przejście do tworzenia nowej deszczowni
                 val intent = Intent(this, CreateRainActivity::class.java)
                 startActivityForResult(intent, 100)
             } else {
-                // Przejście do szczegółów deszczowni
                 val intent = Intent(this, RainDetailsActivity::class.java)
                 intent.putExtra("id", tile.id)
                 startActivity(intent)
@@ -60,9 +58,6 @@ class HomeActivity : AppCompatActivity() {
             loadTiles()
         }
 
-        //loadTiles()
-
-        // Drawer toggle
         val toggle = ActionBarDrawerToggle(
             this,
             drawer,
@@ -83,41 +78,36 @@ class HomeActivity : AppCompatActivity() {
             true
         }
 
-        // --- AUTO-ODŚWIEŻANIE CO 30 SEKUND ---
         refreshRunnable = object : Runnable {
             override fun run() {
-                loadTiles() // Odpalamy pobieranie danych
-                handler.postDelayed(this, 30000) // Planujemy kolejne wywołanie za 30000 ms (30 sekund)
+                loadTiles()
+                handler.postDelayed(this, 30000)
             }
         }
-
     }
-
-    private val remoteRepo = RainRemoteRepository()
 
     private fun loadTiles() {
         val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
 
-        // Załóżmy, że w RainRemoteRepository zmieniłeś URL w getRains na get_rains_with_status.php
         remoteRepo.getRains(email) { rains ->
+            // ⚠️ KLUCZOWA ZMIANA: OkHttp działa w tle, więc musimy wrócić do wątku UI!
             runOnUiThread {
                 tiles.clear()
 
-                // 1. Dzielimy listę na pracujące i niepracujące
-                val workingRains = rains.filter { it.isWorking } // Zakładam, że do modelu Rain też dodałeś pole isWorking
+                // Filtrowanie na pracujące i niepracujące
+                val workingRains = rains.filter { it.isWorking }
                 val stoppedRains = rains.filter { !it.isWorking }
 
-                // 2. Dodajemy najpierw pracujące
+                // Dodawanie do listy
                 workingRains.forEach {
                     tiles.add(RainTile(it.id, it.name, it.hoseLength, it.comment, false, true))
                 }
 
-                // 3. Potem dodajemy stojące
                 stoppedRains.forEach {
                     tiles.add(RainTile(it.id, it.name, it.hoseLength, it.comment, false, false))
                 }
 
-                // 4. Na samym końcu przycisk DODAJ
+                // Przycisk dodawania
                 tiles.add(RainTile("", "Dodaj deszczownię", "", "", true, false))
 
                 adapter.notifyDataSetChanged()
@@ -135,33 +125,28 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun logout() {
-        // 1️⃣ Usuń zapis sesji
         val prefs = getSharedPreferences("user_session", MODE_PRIVATE)
         prefs.edit().putBoolean("logged_in", false).apply()
 
-        // 2️⃣ Przejdź do ekranu logowania i wyczyść backstack
         val intent = Intent(this, LoginActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
 
-        // 3️⃣ Opcjonalnie pokaż Toast
         Toast.makeText(this, "Wylogowano ✅", Toast.LENGTH_SHORT).show()
     }
-
 
     private fun goProfile() {
         val intent = Intent(this, ProfileActivity::class.java)
         startActivity(intent)
     }
 
-
     override fun onResume() {
         super.onResume()
-        handler.post(refreshRunnable) // Uruchamia pętlę odświeżania od razu po wejściu na ekran
+        handler.post(refreshRunnable)
     }
 
     override fun onPause() {
         super.onPause()
-        handler.removeCallbacks(refreshRunnable) // Zatrzymuje pętlę, gdy gasisz ekran lub wychodzisz z aplikacji
+        handler.removeCallbacks(refreshRunnable)
     }
 }
