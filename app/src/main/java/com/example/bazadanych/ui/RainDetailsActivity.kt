@@ -165,13 +165,15 @@ class RainDetailsActivity : AppCompatActivity() {
         val coords = fieldPoints.joinToString(";") { "${it.latitude},${it.longitude}" }
 
         val intent = Intent(this, FieldEditActivity::class.java).apply {
+            putExtra("field_id", "0") // Nowe pole
             putExtra("coords", coords)
             putExtra("area", area)
-            putExtra("field_id", "0")
-            putExtra("name", "name")        // <-- DODAJ TO
-            putExtra("crop", "cropType")    // <-- DODAJ TO
-            putExtra("comment", "comment")  // <-- DODAJ TO
-            putExtra("color", "color")      // <-- DODAJ TO
+
+            // Dla nowego pola wysyłamy puste napisy, żeby Hinty (podpowiedzi) działały
+            putExtra("name", "")
+            putExtra("crop", "")
+            putExtra("comment", "")
+            putExtra("color", "#604CAF50") // Domyślny zielony
         }
         startActivity(intent)
 
@@ -232,18 +234,25 @@ class RainDetailsActivity : AppCompatActivity() {
             title = field.name
             snippet = "Uprawa: ${field.cropType}\nPowierzchnia: ${String.format("%.2f", field.areaHa)} ha"
 
+            // KLIKNIĘCIE W ISTNIEJĄCE POLE
             setOnClickListener { _, _, _ ->
                 val i = Intent(this@RainDetailsActivity, FieldEditActivity::class.java)
                 i.putExtra("field_id", field.id.toString())
                 i.putExtra("coords", field.coordinates)
                 i.putExtra("area", field.areaHa)
+
+                // DODAJEMY BRAKUJĄCE DANE, ABY WYŚWIETLIŁY SIĘ W EDYCJI:
+                i.putExtra("name", field.name)
+                i.putExtra("crop", field.cropType)
+                i.putExtra("comment", field.comment)
+                i.putExtra("color", field.color)
+
                 startActivity(i)
                 true
             }
         }
         map.overlays.add(poly)
     }
-
     private fun loadLiveStatus() {
         if (currentRainId.isEmpty()) return
         remoteRepo.getRainHistory(currentRainId) { history ->

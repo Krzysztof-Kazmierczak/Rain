@@ -32,6 +32,7 @@ class FieldEditActivity : AppCompatActivity() {
     // Domyślny kolor dla bazy (z przeźroczystością #60)
     private var currentColor: String = "#604CAF50"
 
+    // W onCreate zamień kolejność - najpierw widoki, potem dane
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_field_edit)
@@ -41,8 +42,8 @@ class FieldEditActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         toolbar.setNavigationOnClickListener { finish() }
 
-        initViews()
-        loadIntentData()
+        initViews()      // 1. Najpierw przygotuj widoki
+        loadIntentData() // 2. Potem wczytaj dane (nadpiszą domyślny zielony)
     }
 
     private fun initViews() {
@@ -102,24 +103,29 @@ class FieldEditActivity : AppCompatActivity() {
 
         areaText.text = "Powierzchnia: ${String.format("%.2f", areaHa)} ha"
 
-        // Jeśli to edycja istniejącego pola (id różne od "0")
         if (fieldId != "0") {
-            nameEdit.setText(intent.getStringExtra("name") ?: "")
-            cropEdit.setText(intent.getStringExtra("crop") ?: "")
-            commentEdit.setText(intent.getStringExtra("comment") ?: "")
+            // Odbieramy dane przesłane z mapy
+            val name = intent.getStringExtra("name") ?: ""
+            val crop = intent.getStringExtra("crop") ?: ""
+            val comment = intent.getStringExtra("comment") ?: ""
+            val color = intent.getStringExtra("color") ?: "#604CAF50"
 
-            val loadedColor = intent.getStringExtra("color") ?: "#604CAF50"
-            currentColor = loadedColor
+            nameEdit.setText(name)
+            cropEdit.setText(crop)
+            commentEdit.setText(comment)
+            currentColor = color
 
-            // Zaktualizujmy obwódki kółek na podstawie załadowanego koloru
+            // Pobieramy widoki kółek, żeby zaktualizować ramki
             val cardGreen = findViewById<com.google.android.material.card.MaterialCardView>(R.id.colorGreen)
             val cardYellow = findViewById<com.google.android.material.card.MaterialCardView>(R.id.colorYellow)
             val cardBlue = findViewById<com.google.android.material.card.MaterialCardView>(R.id.colorBlue)
 
+            // AKTUALIZACJA RAMKI NA START
+            // Używamy ignoreCase, bo kolory w bazie mogą być małymi/dużymi literami
             when {
-                loadedColor.contains("4CAF50") -> updateColorStroke(cardGreen, cardYellow, cardBlue)
-                loadedColor.contains("FFEB3B") -> updateColorStroke(cardYellow, cardGreen, cardBlue)
-                loadedColor.contains("2196F3") -> updateColorStroke(cardBlue, cardGreen, cardYellow)
+                color.contains("4CAF50", ignoreCase = true) -> updateColorStroke(cardGreen, cardYellow, cardBlue)
+                color.contains("FFEB3B", ignoreCase = true) -> updateColorStroke(cardYellow, cardGreen, cardBlue)
+                color.contains("2196F3", ignoreCase = true) -> updateColorStroke(cardBlue, cardGreen, cardYellow)
             }
         }
     }
