@@ -2,6 +2,7 @@ package com.example.bazadanych.data.repository
 
 import android.util.Log
 import com.example.bazadanych.data.db.FieldData
+import com.example.bazadanych.data.db.FieldEntity
 import com.example.bazadanych.data.db.Rain
 import com.example.bazadanych.data.db.RainStatus
 import okhttp3.*
@@ -238,6 +239,82 @@ class RainRemoteRepository {
                 } catch (e: Exception) {
                     Log.e(TAG, "getRainHistory - Błąd parsowania JSON: ${e.message}")
                     callback(emptyList())
+                }
+            }
+        })
+    }
+
+    fun saveAgriculturalField(
+        email: String, id: String, name: String, areaHa: Double,
+        cropType: String, comment: String, color: String, coords: String,
+        callback: (Boolean) -> Unit
+    ) {
+        val formBody = FormBody.Builder()
+            .add("email", email)
+            .add("id", id)
+            .add("name", name)
+            .add("area_ha", areaHa.toString())
+            .add("crop_type", cropType)
+            .add("comment", comment)
+            .add("color", color)
+            .add("coordinates", coords)
+            .build()
+
+        val request = Request.Builder()
+            .url(baseUrl + "save_agricultural_field.php")
+            .post(formBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: java.io.IOException) { callback(false) }
+            override fun onResponse(call: Call, response: Response) {
+                val result = response.body?.string()?.trim()
+                callback(result == "OK")
+            }
+        })
+    }
+
+    // DODAJEMY TEŻ POBIERANIE PÓL (żeby użyć FieldEntity!)
+    fun getAgriculturalFields(email: String, callback: (List<FieldEntity>) -> Unit) {
+        val url = "${baseUrl}get_agricultural_fields.php?email=$email"
+        val request = Request.Builder().url(url).build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: java.io.IOException) {
+                Log.e("RainRepo", "Błąd pobierania pól: ${e.message}")
+                // Wracamy na główny wątek z pustą listą
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    callback(emptyList())
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val body = response.body?.string()
+                val list = mutableListOf<FieldEntity>()
+
+                if (body != null) {
+                    try {
+                        val jsonArray = JSONArray(body)
+                        for (i in 0 until jsonArray.length()) {
+                            val obj = jsonArray.getJSONObject(i)
+                            list.add(FieldEntity(
+                                id = obj.getInt("id"),
+                                name = obj.getString("name"),
+                                areaHa = obj.getDouble("area_ha"),
+                                cropType = obj.getString("crop_type"),
+                                comment = obj.getString("comment"),
+                                color = obj.getString("color"),
+                                coordinates = obj.getString("coordinates")
+                            ))
+                        }
+                    } catch (e: Exception) {
+                        Log.e("RainRepo", "Błąd parsowania pól: ${e.message}")
+                    }
+                }
+
+                // KLUCZOWY MOMENT: Wracamy na wątek główny UI z gotową listą
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    callback(list)
                 }
             }
         })
