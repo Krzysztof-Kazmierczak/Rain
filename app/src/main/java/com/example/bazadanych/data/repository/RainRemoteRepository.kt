@@ -205,30 +205,38 @@ class RainRemoteRepository {
         val request = Request.Builder().url(url).get().build()
 
         client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) { callback(emptyList()) }
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e(TAG, "getRainHistory - Błąd połączenia: ${e.message}")
+                callback(emptyList())
+            }
 
             override fun onResponse(call: Call, response: Response) {
                 val jsonResponse = response.body?.string()
+                Log.d(TAG, "getRainHistory - Odpowiedź: $jsonResponse") // Sprawdźmy co dokładnie dostaje telefon
+
                 val list = mutableListOf<RainStatus>()
                 try {
                     val jsonArray = JSONArray(jsonResponse)
                     for (i in 0 until jsonArray.length()) {
                         val obj = jsonArray.getJSONObject(i)
+
+                        // Używamy opt... zamiast get..., żeby aplikacja się nie wywaliła gdy czegoś brakuje
                         list.add(RainStatus(
-                            id = obj.getInt("id"),
-                            rainId = obj.getString("rain_id"),
-                            isWorking = obj.optBoolean("is_working", false),
-                            setSpeed = obj.getDouble("set_speed"),
-                            currentSpeed = obj.getDouble("current_speed"),
-                            currentDistance = obj.getDouble("current_distance"),
-                            timeToFinish = obj.getString("time_to_finish"),
-                            updatedAt = obj.getString("updated_at"),
-                            lat = obj.getDouble("lat"),
-                            lng = obj.getDouble("lng")
+                            id = obj.optInt("id", 0),
+                            rainId = obj.optString("rain_id", ""),
+                            isWorking = obj.optBoolean("is_working", false) || obj.optInt("is_working", 0) == 1,
+                            setSpeed = obj.optDouble("set_speed", 0.0),
+                            currentSpeed = obj.optDouble("current_speed", 0.0),
+                            currentDistance = obj.optDouble("current_distance", 0.0),
+                            timeToFinish = obj.optString("time_to_finish", "--:--"),
+                            updatedAt = obj.optString("updated_at", ""),
+                            lat = obj.optDouble("lat", 0.0),
+                            lng = obj.optDouble("lng", 0.0)
                         ))
                     }
                     callback(list)
                 } catch (e: Exception) {
+                    Log.e(TAG, "getRainHistory - Błąd parsowania JSON: ${e.message}")
                     callback(emptyList())
                 }
             }

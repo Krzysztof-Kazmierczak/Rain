@@ -42,6 +42,7 @@ class RainDetailsActivity : AppCompatActivity() {
     private var currentPolygon = Polygon()
     private var isDrawingMode = false
     private var currentPolygonColor = "#604CAF50"
+    private var wasMapCenteredOnMachine = false // Pomoże nam uniknąć "wyrywania" mapy użytkownikowi
 
 
     private val refreshHandler = Handler(Looper.getMainLooper())
@@ -228,54 +229,61 @@ class RainDetailsActivity : AppCompatActivity() {
 
     private fun loadLiveStatus() {
         if (currentRainId.isEmpty()) return
+
         remoteRepo.getRainHistory(currentRainId) { history ->
             runOnUiThread {
                 if (history.isNotEmpty()) {
-                    val latest = history[0]
+                    val latest = history[0] // Pobieramy najnowszy wpis
+
+                    // Aktualizujemy Marker na mapie
                     updateMachineMarker(latest.lat, latest.lng)
+
+                    // Aktualizujemy teksty
                     statusText.text = if (latest.isWorking) "Status: PRACUJE ✅" else "Status: POSTÓJ 🛑"
                     currentSpeedText.text = "Aktualna prędkość: ${latest.currentSpeed} m/h"
                     timeFinishText.text = "Czas do końca: ${latest.timeToFinish}"
+
+                    // Możemy też zmienić kolor statusu w tekście
+                    statusText.setTextColor(if (latest.isWorking) Color.GREEN else Color.RED)
+                } else {
+                    statusText.text = "Status: Brak danych GPS ⚠️"
                 }
             }
         }
     }
 
     private fun updateMachineMarker(lat: Double, lng: Double) {
-        // 1. Sprawdzamy czy współrzędne to 0.0 (brak danych z GPS)
         val isZeroCoords = (lat == 0.0 && lng == 0.0)
+        if (isZeroCoords) return // Jeśli GPS nie wysłał danych, nic nie robimy
 
-        // 2. Ustalamy punkt docelowy
-        val targetPoint = if (isZeroCoords) {
-            // Współrzędne geograficzne środka Polski (okolice Piątku / Kutna)
-            GeoPoint(52.0689, 19.4797)
-        } else {
-            GeoPoint(lat, lng)
-        }
+        val point = GeoPoint(lat, lng)
 
-        // 3. Obsługa markera deszczowni (dodajemy tylko, gdy mamy realne współrzędne)
+        // 1. USUWANIE STAREGO MARKERA (żeby nie zostawały "duchy")
         machineMarker?.let { map.overlays.remove(it) }
 
-        if (!isZeroCoords) {
-            machineMarker = Marker(map).apply {
-                position = targetPoint
-                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                title = "Deszczownia"
-            }
-            map.overlays.add(machineMarker)
+        // 2. TWORZENIE NOWEGO MARKERA
+        machineMarker = Marker(map).apply {
+            position = point
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM) // Dół ikony w punkt GPS
+            title = nameEdit.text.toString()
+
+            // OPCJONALNIE: Własna ikona (jeśli masz w drawable)
+            // icon = ContextCompat.getDrawable(this@RainDetailsActivity, R.drawable.ic_moja_maszyna)
         }
 
-        // 4. Centrowanie mapy (tylko jeśli użytkownik aktualnie nie rysuje pola!)
-        if (!isDrawingMode) {
-            if (isZeroCoords) {
-                map.controller.setZoom(6.5) // Oddalenie na całą Polskę
-            } else {
-                map.controller.setZoom(16.0) // Bliskie przybliżenie na maszynę
-            }
-            map.controller.animateTo(targetPoint)
+        map.overlays.add(machineMarker)
+
+        // 3. INTELIGENTNE CENTROWANIE
+        // Centrujemy TYLKO jeśli:
+        // a) Nie rysujemy pola
+        // b) Robimy to pierwszy raz po wejściu w detale (żeby nie przerywać użytkownikowi przesuwania mapy)
+        if (!isDrawingMode && !wasMapCenteredOnMachine) {
+            map.controller.setZoom(16.0)
+            map.controller.animateTo(point)
+            wasMapCenteredOnMachine = true // Odznaczamy, że już raz ustawiliśmy widok na maszynę
         }
 
-        map.invalidate()
+        map.invalidate() // Odświeżenie mapy
     }
 
     private fun saveMainData() {
