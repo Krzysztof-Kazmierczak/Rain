@@ -237,26 +237,41 @@ class RainDetailsActivity : AppCompatActivity() {
             fillPaint.color = Color.parseColor(field.color)
             outlinePaint.color = Color.BLACK
             outlinePaint.strokeWidth = 2f
-            title = field.name
-            snippet = "Uprawa: ${field.cropType}\nPowierzchnia: ${String.format("%.2f", field.areaHa)} ha"
 
-            // KLIKNIĘCIE W ISTNIEJĄCE POLE
-            setOnClickListener { _, _, _ ->
-                val i = Intent(this@RainDetailsActivity, FieldEditActivity::class.java)
-                i.putExtra("field_id", field.id.toString())
-                i.putExtra("coords", field.coordinates)
-                i.putExtra("area", field.areaHa)
+            // Dane do dymka informacyjnego
+            title = field.name ?: "Pole bez nazwy"
+            snippet = "🌾 Uprawa: ${field.cropType}\n📐 Powierzchnia: ${String.format("%.2f", field.areaHa)} ha\n\n(KLIKNIJ POLE PONOWNIE, ABY EDYTOWAĆ)"
 
-                // DODAJEMY BRAKUJĄCE DANE, ABY WYŚWIETLIŁY SIĘ W EDYCJI:
-                i.putExtra("name", field.name)
-                i.putExtra("crop", field.cropType)
-                i.putExtra("comment", field.comment)
-                i.putExtra("color", field.color)
-
-                startActivity(i)
-                true
-            }
+            // Używamy standardowego dymka bez kombinowania z dotykiem
+            infoWindow = org.osmdroid.views.overlay.infowindow.BasicInfoWindow(
+                org.osmdroid.library.R.layout.bonuspack_bubble, map
+            )
         }
+
+        // ZWYKŁE KLIKNIĘCIE W POLE NA MAPIE
+        poly.setOnClickListener { polygon, _, _ ->
+            if (polygon.isInfoWindowOpen) {
+                // JEŚLI DYMEK BYŁ JUŻ OTWARTY - przechodzimy do edycji!
+                polygon.closeInfoWindow()
+
+                val intent = Intent(this@RainDetailsActivity, FieldEditActivity::class.java).apply {
+                    putExtra("field_id", field.id.toString())
+                    putExtra("coords", field.coordinates)
+                    putExtra("area", field.areaHa)
+                    putExtra("name", field.name)
+                    putExtra("crop", field.cropType)
+                    putExtra("comment", field.comment)
+                    putExtra("color", field.color)
+                }
+                startActivity(intent)
+            } else {
+                // JEŚLI DYMEK BYŁ ZAMKNIĘTY - zamykamy inne i otwieramy ten
+                org.osmdroid.views.overlay.infowindow.InfoWindow.closeAllInfoWindowsOn(map)
+                polygon.showInfoWindow()
+            }
+            true
+        }
+
         map.overlays.add(poly)
     }
     private fun loadLiveStatus() {

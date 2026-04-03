@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.bazadanych.R
 import com.example.bazadanych.data.repository.RainRemoteRepository
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.card.MaterialCardView
 
 class FieldEditActivity : AppCompatActivity() {
 
@@ -18,21 +19,14 @@ class FieldEditActivity : AppCompatActivity() {
     private lateinit var cropEdit: EditText
     private lateinit var commentEdit: EditText
     private lateinit var areaText: TextView
-
-    // Widoki nakładek zaznaczenia
-    private lateinit var checkGreen: View
-    private lateinit var checkYellow: View
-    private lateinit var checkBlue: View
+    private lateinit var btnDeleteField: Button // Deklarujemy tutaj...
 
     private val remoteRepo = RainRemoteRepository()
-    private var fieldId: String = "0" // "0" oznacza nowe pole
+    private var fieldId: String = "0"
     private var coordinates: String = ""
     private var areaHa: Double = 0.0
-
-    // Domyślny kolor dla bazy (z przeźroczystością #60)
     private var currentColor: String = "#604CAF50"
 
-    // W onCreate zamień kolejność - najpierw widoki, potem dane
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_field_edit)
@@ -42,8 +36,9 @@ class FieldEditActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         toolbar.setNavigationOnClickListener { finish() }
 
-        initViews()      // 1. Najpierw przygotuj widoki
-        loadIntentData() // 2. Potem wczytaj dane (nadpiszą domyślny zielony)
+        // KOLEJNOŚĆ JEST KLUCZOWA:
+        initViews()      // 1. Najpierw znajdujemy przyciski
+        loadIntentData() // 2. Potem wczytujemy dane i decydujemy czy pokazać usuwanie
     }
 
     private fun initViews() {
@@ -51,10 +46,29 @@ class FieldEditActivity : AppCompatActivity() {
         cropEdit = findViewById(R.id.cropTypeEdit)
         commentEdit = findViewById(R.id.fieldCommentEdit)
         areaText = findViewById(R.id.fieldAreaText)
+        btnDeleteField = findViewById(R.id.btnDeleteField) // ...a przypisujemy TUTAJ
 
-        val cardGreen = findViewById<com.google.android.material.card.MaterialCardView>(R.id.colorGreen)
-        val cardYellow = findViewById<com.google.android.material.card.MaterialCardView>(R.id.colorYellow)
-        val cardBlue = findViewById<com.google.android.material.card.MaterialCardView>(R.id.colorBlue)
+        val cardGreen = findViewById<MaterialCardView>(R.id.colorGreen)
+        val cardYellow = findViewById<MaterialCardView>(R.id.colorYellow)
+        val cardBlue = findViewById<MaterialCardView>(R.id.colorBlue)
+
+        btnDeleteField.setOnClickListener {
+            val prefs = getSharedPreferences("user_session", MODE_PRIVATE)
+            val email = prefs.getString("user_email", "") ?: ""
+
+            if (fieldId != "0" && email.isNotEmpty()) {
+                remoteRepo.deleteAgriculturalField(email, fieldId) { success ->
+                    runOnUiThread {
+                        if (success) {
+                            Toast.makeText(this, "Pole zostało usunięte! 🗑️", Toast.LENGTH_SHORT).show()
+                            finish()
+                        } else {
+                            Toast.makeText(this, "Błąd podczas usuwania pola.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
 
         cardGreen.setOnClickListener {
             currentColor = "#604CAF50"
@@ -69,31 +83,20 @@ class FieldEditActivity : AppCompatActivity() {
             updateColorStroke(cardBlue, cardGreen, cardYellow)
         }
 
-        // Domyślnie zaznacz zielony
-        updateColorStroke(cardGreen, cardYellow, cardBlue)
-
         findViewById<Button>(R.id.btnSaveField).setOnClickListener {
             saveField()
         }
     }
 
-    // Ta funkcja robi obwódkę wokół zaznaczonego kółka
     private fun updateColorStroke(
-        selected: com.google.android.material.card.MaterialCardView,
-        other1: com.google.android.material.card.MaterialCardView,
-        other2: com.google.android.material.card.MaterialCardView
+        selected: MaterialCardView,
+        other1: MaterialCardView,
+        other2: MaterialCardView
     ) {
-        selected.strokeWidth = 6 // Grubość ramki dla wybranego
-        selected.strokeColor = android.graphics.Color.parseColor("#424242") // Ciemnoszara ramka
-
+        selected.strokeWidth = 6
+        selected.strokeColor = android.graphics.Color.parseColor("#424242")
         other1.strokeWidth = 0
         other2.strokeWidth = 0
-    }
-
-    private fun updateColorChecks(selected: String) {
-        checkGreen.visibility = if (selected == "#4CAF50") View.VISIBLE else View.GONE
-        checkYellow.visibility = if (selected == "#FFEB3B") View.VISIBLE else View.GONE
-        checkBlue.visibility = if (selected == "#2196F3") View.VISIBLE else View.GONE
     }
 
     private fun loadIntentData() {
@@ -104,7 +107,7 @@ class FieldEditActivity : AppCompatActivity() {
         areaText.text = "Powierzchnia: ${String.format("%.2f", areaHa)} ha"
 
         if (fieldId != "0") {
-            // Odbieramy dane przesłane z mapy
+            btnDeleteField.visibility = View.VISIBLE
             val name = intent.getStringExtra("name") ?: ""
             val crop = intent.getStringExtra("crop") ?: ""
             val comment = intent.getStringExtra("comment") ?: ""
@@ -115,18 +118,17 @@ class FieldEditActivity : AppCompatActivity() {
             commentEdit.setText(comment)
             currentColor = color
 
-            // Pobieramy widoki kółek, żeby zaktualizować ramki
-            val cardGreen = findViewById<com.google.android.material.card.MaterialCardView>(R.id.colorGreen)
-            val cardYellow = findViewById<com.google.android.material.card.MaterialCardView>(R.id.colorYellow)
-            val cardBlue = findViewById<com.google.android.material.card.MaterialCardView>(R.id.colorBlue)
+            val cardGreen = findViewById<MaterialCardView>(R.id.colorGreen)
+            val cardYellow = findViewById<MaterialCardView>(R.id.colorYellow)
+            val cardBlue = findViewById<MaterialCardView>(R.id.colorBlue)
 
-            // AKTUALIZACJA RAMKI NA START
-            // Używamy ignoreCase, bo kolory w bazie mogą być małymi/dużymi literami
             when {
                 color.contains("4CAF50", ignoreCase = true) -> updateColorStroke(cardGreen, cardYellow, cardBlue)
                 color.contains("FFEB3B", ignoreCase = true) -> updateColorStroke(cardYellow, cardGreen, cardBlue)
                 color.contains("2196F3", ignoreCase = true) -> updateColorStroke(cardBlue, cardGreen, cardYellow)
             }
+        } else {
+            btnDeleteField.visibility = View.GONE
         }
     }
 
@@ -139,26 +141,22 @@ class FieldEditActivity : AppCompatActivity() {
             return
         }
 
-        val name = nameEdit.text.toString()
-        val crop = cropEdit.text.toString()
-        val comment = commentEdit.text.toString()
-
         remoteRepo.saveAgriculturalField(
             email = email,
             id = fieldId,
-            name = name,
+            name = nameEdit.text.toString(),
             areaHa = areaHa,
-            cropType = crop,
-            comment = comment,
+            cropType = cropEdit.text.toString(),
+            comment = commentEdit.text.toString(),
             color = currentColor,
             coords = coordinates
         ) { success ->
             runOnUiThread {
                 if (success) {
                     Toast.makeText(this, "Pole zapisane! 🌾", Toast.LENGTH_SHORT).show()
-                    finish() // Wraca do mapy
+                    finish()
                 } else {
-                    Toast.makeText(this, "Serwer odrzucił zapis. Sprawdź Logcat!", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Serwer odrzucił zapis.", Toast.LENGTH_LONG).show()
                 }
             }
         }

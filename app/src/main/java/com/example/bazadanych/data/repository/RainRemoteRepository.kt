@@ -44,6 +44,31 @@ class RainRemoteRepository {
         })
     }
 
+    fun deleteAgriculturalField(email: String, id: String, callback: (Boolean) -> Unit) {
+        val formBody = FormBody.Builder()
+            .add("email", email)
+            .add("id", id)
+            .build()
+
+        val request = Request.Builder()
+            .url(baseUrl + "delete_agricultural_field.php") // Korzystamy z baseUrl!
+            .post(formBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: java.io.IOException) {
+                e.printStackTrace()
+                callback(false)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val result = response.body?.string()?.trim()
+                // Zmieniono na "OK", bo tak zwraca Twój plik PHP
+                callback(result == "OK")
+            }
+        })
+    }
+
     fun getField(email: String, rainId: String, callback: (FieldData?) -> Unit) {
         val url = "${baseUrl}get_field.php?email=$email&rain_id=$rainId"
 
