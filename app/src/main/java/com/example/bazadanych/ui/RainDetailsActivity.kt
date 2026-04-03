@@ -45,7 +45,8 @@ class RainDetailsActivity : AppCompatActivity() {
 
     // Map Elements
     private var machineMarker: Marker? = null
-    private var drawingPolygon = Polygon()
+    //private var drawingPolygon = Polygon()
+    private var drawingPolyline = org.osmdroid.views.overlay.Polyline()
     private val fieldPoints = mutableListOf<GeoPoint>()
 
     // State
@@ -92,7 +93,7 @@ class RainDetailsActivity : AppCompatActivity() {
         btnUndo.setOnClickListener {
             if (isDrawingMode && fieldPoints.isNotEmpty()) {
                 fieldPoints.removeAt(fieldPoints.size - 1)
-                updateDrawingPolygon()
+                updateDrawingLine()
             }
         }
 
@@ -114,7 +115,7 @@ class RainDetailsActivity : AppCompatActivity() {
             override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
                 if (isDrawingMode && p != null) {
                     fieldPoints.add(p)
-                    updateDrawingPolygon()
+                    updateDrawingLine()
                     return true
                 }
                 return false
@@ -132,7 +133,7 @@ class RainDetailsActivity : AppCompatActivity() {
         isDrawingMode = !isDrawingMode
         if (isDrawingMode) {
             fieldPoints.clear()
-            updateDrawingPolygon()
+            updateDrawingLine()
             btnStartDrawing.text = "ZAKOŃCZ RYSOWANIE"
             btnStartDrawing.setBackgroundColor(Color.RED)
             Toast.makeText(this, "Klikaj na mapie, aby obrysować pole", Toast.LENGTH_SHORT).show()
@@ -146,17 +147,25 @@ class RainDetailsActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateDrawingPolygon() {
-        map.overlays.remove(drawingPolygon)
+    private fun updateDrawingLine() {
+        // 1. Usuwamy starą linię z mapy
+        map.overlays.remove(drawingPolyline)
+
         if (fieldPoints.isNotEmpty()) {
-            drawingPolygon = Polygon().apply {
-                points = fieldPoints
-                fillPaint.color = Color.parseColor(currentDrawingColor)
-                outlinePaint.color = Color.BLACK
-                outlinePaint.strokeWidth = 3f
+            // 2. Tworzymy nową linię
+            drawingPolyline = org.osmdroid.views.overlay.Polyline().apply {
+                // ZAMIAST: points = fieldPoints
+                // UŻYWAMY: setPoints(fieldPoints)
+                setPoints(fieldPoints)
+
+                outlinePaint.color = Color.parseColor("#FF2196F3") // Niebieski
+                outlinePaint.strokeWidth = 5f
             }
-            map.overlays.add(drawingPolygon)
+            // 3. Dodajemy nową linię na mapę
+            map.overlays.add(drawingPolyline)
         }
+
+        // 4. Odświeżamy mapę
         map.invalidate()
     }
 
@@ -182,7 +191,7 @@ class RainDetailsActivity : AppCompatActivity() {
         btnStartDrawing.text = "DODAJ POLE"
         btnStartDrawing.setBackgroundColor(Color.parseColor("#4CAF50"))
         fieldPoints.clear()
-        updateDrawingPolygon()
+        updateDrawingLine()
     }
 
     private fun loadInitialData() {
@@ -206,16 +215,13 @@ class RainDetailsActivity : AppCompatActivity() {
 
         remoteRepo.getAgriculturalFields(email) { fields ->
             runOnUiThread {
-                // BEZPIECZNE USUWANIE: Zamiast iteratora, używamy funkcji removeAll
-                // Usuwamy tylko te nakładki, które są Polygonami, zostawiając marker maszyny
+                // TUTAJ ZMIANA: zmieniamy drawingPolygon na drawingPolyline
                 map.overlays.removeAll { overlay ->
-                    overlay is Polygon && overlay != drawingPolygon
+                    overlay is Polygon && overlay != drawingPolyline
                 }
 
-                // Rysujemy pobrane z bazy pola
                 fields.forEach { drawFieldOnMap(it) }
-
-                map.invalidate() // Odświeżamy widok mapy
+                map.invalidate()
             }
         }
     }
