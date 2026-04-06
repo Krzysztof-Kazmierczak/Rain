@@ -73,6 +73,7 @@ class HomeActivity : AppCompatActivity() {
                 R.id.nav_home -> Toast.makeText(this, "Home", Toast.LENGTH_SHORT).show()
                 R.id.nav_profile -> goProfile()
                 R.id.nav_logout -> logout()
+                R.id.nav_map -> goFullMap()
             }
             drawer.closeDrawers()
             true
@@ -137,6 +138,11 @@ class HomeActivity : AppCompatActivity() {
 
     private fun goProfile() {
         val intent = Intent(this, ProfileActivity::class.java)
+        startActivity(intent)
+    }
+
+    private fun goFullMap() {
+        val intent = Intent(this, FullMapActivity::class.java)
         startActivity(intent)
     }
 

@@ -37,6 +37,7 @@
         <activity android:name=".ui.RainDetailsActivity"/>
         <activity android:name=".ui.ProfileActivity" android:exported="false" />
         <activity android:name=".ui.FieldEditActivity" android:exported="false" android:windowSoftInputMode="adjustPan" />
+        <activity android:name=".ui.FullMapActivity" android:exported="false" android:windowSoftInputMode="adjustPan" />
     </application>
 
 </manifest>
