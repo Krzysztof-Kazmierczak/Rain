@@ -23,7 +23,10 @@
                 android:layout_height="?attr/actionBarSize"
                 android:title="RainTech"
                 android:background="?attr/colorPrimary"
-                android:titleTextColor="@android:color/white"/>
+                android:titleTextColor="@android:color/white"
+                android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+                app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+                />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rainRecycler"

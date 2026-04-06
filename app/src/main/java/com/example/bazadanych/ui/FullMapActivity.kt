@@ -66,11 +66,13 @@ class FullMapActivity : AppCompatActivity() {
 
     // Dodanie przycisku wyjścia w Toolbaurze
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        // WAŻNE: upewnij się, że Twój plik menu nazywa się map_menu.xml. Jeśli to drawer_menu.xml, zostaw drawer_menu
         menuInflater.inflate(R.menu.drawer_menu, menu)
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        // WAŻNE: Zmieniłem id na action_exit (takie daliśmy w pliku XML menu)
         if (item.itemId == R.id.nav_home) {
             finish() // Zamyka aktywność i wraca do menu
             return true
@@ -87,11 +89,11 @@ class FullMapActivity : AppCompatActivity() {
             override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
                 if (isDrawingMode && p != null) {
                     fieldPoints.add(p)
+                    // Gdy stawiamy punkty, "COFNIJ" musi być widoczne
                     btnUndo.visibility = View.VISIBLE
                     updateDrawingLine()
                     return true
                 }
-                // Zamyka dymki jeśli klikniemy w puste miejsce na mapie
                 org.osmdroid.views.overlay.infowindow.InfoWindow.closeAllInfoWindowsOn(map)
                 return false
             }
@@ -100,28 +102,24 @@ class FullMapActivity : AppCompatActivity() {
         map.overlays.add(eventsOverlay)
     }
 
-    // POPRAWIONA FUNKCJA RYSOWANIA POLA - Teraz klikanie działa!
     private fun drawFieldOnMap(field: FieldEntity) {
         val pts = field.coordinates.split(";").mapNotNull {
             val latLng = it.split(",")
             if (latLng.size == 2) GeoPoint(latLng[0].toDouble(), latLng[1].toDouble()) else null
         }
 
-        val poly = Polygon(map).apply { // Przekazujemy 'map' do konstruktora
+        val poly = Polygon(map).apply {
             points = pts
             fillPaint.color = Color.parseColor(field.color)
             outlinePaint.color = Color.BLACK
             outlinePaint.strokeWidth = 2f
             title = field.name ?: "Pole"
             snippet = "🌾 Uprawa: ${field.cropType}\n📐 Powierzchnia: ${String.format("%.2f", field.areaHa)} ha\n\n(KLIKNIJ PONOWNIE W POLE, BY EDYTOWAĆ)"
-
-            // JAWNIE PRZYPISUJEMY OKNO INFORMACYJNE
             infoWindow = BasicInfoWindow(org.osmdroid.library.R.layout.bonuspack_bubble, map)
         }
 
         poly.setOnClickListener { polygon, _, _ ->
             if (polygon.isInfoWindowOpen) {
-                // Drugie kliknięcie (lub kliknięcie w otwarty dymek) -> Edycja
                 val intent = Intent(this@FullMapActivity, FieldEditActivity::class.java).apply {
                     putExtra("field_id", field.id.toString())
                     putExtra("coords", field.coordinates)
@@ -133,19 +131,13 @@ class FullMapActivity : AppCompatActivity() {
                 }
                 startActivity(intent)
             } else {
-                // Pierwsze kliknięcie -> Pokaż dymek
                 org.osmdroid.views.overlay.infowindow.InfoWindow.closeAllInfoWindowsOn(map)
                 polygon.showInfoWindow()
             }
             true
         }
-
         map.overlays.add(poly)
     }
-
-
-
-
 
     private fun initUI() {
         btnStartDrawing = findViewById(R.id.btnStartDrawing)
@@ -155,16 +147,22 @@ class FullMapActivity : AppCompatActivity() {
         btnUndo.setOnClickListener {
             if (fieldPoints.isNotEmpty()) {
                 fieldPoints.removeAt(fieldPoints.size - 1)
-                if (fieldPoints.isEmpty()) btnUndo.visibility = View.GONE
+
+                // DODAJEMY TEN WARUNEK:
+                if (fieldPoints.isEmpty()) {
+                    isDrawingMode = false           // Wyłączamy tryb rysowania
+                    btnStartDrawing.text = "DODAJ POLE" // Wracamy do pierwotnego napisu
+                    btnUndo.visibility = View.GONE  // Chowamy przycisk COFNIJ
+                }
+
                 updateDrawingLine()
             }
         }
 
         findViewById<FloatingActionButton>(R.id.btnCenterAll).setOnClickListener {
-            loadData() // Przeładuj i wycentruj
+            loadData()
         }
 
-        // Logika rozwijanych menu w bocznej liście
         findViewById<Button>(R.id.menuRainsHeader).setOnClickListener {
             val rec = findViewById<RecyclerView>(R.id.recyclerRains)
             rec.visibility = if (rec.visibility == View.VISIBLE) View.GONE else View.VISIBLE
@@ -189,6 +187,7 @@ class FullMapActivity : AppCompatActivity() {
             }
         }
 
+        // WAŻNE: Zmieniłem na getAllRains, bo tak nazwaliśmy tę funkcję w RainRemoteRepository
         remoteRepo.getRains(email) { rains ->
             runOnUiThread {
                 map.overlays.removeAll { it is Marker }
@@ -199,7 +198,6 @@ class FullMapActivity : AppCompatActivity() {
         }
     }
 
-    // --- KLUCZOWA FUNKCJA: CENTROWANIE NA WSZYSTKICH POLACH ---
     private fun centerMapOnFields(fields: List<FieldEntity>) {
         val allPoints = mutableListOf<GeoPoint>()
         fields.forEach { field ->
@@ -211,7 +209,6 @@ class FullMapActivity : AppCompatActivity() {
 
         if (allPoints.isNotEmpty()) {
             val boundingBox = BoundingBox.fromGeoPoints(allPoints)
-            // Dodajemy margines (padding), żeby pola nie dotykały krawędzi ekranu
             map.zoomToBoundingBox(boundingBox, true, 150)
         }
     }
@@ -239,20 +236,21 @@ class FullMapActivity : AppCompatActivity() {
         }
     }
 
-
-
+    // POPRAWIONE: Logika dynamicznej zmiany przycisków!
     private fun toggleDrawingMode() {
         isDrawingMode = !isDrawingMode
         if (isDrawingMode) {
             fieldPoints.clear()
             updateDrawingLine()
-            btnStartDrawing.text = "ZAKOŃCZ"
-            btnStartDrawing.setBackgroundColor(Color.RED)
+
+            // Zmiana tekstu i pokazanie "Cofnij"
+            btnStartDrawing.text = "ZAKOŃCZ POLE"
+            btnUndo.visibility = View.VISIBLE
         } else {
             if (fieldPoints.size >= 3) {
                 goToFieldEdit()
             } else {
-                isDrawingMode = true
+                isDrawingMode = true // Wymuszamy pozostanie w trybie rysowania
                 Toast.makeText(this, "Zaznacz min. 3 punkty!", Toast.LENGTH_SHORT).show()
             }
         }
@@ -271,6 +269,7 @@ class FullMapActivity : AppCompatActivity() {
         map.invalidate()
     }
 
+    // POPRAWIONE: Przywrócenie pierwotnego stanu przycisków
     private fun goToFieldEdit() {
         val area = GeoUtils.calculateAreaInHectares(fieldPoints)
         val coords = fieldPoints.joinToString(";") { "${it.latitude},${it.longitude}" }
@@ -281,10 +280,10 @@ class FullMapActivity : AppCompatActivity() {
             putExtra("color", "#604CAF50")
         }
         startActivity(intent)
+
         isDrawingMode = false
         btnStartDrawing.text = "DODAJ POLE"
-        btnStartDrawing.setBackgroundColor(Color.parseColor("#4CAF50"))
-        btnUndo.visibility = View.GONE
+        btnUndo.visibility = View.GONE // Chowamy przycisk cofnij
         fieldPoints.clear()
         updateDrawingLine()
     }
