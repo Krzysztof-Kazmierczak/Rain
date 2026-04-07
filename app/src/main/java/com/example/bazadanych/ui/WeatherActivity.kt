@@ -1,5 +1,6 @@
 package com.example.bazadanych.ui
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -77,17 +78,31 @@ class WeatherActivity : AppCompatActivity() {
             ApiClient.rainTech.getCurrentWeather(field.id.toInt()).enqueue(object : Callback<FieldHistory> {
                 override fun onResponse(call: Call<FieldHistory>, response: Response<FieldHistory>) {
                     val data = response.body()
-                    if (response.isSuccessful && data != null) {
+                    if (response.isSuccessful && data != null && data.recorded_at != "Brak danych") {
                         runOnUiThread {
-                            holder.tvAdviceTitle.text = "Dane z serwera (${data.recorded_at})"
+                            holder.tvAdviceTitle.text = "Stan pola (${data.recorded_at})"
                             holder.tvAdviceTitle.setTextColor(Color.parseColor("#4CAF50"))
                             holder.tvAdviceMessage.text = "Temp: ${data.temperature}°C, Opady: ${data.rain_mm}mm"
 
-                            // Tu w przyszłości podepniemy naszego AI Doradcę!
+                            // --- LOGIKA DORADCY AI ---
+                            val temp = data.temperature ?: 0.0
+                            val rain = data.rain_mm ?: 0.0
+
+                            val (advice, color) = when {
+                                rain > 2.0 -> "Nie podlewaj! Spadło wystarczająco deszczu." to "#2196F3" // Niebieski
+                                temp > 25.0 && rain < 0.5 -> "UWAGA! Susza i upał. Włącz deszczownię." to "#F44336" // Czerwony
+                                temp < 5.0 -> "Niska temperatura. Rośliny rosną wolniej." to "#9E9E9E" // Szary
+                                else -> "Warunki optymalne. Monitoruj wilgotność gleby." to "#4CAF50" // Zielony
+                            }
+
+                            holder.tvAdviceTitle.text = "AI Doradca: $advice"
+                            holder.tvAdviceTitle.setTextColor(Color.parseColor(color))
                         }
                     } else {
                         runOnUiThread {
-                            holder.tvAdviceMessage.text = "Brak danych dla tego pola w bazie."
+                            holder.tvAdviceTitle.text = "Czekam na dane..."
+                            holder.tvAdviceMessage.text = "Pole dodane. Dane pogodowe pojawią się w ciągu godziny."
+                            holder.tvAdviceTitle.setTextColor(Color.GRAY)
                         }
                     }
                 }
@@ -100,6 +115,15 @@ class WeatherActivity : AppCompatActivity() {
                     }
                 }
             })
+
+            holder.itemView.setOnClickListener {
+                val intent = Intent(this@WeatherActivity, AnalyticsActivity::class.java)
+                intent.putExtra("FIELD_ID", field.id.toInt())
+                intent.putExtra("FIELD_NAME", field.name)
+                startActivity(intent)
+            }
+
+
         }
 
         override fun getItemCount() = fields.size

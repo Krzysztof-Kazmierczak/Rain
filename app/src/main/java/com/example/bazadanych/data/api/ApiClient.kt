@@ -11,11 +11,11 @@ import retrofit2.http.Query
 interface RainTechApi {
 
     // Pobieranie aktualnej pogody z Twojej bazy
-    @GET("api/v1/get_current_weather.php") // UWAGA: upewnij się, że ścieżka na serwerze jest taka sama!
+    @GET("/get_current_weather.php") // UWAGA: upewnij się, że ścieżka na serwerze jest taka sama!
     fun getCurrentWeather(@Query("field_id") fieldId: Int): Call<FieldHistory>
 
     // Pobieranie historii do wykresów
-    @GET("api/v1/get_history.php") // UWAGA: upewnij się, że ścieżka na serwerze jest taka sama!
+    @GET("/get_history.php") // UWAGA: upewnij się, że ścieżka na serwerze jest taka sama!
     fun getFieldHistory(@Query("field_id") fieldId: Int): Call<List<FieldHistory>>
 }
 

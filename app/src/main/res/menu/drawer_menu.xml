@@ -22,11 +22,6 @@
         android:title="Pogoda" />
 
     <item
-        android:id="@+id/nav_analytics"
-        android:icon="@drawable/baseline_cloud_24"
-        android:title="Pogoda" />
-
-    <item
         android:id="@+id/nav_logout"
         android:title="Wyloguj"
         android:icon="@android:drawable/ic_lock_power_off"/>

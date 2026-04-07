@@ -75,7 +75,7 @@ class HomeActivity : AppCompatActivity() {
                 R.id.nav_logout -> logout()
                 R.id.nav_map -> goFullMap()
                 R.id.nav_weather -> goWeather()
-                R.id.nav_analytics -> goAnalytics()
+               // R.id.nav_analytics -> goAnalytics()
                 }
             drawer.closeDrawers()
             true
