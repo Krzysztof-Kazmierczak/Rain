@@ -9,6 +9,7 @@ import com.example.bazadanych.data.api.ApiClient
 import com.example.bazadanych.data.db.FieldHistory
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.components.YAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
@@ -63,7 +64,10 @@ class AnalyticsActivity : AppCompatActivity() {
                 labelRotationAngle = -45f // Pochylamy daty, żeby się zmieściły
                 granularity = 1f
             }
-            axisRight.isEnabled = false
+            xAxis.setDrawGridLines(false)
+            axisRight.isEnabled = true // <-- WŁĄCZAMY PRAWĄ OŚ
+            axisLeft.axisMinimum = 0f  // Opcjonalnie: żeby temperatura nie wisiała w powietrzu
+            axisRight.axisMinimum = 0f
         }
     }
 
@@ -75,29 +79,28 @@ class AnalyticsActivity : AppCompatActivity() {
         }
 
         val lineData = LineData()
+        val cbTemp = findViewById<CheckBox>(R.id.cbTemp)
+        val cbRain = findViewById<CheckBox>(R.id.cbRain)
+        val cbSpeed = findViewById<CheckBox>(R.id.cbSpeed)
 
-        // 1. Temperatura
-        if (findViewById<CheckBox>(R.id.cbTemp).isChecked) {
-            val tempEntries = fullHistoryData.mapIndexed { i, d ->
-                Entry(i.toFloat(), (d.temperature ?: 0.0).toFloat())
-            }
-            lineData.addDataSet(createDataSet(tempEntries, "Temp (°C)", Color.RED))
+        lineChart.axisRight.isEnabled = cbRain.isChecked || cbSpeed.isChecked
+
+        // 1. Temperatura (LEWA OŚ)
+        if (cbTemp.isChecked) {
+            val tempEntries = fullHistoryData.mapIndexed { i, d -> Entry(i.toFloat(), (d.temperature ?: 0.0).toFloat()) }
+            lineData.addDataSet(createDataSet(tempEntries, "Temp (°C)", Color.RED, YAxis.AxisDependency.LEFT))
         }
 
-        // 2. Opady
-        if (findViewById<CheckBox>(R.id.cbRain).isChecked) {
-            val rainEntries = fullHistoryData.mapIndexed { i, d ->
-                Entry(i.toFloat(), (d.rain_mm ?: 0.0).toFloat())
-            }
-            lineData.addDataSet(createDataSet(rainEntries, "Opady (mm)", Color.BLUE))
+        // 2. Opady (PRAWA OŚ - dużo mniejsza skala)
+        if (cbRain.isChecked) {
+            val rainEntries = fullHistoryData.mapIndexed { i, d -> Entry(i.toFloat(), (d.rain_mm ?: 0.0).toFloat()) }
+            lineData.addDataSet(createDataSet(rainEntries, "Opady (mm)", Color.BLUE, YAxis.AxisDependency.RIGHT))
         }
 
-        // 3. Prędkość (Poprawione! Nie rzutujemy daty na Float tutaj)
-       /* if (findViewById<CheckBox>(R.id.cbSpeed).isChecked) {
-            val speedEntries = fullHistoryData.mapIndexed { i, d ->
-                Entry(i.toFloat(), (d.created_at ?: 0.0).toFloat())
-            }
-            lineData.addDataSet(createDataSet(speedEntries, "Prędkość (m/h)", Color.parseColor("#4CAF50")))
+        // 3. Prędkość (PRAWA OŚ)
+        /*if (cbSpeed.isChecked) {
+            val speedEntries = fullHistoryData.mapIndexed { i, d -> Entry(i.toFloat(), (d.machine_speed ?: 0.0).toFloat()) }
+            lineData.addDataSet(createDataSet(speedEntries, "Prędkość (m/h)", Color.parseColor("#4CAF50"), YAxis.AxisDependency.RIGHT))
         }*/
 
         // Ustawienie etykiet osi X (Daty)
@@ -116,15 +119,17 @@ class AnalyticsActivity : AppCompatActivity() {
         lineChart.invalidate()
     }
 
-    private fun createDataSet(entries: List<Entry>, label: String, colorCode: Int): LineDataSet {
+    // Dodajemy parametr 'axis' na końcu
+    private fun createDataSet(entries: List<Entry>, label: String, colorCode: Int, axis: YAxis.AxisDependency): LineDataSet {
         return LineDataSet(entries, label).apply {
+            axisDependency = axis // <-- TO ROZWIĄZUJE TWÓJ PROBLEM
             color = colorCode
             setCircleColor(colorCode)
             lineWidth = 2.5f
             circleRadius = 4f
             setDrawCircleHole(true)
             circleHoleRadius = 2f
-            setDrawValues(false) // Wyłączamy cyferki nad kropkami (czytelność!)
+            setDrawValues(false)
             mode = LineDataSet.Mode.CUBIC_BEZIER
         }
     }

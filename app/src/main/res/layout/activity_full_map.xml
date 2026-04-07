@@ -22,6 +22,7 @@
             app:titleTextColor="@android:color/white"
             app:navigationIcon="@drawable/baseline_menu_24"
             app:navigationIconTint="@android:color/white"/>
+
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -40,8 +41,7 @@
                 android:layout_alignParentEnd="true"
                 android:layout_alignParentTop="true"
                 android:src="@drawable/baseline_home_24"
-                app:backgroundTint="@android:color/white"
-                 />
+                app:backgroundTint="@android:color/white" />
         </RelativeLayout>
 
         <LinearLayout
@@ -73,9 +73,7 @@
                 android:layout_marginStart="8dp"
                 android:backgroundTint="#F44336"
                 android:textColor="#FFFFFF"
-                android:visibility="gone"
-                />
-
+                android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
 
@@ -88,10 +86,33 @@
         android:clickable="true"
         android:focusable="true">
 
-        <View
+        <LinearLayout
+            android:id="@+id/btnBackToMainMenu"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:background="?attr/colorPrimary"/>
+            android:background="?attr/colorPrimary"
+            android:foreground="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="16dp">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/baseline_arrow_back_24"
+                app:tint="@android:color/white" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="MENU GŁÓWNE"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <Button
             android:id="@+id/menuRainsHeader"

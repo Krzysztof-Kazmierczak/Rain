@@ -7,6 +7,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
@@ -65,7 +66,7 @@ class FullMapActivity : AppCompatActivity() {
     }
 
     // Dodanie przycisku wyjścia w Toolbaurze
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+   /* override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         // WAŻNE: upewnij się, że Twój plik menu nazywa się map_menu.xml. Jeśli to drawer_menu.xml, zostaw drawer_menu
         menuInflater.inflate(R.menu.drawer_menu, menu)
         return true
@@ -78,7 +79,7 @@ class FullMapActivity : AppCompatActivity() {
             return true
         }
         return super.onOptionsItemSelected(item)
-    }
+    }*/
 
     private fun setupMap() {
         map = findViewById(R.id.fullMap)
@@ -170,6 +171,10 @@ class FullMapActivity : AppCompatActivity() {
         findViewById<Button>(R.id.menuFieldsHeader).setOnClickListener {
             val rec = findViewById<RecyclerView>(R.id.recyclerFields)
             rec.visibility = if (rec.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+        }
+
+        findViewById<LinearLayout>(R.id.btnBackToMainMenu).setOnClickListener {
+            finish() // Wychodzi do menu głównego
         }
     }
 
