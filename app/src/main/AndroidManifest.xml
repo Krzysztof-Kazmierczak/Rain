@@ -38,6 +38,8 @@
         <activity android:name=".ui.ProfileActivity" android:exported="false" />
         <activity android:name=".ui.FieldEditActivity" android:exported="false" android:windowSoftInputMode="adjustPan" />
         <activity android:name=".ui.FullMapActivity" android:exported="false" android:windowSoftInputMode="adjustPan" />
+        <activity android:name=".ui.WeatherActivity" android:exported="false" />
+        <activity android:name=".ui.AnalyticsActivity" android:exported="false" android:theme="@style/Theme.BazaDanych" />
     </application>
 
 </manifest>
