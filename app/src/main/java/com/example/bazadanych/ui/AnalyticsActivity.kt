@@ -6,6 +6,7 @@ import android.graphics.DashPathEffect
 import android.os.Bundle
 import android.view.MotionEvent
 import android.widget.CheckBox
+import android.widget.ImageButton
 import androidx.appcompat.app.AppCompatActivity
 import com.example.bazadanych.R
 import com.example.bazadanych.data.api.ApiClient
@@ -36,6 +37,8 @@ class AnalyticsActivity : AppCompatActivity() {
     // Aktywne checkboxy (max 2 per wykres)
     private val activeWeatherParams = mutableListOf(R.id.cbTemp, R.id.cbRain)
     private val activeMachineParams = mutableListOf(R.id.cbSpeed)
+    private var currentInterval: Int = 1 // Domyślnie surowe dane z API to co 3h
+    private var isForecastVisible: Boolean = true // Domyślnie prognoza jest włączona
 
     private var displayData: List<FieldHistory> = emptyList()
 
@@ -63,13 +66,37 @@ class AnalyticsActivity : AppCompatActivity() {
         setupCheckboxes()
         loadDataFromServer(fieldId)
 
+        // Obsługa przycisku oka (włącz/wyłącz prognozę)
+        val btnToggleForecast = findViewById<ImageButton>(R.id.btnToggleForecast)
+        btnToggleForecast.setOnClickListener {
+            isForecastVisible = !isForecastVisible
+
+            // Zmiana ikony
+            val iconRes = if (isForecastVisible) R.drawable.ic_visibility else R.drawable.ic_visibility
+            btnToggleForecast.setImageResource(iconRes)
+
+            // Opcjonalny mały komunikat
+            val msg = if (isForecastVisible) "Prognoza włączona" else "Prognoza ukryta"
+            android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show()
+
+            updateChartsData() // Przerysuj wykresy
+        }
+
+        // Zmodyfikowany nasłuchiwacz Chipów (obsługa 1h)
         findViewById<ChipGroup>(R.id.chipGroupInterval).setOnCheckedStateChangeListener { group, checkedIds ->
             val interval = when(checkedIds.first()) {
-                R.id.chip3h -> 3
+                R.id.chip1h -> 1
                 R.id.chip12h -> 12
                 R.id.chipDay -> 24
-                else -> 0 // Surowe
+                else -> 3 // Domyślne Surowe (3h)
             }
+
+            // Komunikat dla 1h
+            if (interval == 1) {
+                android.widget.Toast.makeText(this, "Skala 1h pokazuje tylko historię maszyny. Prognoza jest co 3h.", android.widget.Toast.LENGTH_LONG).show()
+            }
+
+            currentInterval = interval
             applyAggregation(interval)
         }
     }
@@ -105,23 +132,24 @@ class AnalyticsActivity : AppCompatActivity() {
     }
 
     private fun applyAggregation(hours: Int) {
-        if (hours == 0) {
+        if (hours == 1) {
+            // Magia dla 1h: Bierzemy surowe dane, ale CAŁKOWICIE wyrzucamy prognozę (zostaje tylko historia)
+            displayData = fullHistoryData.filter { it.is_forecast != 1 }
+        } else if (hours == 0 || hours == 3) {
             displayData = fullHistoryData
         } else {
-            // Magia grupowania: bierzemy punkty co X godzin i wyciągamy średnią
-            // Dla uproszczenia (skoro dane z API są co 3h), hours / 3 powie nam co ile rekordów brać średnią
             val step = (hours / 3).coerceAtLeast(1)
             displayData = fullHistoryData.windowed(size = step, step = step, partialWindows = true).map { window ->
                 FieldHistory(
+                    // ... (Twoje obecne mapowanie pól ze średnimi i sumami) ...
                     id = window[0].id,
                     field_id = window[0].field_id,
                     temperature = window.mapNotNull { it.temperature }.average(),
-                    rain_mm = window.mapNotNull { it.rain_mm }.sum(), // Opady lepiej sumować niż średniować
+                    rain_mm = window.mapNotNull { it.rain_mm }.sum(),
                     humidity = window.mapNotNull { it.humidity }.average().toInt(),
                     wind_speed = window.mapNotNull { it.wind_speed }.average(),
-                    is_forecast = window.last().is_forecast, // Jeśli choć jeden w oknie to prognoza, traktujemy jako prognozę
+                    is_forecast = window.last().is_forecast,
                     recorded_at = window.last().recorded_at,
-                    // ... reszta pól ...
                     machine_speed = window.mapNotNull { it.machine_speed }.average(),
                     wind_deg = window[0].wind_deg,
                     pressure = window[0].pressure,
@@ -129,7 +157,7 @@ class AnalyticsActivity : AppCompatActivity() {
                 )
             }
         }
-        updateChartsData() // Odśwież wykresy z nowymi danymi
+        updateChartsData()
     }
 
     private fun setupChartStyle(chart: LineChart, isTopChart: Boolean) {
@@ -147,18 +175,30 @@ class AnalyticsActivity : AppCompatActivity() {
             xAxis.apply {
                 position = XAxis.XAxisPosition.BOTTOM
                 setDrawGridLines(true)
+                // TO NAPRAWIA PROBLEM POWIELAJĄCYCH SIĘ GODZIN:
                 granularity = 1f
-                setDrawLabels(true) // Wyświetlamy na obu wykresach
+                isGranularityEnabled = true
+
+                setDrawLabels(true)
                 labelRotationAngle = -45f
 
                 valueFormatter = object : ValueFormatter() {
                     override fun getFormattedValue(value: Float): String {
                         val index = value.toInt()
-                        // Używamy displayData, żeby etykiety pasowały do tego, co widzimy
-                        return if (index >= 0 && index < displayData.size) {
-                            val date = displayData[index].recorded_at ?: ""
-                            if (date.contains(" ")) date.substringAfter(" ").substringBeforeLast(":") else date
-                        } else ""
+                        if (index >= 0 && index < displayData.size) {
+                            val fullDate = displayData[index].recorded_at ?: ""
+
+                            // Dzielimy datę i godzinę (z "2026-04-07 08:00:00")
+                            if (fullDate.contains(" ")) {
+                                val datePart = fullDate.substringBefore(" ") // "2026-04-07"
+                                val timePart = fullDate.substringAfter(" ").substringBeforeLast(":") // "08:00"
+
+                                // Jeśli wybraliśmy widok "1 Dzień", pokazujemy datę. Jak inny - godzinę.
+                                return if (currentInterval >= 24) datePart else timePart
+                            }
+                            return fullDate
+                        }
+                        return ""
                     }
                 }
             }
@@ -178,8 +218,8 @@ class AnalyticsActivity : AppCompatActivity() {
         chartMachine.marker = marker
 
         // 3. Rysowanie linii "TERAZ" (pionowa czarna kreska)
-        drawNowLine(chartWeather)
-        drawNowLine(chartMachine)
+       // drawNowLine(chartWeather)
+        //drawNowLine(chartMachine)
 
         // 4. PRZYGOTOWANIE DANYCH DLA WYKRESU GÓRNEGO (POGODA)
         val weatherData = LineData()
@@ -258,8 +298,8 @@ class AnalyticsActivity : AppCompatActivity() {
             }
         }
 
-        // Łączymy linie (ostatni punkt przeszłości jest pierwszym przyszłości)
-        if (pastEntries.isNotEmpty() && futureEntries.isNotEmpty()) {
+        // Łączymy linie tylko jeśli będziemy rysować prognozę
+        if (isForecastVisible && pastEntries.isNotEmpty() && futureEntries.isNotEmpty()) {
             futureEntries.add(0, pastEntries.last())
         }
 
@@ -268,8 +308,8 @@ class AnalyticsActivity : AppCompatActivity() {
             lineData.addDataSet(createDataSet(pastEntries, label, colorCode, axis, isDashed = false))
         }
 
-        // 2. Dodajemy linię PRZERYWANĄ (Prognoza)
-        if (futureEntries.size > 1) { // Rysuj tylko, gdy faktycznie są jakieś dane z przyszłości
+        // 2. Dodajemy linię PRZERYWANĄ (Prognoza) - TYLKO jeśli "oko" jest włączone!
+        if (isForecastVisible && futureEntries.size > 1) {
             lineData.addDataSet(createDataSet(futureEntries, "$label (Prognoza)", colorCode, axis, isDashed = true))
         }
     }
@@ -291,8 +331,10 @@ class AnalyticsActivity : AppCompatActivity() {
             }
 
             if (isDashed) {
-                enableDashedLine(10f, 10f, 0f) // Magia linii przerywanej dla prognozy!
-                setDrawCircles(false) // Mniej kropek na prognozie
+                enableDashedLine(10f, 10f, 0f)
+                setDrawCircles(false)
+                // TA LINIJKA USUWA PODWÓJNY WPIS Z LEGENDY:
+                form = com.github.mikephil.charting.components.Legend.LegendForm.NONE
             }
         }
     }

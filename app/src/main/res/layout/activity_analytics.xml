@@ -57,7 +57,7 @@
         app:singleSelection="true">
 
         <com.google.android.material.chip.Chip
-            android:id="@+id/chipRaw"
+            android:id="@+id/chip1h"
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -92,12 +92,26 @@
         android:orientation="vertical"
         android:weightSum="10">
 
-        <com.github.mikephil.charting.charts.LineChart
-            android:id="@+id/chartWeather"
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="5"
-            android:layout_margin="8dp"/>
+            android:layout_height="wrap_content">
+
+            <com.github.mikephil.charting.charts.LineChart
+                android:id="@+id/chartWeather"
+                android:layout_width="match_parent"
+                android:layout_height="300dp" />
+
+            <ImageButton
+                android:id="@+id/btnToggleForecast"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_gravity="top|end"
+                android:layout_margin="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_visibility"
+                android:tooltipText="Pokaż/Ukryj Prognozę"
+                app:tint="@android:color/darker_gray" />
+        </FrameLayout>
 
         <com.github.mikephil.charting.charts.LineChart
             android:id="@+id/chartMachine"
