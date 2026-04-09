@@ -96,10 +96,35 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp">
+
+                <TextView
+                    android:id="@+id/tvWeatherLeftLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentLeft="true"
+                    android:text="← Jednostki Lewa"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvWeatherRightLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentRight="true"
+                    android:text="Jednostki Prawa →"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </RelativeLayout>
+
             <com.github.mikephil.charting.charts.LineChart
                 android:id="@+id/chartWeather"
                 android:layout_width="match_parent"
-                android:layout_height="300dp" />
+                android:layout_height="250dp" />
 
             <ImageButton
                 android:id="@+id/btnToggleForecast"
@@ -113,12 +138,33 @@
                 app:tint="@android:color/darker_gray" />
         </FrameLayout>
 
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="10dp">
+            <TextView
+                android:id="@+id/tvMachineLeftLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:text="Lewa"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/tvMachineRightLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentRight="true"
+                android:text="Prawa"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+        </RelativeLayout>
+
         <com.github.mikephil.charting.charts.LineChart
             android:id="@+id/chartMachine"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="5"
-            android:layout_margin="8dp"/>
+            android:layout_height="match_parent" />
     </LinearLayout>
 
 </LinearLayout>

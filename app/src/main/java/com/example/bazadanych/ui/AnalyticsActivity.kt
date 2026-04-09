@@ -1,12 +1,12 @@
 package com.example.bazadanych.ui
 
-import CustomMarkerView
 import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.os.Bundle
 import android.view.MotionEvent
 import android.widget.CheckBox
 import android.widget.ImageButton
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.example.bazadanych.R
 import com.example.bazadanych.data.api.ApiClient
@@ -84,7 +84,10 @@ class AnalyticsActivity : AppCompatActivity() {
 
         // Zmodyfikowany nasłuchiwacz Chipów (obsługa 1h)
         findViewById<ChipGroup>(R.id.chipGroupInterval).setOnCheckedStateChangeListener { group, checkedIds ->
-            val interval = when(checkedIds.first()) {
+            // Używamy firstOrNull zamiast first, aby uniknąć błędu gdy nic nie jest zaznaczone
+            val checkedId = checkedIds.firstOrNull() ?: return@setOnCheckedStateChangeListener
+
+            val interval = when(checkedId) {
                 R.id.chip1h -> 1
                 R.id.chip12h -> 12
                 R.id.chipDay -> 24
@@ -153,7 +156,8 @@ class AnalyticsActivity : AppCompatActivity() {
                     machine_speed = window.mapNotNull { it.machine_speed }.average(),
                     wind_deg = window[0].wind_deg,
                     pressure = window[0].pressure,
-                    clouds = window[0].clouds
+                    clouds = window[0].clouds,
+                    created_at = window[0].created_at
                 )
             }
         }
@@ -163,42 +167,45 @@ class AnalyticsActivity : AppCompatActivity() {
     private fun setupChartStyle(chart: LineChart, isTopChart: Boolean) {
         chart.apply {
             description.isEnabled = false
-            setNoDataText("Pobieranie danych...")
+            setNoDataText("Brak danych...")
             setTouchEnabled(true)
             isDragEnabled = true
             setScaleEnabled(true)
             setPinchZoom(true)
 
             axisRight.isEnabled = true
-            axisLeft.axisMinimum = 0f
+            //axisLeft.axisMinimum = 0f
 
             xAxis.apply {
                 position = XAxis.XAxisPosition.BOTTOM
                 setDrawGridLines(true)
                 // TO NAPRAWIA PROBLEM POWIELAJĄCYCH SIĘ GODZIN:
                 granularity = 1f
+                chartWeather.setVisibleXRangeMaximum(24f) // Pokazuj 24 godziny na ekranie (zamiast 10 punktów)
+                chartMachine.setVisibleXRangeMaximum(24f)
                 isGranularityEnabled = true
 
                 setDrawLabels(true)
                 labelRotationAngle = -45f
 
-                valueFormatter = object : ValueFormatter() {
+                xAxis.valueFormatter = object : ValueFormatter() {
                     override fun getFormattedValue(value: Float): String {
-                        val index = value.toInt()
-                        if (index >= 0 && index < displayData.size) {
-                            val fullDate = displayData[index].recorded_at ?: ""
+                        // value to teraz liczba godzin od początku wykresu
+                        val firstTimeStr = displayData.firstOrNull()?.recorded_at ?: return ""
+                        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+                        val calendar = java.util.Calendar.getInstance()
 
-                            // Dzielimy datę i godzinę (z "2026-04-07 08:00:00")
-                            if (fullDate.contains(" ")) {
-                                val datePart = fullDate.substringBefore(" ") // "2026-04-07"
-                                val timePart = fullDate.substringAfter(" ").substringBeforeLast(":") // "08:00"
+                        calendar.time = sdf.parse(firstTimeStr) ?: return ""
+                        calendar.add(java.util.Calendar.HOUR_OF_DAY, value.toInt()) // Dodajemy 'value' godzin
 
-                                // Jeśli wybraliśmy widok "1 Dzień", pokazujemy datę. Jak inny - godzinę.
-                                return if (currentInterval >= 24) datePart else timePart
-                            }
-                            return fullDate
+                        val resultDate = calendar.time
+                        val outSdf = if (currentInterval >= 24) {
+                            java.text.SimpleDateFormat("dd.MM", java.util.Locale.getDefault())
+                        } else {
+                            java.text.SimpleDateFormat("HH:00", java.util.Locale.getDefault())
                         }
-                        return ""
+
+                        return outSdf.format(resultDate)
                     }
                 }
             }
@@ -209,71 +216,81 @@ class AnalyticsActivity : AppCompatActivity() {
     }
 
     private fun updateChartsData() {
-        // 1. Zabezpieczenie przed pustymi danymi
-        if (displayData.isEmpty()) return
+        // DODANE: Czyszczenie znaczników przed przerysowaniem, żeby uniknąć NullPointerException
+        chartWeather.highlightValues(null)
+        chartMachine.highlightValues(null)
 
-        // 2. Konfiguracja markerów (dymków) - robimy to raz dla obu wykresów
-        val marker = CustomMarkerView(this, R.layout.view_marker, displayData)
-        chartWeather.marker = marker
-        chartMachine.marker = marker
+        if (fullHistoryData.isEmpty()) return
 
-        // 3. Rysowanie linii "TERAZ" (pionowa czarna kreska)
-       // drawNowLine(chartWeather)
-        //drawNowLine(chartMachine)
-
-        // 4. PRZYGOTOWANIE DANYCH DLA WYKRESU GÓRNEGO (POGODA)
+        // WYKRES POGODY
         val weatherData = LineData()
+        val tvWeatherLeft = findViewById<TextView>(R.id.tvWeatherLeftLabel)
+        val tvWeatherRight = findViewById<TextView>(R.id.tvWeatherRightLabel)
 
-        if (activeWeatherParams.contains(R.id.cbTemp)) {
-            addLineWithForecast(weatherData, "Temp (°C)", Color.RED, YAxis.AxisDependency.LEFT) {
-                it.temperature?.toFloat()
+        // Czyścimy etykiety i osie na start
+        tvWeatherLeft.text = ""
+        tvWeatherRight.text = ""
+        chartWeather.axisLeft.isEnabled = false
+        chartWeather.axisRight.isEnabled = false
+
+        activeWeatherParams.forEachIndexed { index, id ->
+            val (label, color, extractor) = getParamInfo(id)
+            val axis = if (index == 0) YAxis.AxisDependency.LEFT else YAxis.AxisDependency.RIGHT
+
+            addLineWithForecast(weatherData, label, color, axis, extractor)
+
+            if (index == 0) {
+                tvWeatherLeft.text = "← $label"
+                chartWeather.axisLeft.isEnabled = true
+                chartWeather.axisLeft.textColor = color
+            } else {
+                tvWeatherRight.text = "$label →"
+                chartWeather.axisRight.isEnabled = true
+                chartWeather.axisRight.textColor = color
             }
         }
 
-        if (activeWeatherParams.contains(R.id.cbRain)) {
-            addLineWithForecast(weatherData, "Opady (mm)", Color.BLUE, YAxis.AxisDependency.RIGHT) {
-                it.rain_mm?.toFloat()
-            }
-        }
-
-        if (activeWeatherParams.contains(R.id.cbClouds)) {
-            addLineWithForecast(weatherData, "Chmury (%)", Color.GRAY, YAxis.AxisDependency.RIGHT) {
-                it.clouds?.toFloat()
-            }
-        }
-
-        // 5. PRZYGOTOWANIE DANYCH DLA WYKRESU DOLNEGO (MASZYNA / WIATR)
+        // WYKRES MASZYNY
         val machineData = LineData()
+        val tvMachineLeft = findViewById<TextView>(R.id.tvMachineLeftLabel)
+        val tvMachineRight = findViewById<TextView>(R.id.tvMachineRightLabel)
 
-        if (activeMachineParams.contains(R.id.cbSpeed)) {
-            // Prędkość tylko dla historii (is_forecast != 1)
-            addLineWithForecast(machineData, "Prędkość (km/h)", Color.parseColor("#4CAF50"), YAxis.AxisDependency.LEFT) {
-                if (it.is_forecast == 1) null else it.machine_speed?.toFloat()
+        tvMachineLeft.text = ""
+        tvMachineRight.text = ""
+        chartMachine.axisLeft.isEnabled = false
+        chartMachine.axisRight.isEnabled = false
+
+        activeMachineParams.forEachIndexed { index, id ->
+            val (label, color, extractor) = getParamInfo(id)
+            val axis = if (index == 0) YAxis.AxisDependency.LEFT else YAxis.AxisDependency.RIGHT
+
+            addLineWithForecast(machineData, label, color, axis, extractor)
+
+            if (index == 0) {
+                tvMachineLeft.text = "← $label"
+                chartMachine.axisLeft.isEnabled = true
+                chartMachine.axisLeft.textColor = color
+            } else {
+                tvMachineRight.text = "$label →"
+                chartMachine.axisRight.isEnabled = true
+                chartMachine.axisRight.textColor = color
             }
         }
 
-        if (activeMachineParams.contains(R.id.cbWind)) {
-            addLineWithForecast(machineData, "Wiatr (m/s)", Color.parseColor("#FF9800"), YAxis.AxisDependency.RIGHT) {
-                it.wind_speed?.toFloat()
-            }
-        }
+        // Odświeżanie (z obsługą pustego wykresu)
+        if (weatherData.dataSetCount > 0) chartWeather.data = weatherData else chartWeather.clear()
+        if (machineData.dataSetCount > 0) chartMachine.data = machineData else chartMachine.clear()
 
-        if (activeMachineParams.contains(R.id.cbHumidity)) {
-            addLineWithForecast(machineData, "Wilgotność (%)", Color.parseColor("#00BCD4"), YAxis.AxisDependency.RIGHT) {
-                it.humidity?.toFloat()
-            }
-        }
+        // Reszta standardowych ustawień
+        val markerView = CustomMarkerView(this, R.layout.view_marker)
 
-        // 6. FINALNE ODŚWIEŻENIE WYKRESÓW
-        chartWeather.data = weatherData
-        chartMachine.data = machineData
+        // Przypisz do obu wykresów
+        chartWeather.marker = markerView
+        chartMachine.marker = markerView
 
-        chartWeather.invalidate() // Przerysuj górny
-        chartMachine.invalidate() // Przerysuj dolny
-
-        // 7. Synchronizacja widoku (żeby oba pokazywały ten sam zakres po zmianie danych)
-        chartWeather.moveViewToX(displayData.size.toFloat())
-        chartMachine.moveViewToX(displayData.size.toFloat())
+        // Odśwież wykresy
+        chartWeather.invalidate()
+        chartMachine.invalidate()
     }
 
     // Nowa super-funkcja, która automatycznie tnie dane na historię i prognozę
@@ -287,29 +304,37 @@ class AnalyticsActivity : AppCompatActivity() {
         val pastEntries = mutableListOf<Entry>()
         val futureEntries = mutableListOf<Entry>()
 
-        displayData.forEachIndexed { i, d ->
+        // Pobieramy czas pierwszego rekordu jako punkt odniesienia (X = 0)
+        val firstTimeStr = displayData.firstOrNull()?.recorded_at ?: return
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+        val firstDate = sdf.parse(firstTimeStr) ?: return
+        val firstTimestamp = firstDate.time
+
+        displayData.forEach { d ->
             val value = valueExtractor(d)
             if (value != null) {
+
+                val currentDate = sdf.parse(d.recorded_at ?: "") ?: return@forEach
+                val hoursOffset = (currentDate.time - firstTimestamp).toFloat() / (1000 * 60 * 60)
+
                 if (d.is_forecast != 1) {
-                    pastEntries.add(Entry(i.toFloat(), value))
+                    pastEntries.add(Entry(hoursOffset, value, d))
                 } else {
-                    futureEntries.add(Entry(i.toFloat(), value))
+                    futureEntries.add(Entry(hoursOffset, value, d))
                 }
             }
         }
 
-        // Łączymy linie tylko jeśli będziemy rysować prognozę
         if (isForecastVisible && pastEntries.isNotEmpty() && futureEntries.isNotEmpty()) {
             futureEntries.add(0, pastEntries.last())
         }
 
-        // 1. Dodajemy linię CIĄGŁĄ (Historia)
         if (pastEntries.isNotEmpty()) {
             lineData.addDataSet(createDataSet(pastEntries, label, colorCode, axis, isDashed = false))
         }
-
-        // 2. Dodajemy linię PRZERYWANĄ (Prognoza) - TYLKO jeśli "oko" jest włączone!
+        // Znajdź to w addLineWithForecast (okolice końca funkcji)
         if (isForecastVisible && futureEntries.size > 1) {
+            // ZMIANA: Zamiast "" wpisz label + " (Prognoza)"
             lineData.addDataSet(createDataSet(futureEntries, "$label (Prognoza)", colorCode, axis, isDashed = true))
         }
     }
@@ -324,36 +349,29 @@ class AnalyticsActivity : AppCompatActivity() {
             setDrawValues(false)
             mode = LineDataSet.Mode.CUBIC_BEZIER
 
+            // --- KONFIGURACJA LINII POMOCNICZYCH (CELOWNIKA) ---
+            setDrawHighlightIndicators(true) // Włącz linie pomocnicze
+            setDrawHorizontalHighlightIndicator(true) // Linia pozioma (do osi Y)
+            setDrawVerticalHighlightIndicator(true)   // Linia pionowa (do osi X)
+
+            highlightLineWidth = 2f           // GRUBOŚĆ: Ustaw na 2f lub 3f, żeby były wyraźne
+            highLightColor = colorCode        // KOLOR: Ustawiamy taki sam jak linia wykresu!
+
+            // Opcjonalnie: kreskowanie linii pomocniczej, żeby nie myliła się z wykresami
+            enableDashedHighlightLine(10f, 5f, 0f)
+            // ---------------------------------------------------
+
             if (label.contains("Opady")) {
                 setDrawFilled(true)
                 fillColor = Color.BLUE
-                fillAlpha = 50 // Przezroczystość
+                fillAlpha = 50
             }
 
             if (isDashed) {
                 enableDashedLine(10f, 10f, 0f)
                 setDrawCircles(false)
-                // TA LINIJKA USUWA PODWÓJNY WPIS Z LEGENDY:
                 form = com.github.mikephil.charting.components.Legend.LegendForm.NONE
             }
-        }
-    }
-
-    private fun drawNowLine(chart: LineChart) {
-        chart.xAxis.removeAllLimitLines()
-
-        // Szukamy pierwszego indeksu, który jest prognozą
-        val nowIndex = displayData.indexOfFirst { it.is_forecast == 1 }
-
-        if (nowIndex != -1) {
-            val nowLine = com.github.mikephil.charting.components.LimitLine(nowIndex.toFloat(), "TERAZ")
-            nowLine.lineColor = Color.BLACK
-            nowLine.lineWidth = 2f
-            nowLine.enableDashedLine(10f, 5f, 0f)
-            nowLine.labelPosition = com.github.mikephil.charting.components.LimitLine.LimitLabelPosition.RIGHT_TOP
-            nowLine.textSize = 10f
-
-            chart.xAxis.addLimitLine(nowLine)
         }
     }
 
@@ -378,9 +396,22 @@ class AnalyticsActivity : AppCompatActivity() {
         ApiClient.rainTech.getFieldHistory(fieldId).enqueue(object : Callback<List<FieldHistory>> {
             override fun onResponse(call: Call<List<FieldHistory>>, response: Response<List<FieldHistory>>) {
                 if (response.isSuccessful && response.body() != null) {
-                    fullHistoryData = response.body()!!
-                    displayData = fullHistoryData
-                    updateChartsData()
+                    // Tu aplikujemy Twój filtr ratunkowy ucinający stare prognozy z PHP
+                    val rawData = response.body()!!
+                    val lastHistoryPoint = rawData.lastOrNull { it.is_forecast == 0 }
+
+                    fullHistoryData = if (lastHistoryPoint != null && lastHistoryPoint.recorded_at != null) {
+                        rawData.filter {
+                            it.is_forecast == 0 ||
+                                    (it.is_forecast == 1 && it.recorded_at!! > lastHistoryPoint.recorded_at!!)
+                        }
+                    } else {
+                        rawData
+                    }
+
+                    // ZMIANA: Zamiast od razu przypisywać displayData, wywołujemy applyAggregation!
+                    // Ponieważ currentInterval wynosi 1 (domyślnie), aplikacja od razu nałoży skalę 1h.
+                    applyAggregation(currentInterval)
                 }
             }
             override fun onFailure(call: Call<List<FieldHistory>>, t: Throwable) {
@@ -389,4 +420,16 @@ class AnalyticsActivity : AppCompatActivity() {
             }
         })
     }
+    private fun getParamInfo(id: Int): Triple<String, Int, (FieldHistory) -> Float?> {
+        return when (id) {
+            R.id.cbTemp -> Triple("Temperatura (°C)", Color.RED) { it.temperature?.toFloat() }
+            R.id.cbRain -> Triple("Opady (mm)", Color.BLUE) { it.rain_mm?.toFloat() }
+            R.id.cbClouds -> Triple("Chmury (%)", Color.DKGRAY) { it.clouds?.toFloat() }
+            R.id.cbSpeed -> Triple("Prędkość (km/h)", Color.parseColor("#4CAF50")) { if (it.is_forecast == 1) null else it.machine_speed?.toFloat() }
+            R.id.cbWind -> Triple("Wiatr (m/s)", Color.parseColor("#FF9800")) { it.wind_speed?.toFloat() }
+            R.id.cbHumidity -> Triple("Wilgotność (%)", Color.parseColor("#00BCD4")) { it.humidity?.toFloat() }
+            else -> Triple("Błąd", Color.BLACK) { 0f }
+        }
+    }
+
 }
