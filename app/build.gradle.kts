@@ -1,14 +1,12 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.ksp)
 }
 
 android {
     namespace = "com.example.bazadanych"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1 }
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.bazadanych"
@@ -48,6 +46,8 @@ android {
 }
 
 dependencies {
+    val roomVersion = "2.6.1"
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -61,8 +61,12 @@ dependencies {
     implementation("org.osmdroid:osmdroid-android:6.1.18")
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.google.code.gson:gson:2.10.1")
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
-    implementation(libs.core.ktx)
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    ksp("androidx.room:room-compiler:$roomVersion")
+
     implementation(libs.androidx.swiperefreshlayout)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

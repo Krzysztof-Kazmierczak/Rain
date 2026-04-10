@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.bazadanych.R
+import com.example.bazadanych.data.local_db.CacheHelper
 import com.example.bazadanych.data.repository.RainRemoteRepository
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.navigation.NavigationView
@@ -92,28 +93,46 @@ class HomeActivity : AppCompatActivity() {
     private fun loadTiles() {
         val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
 
-        remoteRepo.getRains(email) { rains ->
-            // ⚠️ KLUCZOWA ZMIANA: OkHttp działa w tle, więc musimy wrócić do wątku UI!
-            runOnUiThread {
-                tiles.clear()
-
-                // Filtrowanie na pracujące i niepracujące
-                val workingRains = rains.filter { it.isWorking }
-                val stoppedRains = rains.filter { !it.isWorking }
-
-                // Dodawanie do listy
-                workingRains.forEach {
-                    tiles.add(RainTile(it.id, it.name, it.hoseLength, it.comment, false, true))
-                }
-
-                stoppedRains.forEach {
-                    tiles.add(RainTile(it.id, it.name, it.hoseLength, it.comment, false, false))
-                }
-
-                // Przycisk dodawania
+        // 1. NAJPIERW WCZYTUJEMY CACHE (żeby zawsze coś było)
+        val cachedRains: List<RainTile>? = CacheHelper.loadList(this, "HOME_TILES_CACHE")
+        if (cachedRains != null) {
+            tiles.clear()
+            tiles.addAll(cachedRains)
+            // Jeśli lista była pusta, a cache ma dane, dodajemy przycisk "Dodaj" na koniec
+            if (tiles.none { it.isAddButton }) {
                 tiles.add(RainTile("", "Dodaj deszczownię", "", "", true, false))
+            }
+            adapter.notifyDataSetChanged()
+        }
 
-                adapter.notifyDataSetChanged()
+        // 2. PRÓBA POBRANIA Z SIECI
+        remoteRepo.getRains(email) { rainsFromServer ->
+            runOnUiThread {
+                // SPRAWDZAMY CZY MAMY DANE Z SERWERA
+                if (rainsFromServer.isNotEmpty()) {
+                    tiles.clear()
+
+                    val workingRains = rainsFromServer.filter { it.isWorking }
+                    val stoppedRains = rainsFromServer.filter { !it.isWorking }
+
+                    workingRains.forEach {
+                        tiles.add(RainTile(it.id, it.name, it.hoseLength, it.comment, false, true))
+                    }
+                    stoppedRains.forEach {
+                        tiles.add(RainTile(it.id, it.name, it.hoseLength, it.comment, false, false))
+                    }
+                    tiles.add(RainTile("", "Dodaj deszczownię", "", "", true, false))
+
+                    // ZAPISUJEMY DO CACHE TYLKO GDY MAMY ŚWIEŻE DANE
+                    CacheHelper.saveList(this, "HOME_TILES_CACHE", tiles)
+                    CacheHelper.saveLastSyncTime(this)
+
+                    adapter.notifyDataSetChanged()
+                } else {
+                    // Jeśli rainsFromServer jest puste (błąd/brak neta), nic nie robimy.
+                    // Na ekranie zostają dane z cache, które wczytaliśmy w kroku 1.
+                    android.util.Log.d("AGRO_DEBUG", "Brak nowych danych z serwera, zostawiam cache.")
+                }
                 swipeRefresh.isRefreshing = false
             }
         }
@@ -146,8 +165,6 @@ class HomeActivity : AppCompatActivity() {
         val intent = Intent(this, FullMapActivity::class.java)
         startActivity(intent)
     }
-
-
     private fun goWeather() {
         val intent = Intent(this, WeatherActivity::class.java)
         startActivity(intent)

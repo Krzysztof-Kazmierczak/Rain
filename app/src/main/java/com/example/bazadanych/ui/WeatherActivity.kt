@@ -13,7 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.bazadanych.R
 import com.example.bazadanych.data.api.ApiClient
-import com.example.bazadanych.data.db.FieldEntity
+import com.example.bazadanych.data.db.FieldItem
 import com.example.bazadanych.data.db.FieldHistory
 import com.example.bazadanych.data.repository.RainRemoteRepository
 import com.google.android.material.appbar.MaterialToolbar
@@ -45,16 +45,29 @@ class WeatherActivity : AppCompatActivity() {
         val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
         if (email.isEmpty()) return
 
+        // 1. WCZYTAJ CACHE PÓL (Musisz importować CacheHelper na górze pliku!)
+        val cachedFields: List<FieldItem>? = com.example.bazadanych.data.local_db.CacheHelper.loadList(this, "WEATHER_FIELDS_CACHE")
+        if (cachedFields != null && cachedFields.isNotEmpty()) {
+            adapter = WeatherAdapter(cachedFields)
+            recyclerWeather.adapter = adapter
+        }
+
+        // 2. Pobierz z internetu
         remoteRepo.getAgriculturalFields(email) { fields ->
             runOnUiThread {
-                adapter = WeatherAdapter(fields)
-                recyclerWeather.adapter = adapter
+                if (fields.isNotEmpty()) {
+                    // Zapisz do pamięci na przyszłość
+                    com.example.bazadanych.data.local_db.CacheHelper.saveList(this@WeatherActivity, "WEATHER_FIELDS_CACHE", fields)
+
+                    adapter = WeatherAdapter(fields)
+                    recyclerWeather.adapter = adapter
+                }
             }
         }
     }
 
     // --- ADAPTER WEWNĘTRZNY ---
-    inner class WeatherAdapter(private val fields: List<FieldEntity>) : RecyclerView.Adapter<WeatherAdapter.ViewHolder>() {
+    inner class WeatherAdapter(private val fields: List<FieldItem>) : RecyclerView.Adapter<WeatherAdapter.ViewHolder>() {
 
         inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val tvFieldName: TextView = view.findViewById(R.id.tvFieldName)
@@ -109,9 +122,9 @@ class WeatherActivity : AppCompatActivity() {
 
                 override fun onFailure(call: Call<FieldHistory>, t: Throwable) {
                     runOnUiThread {
-                        holder.tvAdviceTitle.text = "❌ Błąd pobierania"
-                        holder.tvAdviceTitle.setTextColor(Color.RED)
-                        holder.tvAdviceMessage.text = "Brak połączenia z home.pl: ${t.message}"
+                        holder.tvAdviceTitle.text = "Stan z pamięci (Brak sieci)"
+                        holder.tvAdviceTitle.setTextColor(Color.GRAY)
+                        // Nie zmieniamy treści wiadomości, żeby użytkownik wiedział z czego to pole się składa
                     }
                 }
             })

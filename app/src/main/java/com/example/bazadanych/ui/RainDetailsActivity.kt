@@ -5,16 +5,15 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.bazadanych.R
-import com.example.bazadanych.data.db.FieldEntity
 import com.example.bazadanych.data.db.Rain
 import com.example.bazadanych.data.calculation.GeoUtils
+import com.example.bazadanych.data.db.FieldItem
 import com.example.bazadanych.data.repository.RainRemoteRepository
 import com.google.android.material.appbar.MaterialToolbar
 import org.osmdroid.config.Configuration
@@ -213,20 +212,30 @@ class RainDetailsActivity : AppCompatActivity() {
         val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
         if (email.isEmpty()) return
 
+        // 1. ŁADOWANIE OFFLINE - zmieniamy <FieldEntity> na <FieldItem>
+        val cachedFields = com.example.bazadanych.data.local_db.CacheHelper.loadList<FieldItem>(this, "FIELDS_CACHE")
+        if (cachedFields != null && cachedFields.isNotEmpty()) {
+            // Usuwamy stare polygony (oprócz linii rysowania)
+            map.overlays.removeAll { overlay -> overlay is Polygon && overlay != drawingPolyline }
+            cachedFields.forEach { drawFieldOnMap(it) }
+            map.invalidate()
+        }
+
+        // 2. POBIERANIE Z SIECI - repo zwraca teraz List<FieldItem>
         remoteRepo.getAgriculturalFields(email) { fields ->
             runOnUiThread {
-                // TUTAJ ZMIANA: zmieniamy drawingPolygon na drawingPolyline
-                map.overlays.removeAll { overlay ->
-                    overlay is Polygon && overlay != drawingPolyline
-                }
+                if (fields.isNotEmpty()) {
+                    com.example.bazadanych.data.local_db.CacheHelper.saveList(this@RainDetailsActivity, "FIELDS_CACHE", fields)
 
-                fields.forEach { drawFieldOnMap(it) }
-                map.invalidate()
+                    map.overlays.removeAll { overlay -> overlay is Polygon && overlay != drawingPolyline }
+                    fields.forEach { drawFieldOnMap(it) }
+                    map.invalidate()
+                }
             }
         }
     }
 
-    private fun drawFieldOnMap(field: FieldEntity) {
+    private fun drawFieldOnMap(field: FieldItem) {
         val pts = field.coordinates.split(";").mapNotNull {
             val latLng = it.split(",")
             if (latLng.size == 2) GeoPoint(latLng[0].toDouble(), latLng[1].toDouble()) else null
