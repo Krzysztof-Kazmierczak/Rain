@@ -91,26 +91,14 @@ class RainRemoteRepository {
             }
         })
     }
-
+    // W RainRemoteRepository.kt
     fun getRainDetails(id: String, callback: (Rain?) -> Unit) {
         val url = "${baseUrl}get_rain_details.php?id=$id"
-        val request = Request.Builder().url(url).get().build()
-
-        Log.d(TAG, "Pobieranie detali z URL: $url")
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Log.e(TAG, "getRainDetails - Błąd połączenia: ${e.message}")
-                callback(null)
-            }
-
+        client.newCall(Request.Builder().url(url).get().build()).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) { callback(null) }
             override fun onResponse(call: Call, response: Response) {
                 val jsonResponse = response.body?.string()
-                Log.d(TAG, "getRainDetails - Odpowiedź serwera: $jsonResponse")
-
-                if (jsonResponse == "ERROR" || jsonResponse.isNullOrEmpty()) {
-                    callback(null)
-                } else {
+                if (!jsonResponse.isNullOrEmpty() && jsonResponse != "ERROR") {
                     try {
                         val obj = JSONObject(jsonResponse)
                         val rain = Rain(
@@ -118,14 +106,12 @@ class RainRemoteRepository {
                             name = obj.getString("name"),
                             hoseLength = obj.getString("hose_length"),
                             comment = obj.getString("comment"),
-                            isWorking = false
+                            // ZMIANA: Pobieraj is_working z bazy, a nie wpisuj false!
+                            isWorking = obj.optInt("is_working", 0) == 1
                         )
                         callback(rain)
-                    } catch (e: Exception) {
-                        Log.e(TAG, "getRainDetails - Błąd parsowania: ${e.message}")
-                        callback(null)
-                    }
-                }
+                    } catch (e: Exception) { callback(null) }
+                } else { callback(null) }
             }
         })
     }

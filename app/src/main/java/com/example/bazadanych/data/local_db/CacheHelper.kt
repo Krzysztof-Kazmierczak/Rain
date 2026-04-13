@@ -44,4 +44,22 @@ object CacheHelper {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getString("LAST_SYNC", "Nigdy") ?: "Nigdy"
     }
+
+    // 5. ZAPISYWANIE POJEDYNCZEGO OBIEKTU (Dopisujemy to do Twojego CacheHelper)
+    inline fun <reified T> saveObject(context: Context, key: String, obj: T) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val json = gson.toJson(obj)
+        prefs.edit().putString(key, json).apply()
+    }
+
+    // 6. ODCZYTYWANIE POJEDYNCZEGO OBIEKTU (Dopisujemy to do Twojego CacheHelper)
+    inline fun <reified T> loadObject(context: Context, key: String): T? {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val json = prefs.getString(key, null) ?: return null
+        return try {
+            gson.fromJson(json, T::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
 }
