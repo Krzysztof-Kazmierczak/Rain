@@ -19,11 +19,6 @@ import com.example.bazadanych.data.db.FieldItem
 import com.example.bazadanych.data.local_db.CacheHelper
 import com.example.bazadanych.data.repository.RainRemoteRepository
 import com.google.android.material.appbar.MaterialToolbar
-import okhttp3.Call
-import okhttp3.Callback
-import okhttp3.Request
-import okhttp3.Response
-import org.json.JSONObject
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -32,7 +27,6 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
-import java.io.IOException
 
 class RainDetailsActivity : AppCompatActivity() {
 
@@ -202,63 +196,88 @@ class RainDetailsActivity : AppCompatActivity() {
         updateDrawingLine()
     }
 
-    private fun loadInitialData() {
+    private fun refreshStatusUI(isWorking: Boolean, speed: Double, finishTime: String, isOffline: Boolean) {
+        val label = if (isOffline) "[Cache] " else ""
+
+        // Ustawiamy napis PRACUJE/STOP
+        statusText.text = "${label}Status: ${if (isWorking) "PRACUJE ✅" else "STOP 🛑"}"
+        statusText.setTextColor(if (isWorking) Color.GREEN else Color.RED)
+
+        // Ustawiamy resztę
+        currentSpeedText.text = "${label}Prędkość: $speed m/h"
+        timeFinishText.text = "${label}Czas do końca: $finishTime"
+    }
+
+    // 2. Poprawione ładowanie statusu na żywo
+    private fun loadLiveStatus() {
         if (currentRainId.isEmpty()) return
 
-        val detailCacheKey = "RAIN_DETAILS_$currentRainId"
+        remoteRepo.getRainHistory(currentRainId) { history ->
+            if (history.isNotEmpty()) {
+                val latest = history[0]
 
-        // 1. Próbujemy wczytać pełne detale z cache
-        var rainData = CacheHelper.loadObject<Rain>(this, detailCacheKey)
+                // AKTUALIZUJEMY UI (Tylko tu!)
+                refreshStatusUI(
+                    isWorking = latest.isWorking,
+                    speed = latest.currentSpeed,
+                    finishTime = latest.timeToFinish,
+                    isOffline = false
+                )
 
-        // 2. Jeśli ich nie ma, bierzemy dane z kafelka (to co było widać na liście)
-        if (rainData == null) {
-            val homeTiles = CacheHelper.loadList<RainTile>(this, "HOME_TILES_CACHE")
-            val tile = homeTiles?.find { it.id == currentRainId }
-            if (tile != null) {
-                rainData = Rain(tile.id, tile.title, tile.hoseLength, tile.comment, tile.isWorking)
-            }
-        }
+                updateMachineMarker(latest.lat, latest.lng)
 
-        // 3. WYKORZYSTUJEMY FUNKCJĘ POMOCNICZĄ DLA CACHE
-        rainData?.let {
-            nameEdit.setText(it.name)
-            lengthEdit.setText(it.hoseLength)
-            commentEdit.setText(it.comment)
-
-            // Pokazujemy status z pamięci, żeby użytkownik nie widział "Pobieranie..."
-            updateUIStatus(it.isWorking)
-        }
-
-        // 4. Pobieramy świeże dane techniczne (nazwa, wąż)
-        remoteRepo.getRainDetails(currentRainId) { rainFromServer ->
-            runOnUiThread {
-                rainFromServer?.let {
-                    nameEdit.setText(it.name)
-                    lengthEdit.setText(it.hoseLength)
-                    commentEdit.setText(it.comment)
-                    CacheHelper.saveObject(this@RainDetailsActivity, detailCacheKey, it)
-
-                    // Opcjonalnie: jeśli Twoje nowe getRainDetails poprawnie pobiera status,
-                    // możesz go tu odświeżyć, ale bezpieczniej zostawić to dla loadLiveStatus
-                    updateUIStatus(it.isWorking)
+                // Zapisujemy do cache, żeby po powrocie od razu widzieć ostatni stan
+                CacheHelper.saveObject(this, "RAIN_LIVE_STATUS_$currentRainId", latest)
+            } else {
+                // Jeśli historia pusta, pokazujemy to co mamy w cache (nie niszczymy statusu!)
+                val cached = CacheHelper.loadObject<RainStatus>(this, "RAIN_LIVE_STATUS_$currentRainId")
+                cached?.let {
+                    refreshStatusUI(it.isWorking, it.currentSpeed, it.timeToFinish, true)
                 }
             }
         }
     }
 
-    // Pomocnicza funkcja, żeby kod był czysty
-    private fun updateUIStatus(working: Boolean) {
-        statusText.text = if (working) "Status: PRACUJE ✅" else "Status: STOP 🛑"
-        statusText.setTextColor(if (working) android.graphics.Color.GREEN else android.graphics.Color.RED)
-    }
+    // 3. Poprawione ładowanie startowe
+    private fun loadInitialData() {
+        if (currentRainId.isEmpty()) return
 
-    private fun updateStatusView(isWorking: Boolean, speed: Double?, finishTime: String?, isOffline: Boolean) {
-        val label = if (isOffline) "[Cache] " else ""
-        statusText.text = "${label}Status: ${if (isWorking) "PRACUJE ✅" else "STOP 🛑"}"
-        statusText.setTextColor(if (isWorking) android.graphics.Color.GREEN else android.graphics.Color.RED)
+        val detailCacheKey = "RAIN_DETAILS_$currentRainId"
 
-        speed?.let { currentSpeedText.text = "${label}Prędkość: $it m/h" }
-        finishTime?.let { timeFinishText.text = "${label}Czas do końca: $it" }
+        // 1. NAJPIERW WCZYTUJEMY Z CACHE (Dla trybu offline)
+        val cachedRain = CacheHelper.loadObject<Rain>(this, detailCacheKey)
+        cachedRain?.let {
+            nameEdit.setText(it.name)
+            lengthEdit.setText(it.hoseLength)
+            commentEdit.setText(it.comment)
+            // Możesz też dodać np. "[Cache]" do tytułu na toolbarze, żeby wiedzieć, że to offline
+            supportActionBar?.title = "[Offline] ${it.name}"
+        }
+
+        // 2. POBIERAMY ŚWIEŻE DANE Z SIECI
+        remoteRepo.getRainDetails(currentRainId) { name, length, comment ->
+            if (name.isNotEmpty()) {
+                // Aktualizujemy pola na ekranie
+                nameEdit.setText(name)
+                lengthEdit.setText(length)
+                commentEdit.setText(comment)
+                supportActionBar?.title = name
+
+                // 3. ZAPISUJEMY ŚWIEŻE DANE DO CACHE
+                // Tworzymy obiekt Rain, aby CacheHelper mógł go zapisać
+                val rainToCache = Rain(
+                    id = currentRainId,
+                    name = name,
+                    hoseLength = length,
+                    comment = comment,
+                    isWorking = false // To pole uzupełni nam loadLiveStatus
+                )
+                CacheHelper.saveObject(this, detailCacheKey, rainToCache)
+            }
+        }
+
+        // 4. Pobieramy status (to już masz i działa)
+        loadLiveStatus()
     }
 
     private fun loadAllAgriculturalFields() {
@@ -336,34 +355,7 @@ class RainDetailsActivity : AppCompatActivity() {
 
         map.overlays.add(poly)
     }
-    private fun loadLiveStatus() {
-        if (currentRainId.isEmpty()) return
 
-        remoteRepo.getRainHistory(currentRainId) { history ->
-            runOnUiThread {
-                if (history.isNotEmpty()) {
-                    val latest = history[0]
-
-                    // WYKORZYSTUJEMY Twoją drugą funkcję (tą bardziej szczegółową)
-                    updateStatusView(
-                        isWorking = latest.isWorking,
-                        speed = latest.currentSpeed,
-                        finishTime = latest.timeToFinish,
-                        isOffline = false // Dane są świeżo z serwera
-                    )
-
-                    updateMachineMarker(latest.lat, latest.lng)
-                } else {
-                    // Jeśli nie ma historii, spróbuj chociaż pokazać ostatni znany stan z cache
-                    val statusKey = "RAIN_LIVE_STATUS_$currentRainId"
-                    val cached = CacheHelper.loadObject<RainStatus>(this, statusKey)
-                    cached?.let {
-                        updateStatusView(it.isWorking, it.currentSpeed, it.timeToFinish, true)
-                    }
-                }
-            }
-        }
-    }
     private fun updateMachineMarker(lat: Double, lng: Double) {
         if (lat == 0.0 && lng == 0.0) return
         val point = GeoPoint(lat, lng)

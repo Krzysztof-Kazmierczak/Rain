@@ -23,36 +23,26 @@ class RainRemoteRepository {
 
     fun getAgriculturalFields(email: String, callback: (List<FieldItem>) -> Unit) {
         val url = "${baseUrl}get_agricultural_fields.php?email=$email"
-        val request = Request.Builder().url(url).get().build()
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Log.e(TAG, "Błąd pól: ${e.message}")
-                postOnMain { callback(emptyList()) }
-            }
-
+        client.newCall(Request.Builder().url(url).get().build()).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) { postOnMain { callback(emptyList()) } }
             override fun onResponse(call: Call, response: Response) {
                 val body = response.body?.string()
                 val list = mutableListOf<FieldItem>()
-                if (!body.isNullOrEmpty()) {
-                    try {
-                        val jsonArray = JSONArray(body)
-                        for (i in 0 until jsonArray.length()) {
-                            val obj = jsonArray.getJSONObject(i)
-                            list.add(FieldItem(
-                                id = obj.getInt("id"),
-                                name = obj.optString("name", "Pole"),
-                                areaHa = obj.optDouble("area_ha", 0.0),
-                                cropType = obj.optString("crop_type", ""),
-                                comment = obj.optString("comment", ""),
-                                color = obj.optString("color", "#604CAF50"),
-                                coordinates = obj.getString("coordinates")
-                            ))
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Błąd JSON pól: ${e.message}")
+                try {
+                    val jsonArray = JSONArray(body ?: "[]")
+                    for (i in 0 until jsonArray.length()) {
+                        val obj = jsonArray.getJSONObject(i)
+                        list.add(FieldItem(
+                            id = obj.optInt("id", 0),
+                            name = obj.optString("name", "Pole"),
+                            areaHa = obj.optDouble("area_ha", 0.0),
+                            cropType = obj.optString("crop_type", ""),
+                            comment = obj.optString("comment", ""),
+                            color = obj.optString("color", "#604CAF50"),
+                            coordinates = obj.optString("coordinates", "")
+                        ))
                     }
-                }
+                } catch (e: Exception) { }
                 postOnMain { callback(list) }
             }
         })
@@ -92,26 +82,18 @@ class RainRemoteRepository {
         })
     }
     // W RainRemoteRepository.kt
-    fun getRainDetails(id: String, callback: (Rain?) -> Unit) {
+    fun getRainDetails(id: String, callback: (name: String, length: String, comment: String) -> Unit) {
         val url = "${baseUrl}get_rain_details.php?id=$id"
         client.newCall(Request.Builder().url(url).get().build()).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) { callback(null) }
+            override fun onFailure(call: Call, e: IOException) { postOnMain { callback("", "", "") } }
             override fun onResponse(call: Call, response: Response) {
-                val jsonResponse = response.body?.string()
-                if (!jsonResponse.isNullOrEmpty() && jsonResponse != "ERROR") {
-                    try {
-                        val obj = JSONObject(jsonResponse)
-                        val rain = Rain(
-                            id = obj.getString("id"),
-                            name = obj.getString("name"),
-                            hoseLength = obj.getString("hose_length"),
-                            comment = obj.getString("comment"),
-                            // ZMIANA: Pobieraj is_working z bazy, a nie wpisuj false!
-                            isWorking = obj.optInt("is_working", 0) == 1
-                        )
-                        callback(rain)
-                    } catch (e: Exception) { callback(null) }
-                } else { callback(null) }
+                val body = response.body?.string()
+                try {
+                    val obj = JSONObject(body ?: "{}")
+                    postOnMain {
+                        callback(obj.optString("name", ""), obj.optString("hose_length", "0"), obj.optString("comment", ""))
+                    }
+                } catch (e: Exception) { postOnMain { callback("", "", "") } }
             }
         })
     }
@@ -146,74 +128,41 @@ class RainRemoteRepository {
         })
     }
 
-
-
     fun getRainHistory(rainId: String, callback: (List<RainStatus>) -> Unit) {
         val url = "${baseUrl}get_rain_history.php?rain_id=$rainId"
-        val request = Request.Builder().url(url).get().build()
-
-        client.newCall(request).enqueue(object : Callback {
+        client.newCall(Request.Builder().url(url).get().build()).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                Log.e("REPO", "Błąd sieci: ${e.message}")
                 postOnMain { callback(emptyList()) }
             }
-
             override fun onResponse(call: Call, response: Response) {
-                val jsonResponse = response.body?.string()
+                val body = response.body?.string()
+                Log.d("REPO", "Odebrano z serwera: $body") // ZOBACZYSZ TO W LOGCAT
                 val list = mutableListOf<RainStatus>()
-                if (!jsonResponse.isNullOrEmpty() && jsonResponse != "ERROR") {
-                    try {
-                        val jsonArray = JSONArray(jsonResponse)
-                        for (i in 0 until jsonArray.length()) {
-                            val obj = jsonArray.getJSONObject(i)
-                            list.add(RainStatus(
-                                id = obj.optInt("id", 0),
-                                rainId = obj.optString("rain_id", ""),
-                                isWorking = obj.optInt("is_working", 0) == 1,
-                                setSpeed = obj.optDouble("set_speed", 0.0),
-                                currentSpeed = obj.optDouble("current_speed", 0.0),
-                                currentDistance = obj.optDouble("current_distance", 0.0),
-                                timeToFinish = obj.optString("time_to_finish", "--:--"),
-                                updatedAt = obj.optString("updated_at", ""),
-                                lat = obj.optDouble("lat", 0.0),
-                                lng = obj.optDouble("lng", 0.0)
-                            ))
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Błąd JSON historii: ${e.message}")
+                try {
+                    val jsonArray = JSONArray(body ?: "[]")
+                    for (i in 0 until jsonArray.length()) {
+                        val obj = jsonArray.getJSONObject(i)
+                        list.add(RainStatus(
+                            id = obj.optInt("id", 0),
+                            rainId = obj.optString("rain_id", ""),
+                            isWorking = obj.optBoolean("is_working", false),
+                            setSpeed = obj.optDouble("set_speed", 0.0),
+                            currentSpeed = obj.optDouble("current_speed", 0.0),
+                            currentDistance = obj.optDouble("current_distance", 0.0),
+                            timeToFinish = obj.optString("time_to_finish", "--:--"),
+                            updatedAt = obj.optString("updated_at", ""),
+                            lat = obj.optDouble("lat", 0.0),
+                            lng = obj.optDouble("lng", 0.0)
+                        ))
                     }
+                } catch (e: Exception) {
+                    Log.e("REPO", "Błąd parsowania JSON: ${e.message}")
                 }
                 postOnMain { callback(list) }
             }
         })
     }
-
-    fun saveField(
-        email: String, id: String, name: String, areaHa: Double,
-        cropType: String, comment: String, color: String, coords: String,
-        callback: (Boolean) -> Unit
-    ) {
-        val formBody = FormBody.Builder()
-            .add("email", email)
-            .add("id", id)
-            .add("name", name)
-            .add("area_ha", areaHa.toString())
-            .add("crop_type", cropType)
-            .add("comment", comment)
-            .add("color", color)
-            .add("coordinates", coords)
-            .build()
-
-        val request = Request.Builder().url(baseUrl + "save_agricultural_field.php").post(formBody).build()
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) { postOnMain { callback(false) } }
-            override fun onResponse(call: Call, response: Response) {
-                val result = response.body?.string()?.trim()
-                postOnMain { callback(result == "OK") }
-            }
-        })
-    }
-
     fun saveAgriculturalField(
         email: String, id: String, name: String, areaHa: Double,
         cropType: String, comment: String, color: String, coords: String,
