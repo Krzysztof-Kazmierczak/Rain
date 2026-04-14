@@ -59,7 +59,7 @@ class WeatherActivity : AppCompatActivity() {
                     // Zapisz do pamięci na przyszłość
                     com.example.bazadanych.data.local_db.CacheHelper.saveList(this@WeatherActivity, "WEATHER_FIELDS_CACHE", fields)
 
-                    //adapter = WeatherAdapter(fields)
+                    adapter = WeatherAdapter(fields)
                     recyclerWeather.adapter = adapter
                 }
             }

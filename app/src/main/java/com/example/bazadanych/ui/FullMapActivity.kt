@@ -120,9 +120,9 @@ class FullMapActivity : AppCompatActivity() {
             runOnUiThread {
                 // Usuwamy tylko stare polygony, zostawiamy linię rysowania
                 map.overlays.removeAll { it is Polygon }
-              //  fields.forEach { drawFieldOnMap(it) }
-               // setupFieldsSidebar(fields)
-               // if (fields.isNotEmpty()) centerMapOnFields(fields)
+                fields.forEach { drawFieldOnMap(it) }
+                setupFieldsSidebar(fields)
+                if (fields.isNotEmpty()) centerMapOnFields(fields)
                 map.invalidate()
             }
         }
