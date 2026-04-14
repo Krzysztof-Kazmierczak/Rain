@@ -62,4 +62,11 @@ object CacheHelper {
             null
         }
     }
+
+    // Dodaj to jako nową klasę danych
+    data class MapConfig(
+        val lat: Double,
+        val lng: Double,
+        val zoom: Double
+    ) : java.io.Serializable
 }
