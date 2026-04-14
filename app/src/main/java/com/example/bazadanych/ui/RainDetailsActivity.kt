@@ -197,7 +197,7 @@ class RainDetailsActivity : AppCompatActivity() {
     }
 
     private fun refreshStatusUI(isWorking: Boolean, speed: Double, finishTime: String, isOffline: Boolean) {
-        val label = if (isOffline) "[Cache] " else ""
+        val label = if (isOffline) "[Dane Offline] " else ""
 
         // Ustawiamy napis PRACUJE/STOP
         statusText.text = "${label}Status: ${if (isWorking) "PRACUJE ✅" else "STOP 🛑"}"

@@ -82,50 +82,69 @@ class WeatherActivity : AppCompatActivity() {
             return ViewHolder(view)
         }
 
+        private fun displayWeatherData(holder: ViewHolder, data: FieldHistory, isOffline: Boolean) {
+            val temp = data.temperature ?: 0.0
+            val rain = data.rain_mm ?: 0.0
+            val date = data.recorded_at ?: ""
+
+            // --- LOGIKA ETYKIET ---
+            // Jeśli offline: pokazać "[Dane Offline] Czas: ..."
+            // Jeśli online: pokazać po prostu "AI Doradca: ..."
+            val statusLabel = if (isOffline) "[Dane Offline]:" else ""
+
+            holder.tvAdviceMessage.text = "Temp: ${temp}°C, Opady: ${rain}mm"
+
+            // Logika doradcy AI
+            val (advice, color) = when {
+                rain > 2.0 -> "Nie podlewaj! Spadło wystarczająco deszczu." to "#2196F3"
+                temp > 25.0 && rain < 0.5 -> "UWAGA! Susza i upał. Włącz deszczownię." to "#F44336"
+                temp < 5.0 -> "Niska temperatura. Rośliny rosną wolniej." to "#9E9E9E"
+                else -> "Warunki optymalne. Monitoruj wilgotność gleby." to "#4CAF50"
+            }
+
+            // Ustawiamy tytuł: [Dane Offline] Data: Porada LUB Porada (bez daty)
+            holder.tvAdviceTitle.text = if (isOffline) {
+                "$statusLabel $advice"
+            } else {
+                "AI Doradca: $advice"
+            }
+
+            holder.tvAdviceTitle.setTextColor(Color.parseColor(color))
+        }
+
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val field = fields[position]
             holder.tvFieldName.text = field.name ?: "Pole bez nazwy"
             holder.tvFieldCrop.text = "🌾 Uprawa: ${field.cropType}"
 
-            // Uderzamy do Twojego serwera po zapisaną pogodę
+            // --- LOGIKA OFFLINE DLA POGODY ---
+            val weatherCacheKey = "WEATHER_DATA_FIELD_${field.id}"
+            val cachedWeather = com.example.bazadanych.data.local_db.CacheHelper.loadObject<FieldHistory>(holder.itemView.context, weatherCacheKey)
+
+            if (cachedWeather != null) {
+                // Jeśli mamy coś w pamięci, pokazujemy to od razu z dopiskiem
+                displayWeatherData(holder, cachedWeather, isOffline = true)
+            } else {
+                holder.tvAdviceTitle.text = "Czekam na dane..."
+                holder.tvAdviceMessage.text = "Pobieranie aktualnej pogody..."
+            }
+
+            // --- POBIERANIE Z SIECI ---
             ApiClient.rainTech.getCurrentWeather(field.id.toInt()).enqueue(object : Callback<FieldHistory> {
                 override fun onResponse(call: Call<FieldHistory>, response: Response<FieldHistory>) {
                     val data = response.body()
                     if (response.isSuccessful && data != null && data.recorded_at != "Brak danych") {
+                        // Zapisujemy nową pogodę do cache
+                        com.example.bazadanych.data.local_db.CacheHelper.saveObject(holder.itemView.context, weatherCacheKey, data)
+
                         runOnUiThread {
-                            holder.tvAdviceTitle.text = "Stan pola (${data.recorded_at})"
-                            holder.tvAdviceTitle.setTextColor(Color.parseColor("#4CAF50"))
-                            holder.tvAdviceMessage.text = "Temp: ${data.temperature}°C, Opady: ${data.rain_mm}mm"
-
-                            // --- LOGIKA DORADCY AI ---
-                            val temp = data.temperature ?: 0.0
-                            val rain = data.rain_mm ?: 0.0
-
-                            val (advice, color) = when {
-                                rain > 2.0 -> "Nie podlewaj! Spadło wystarczająco deszczu." to "#2196F3" // Niebieski
-                                temp > 25.0 && rain < 0.5 -> "UWAGA! Susza i upał. Włącz deszczownię." to "#F44336" // Czerwony
-                                temp < 5.0 -> "Niska temperatura. Rośliny rosną wolniej." to "#9E9E9E" // Szary
-                                else -> "Warunki optymalne. Monitoruj wilgotność gleby." to "#4CAF50" // Zielony
-                            }
-
-                            holder.tvAdviceTitle.text = "AI Doradca: $advice"
-                            holder.tvAdviceTitle.setTextColor(Color.parseColor(color))
-                        }
-                    } else {
-                        runOnUiThread {
-                            holder.tvAdviceTitle.text = "Czekam na dane..."
-                            holder.tvAdviceMessage.text = "Pole dodane. Dane pogodowe pojawią się w ciągu godziny."
-                            holder.tvAdviceTitle.setTextColor(Color.GRAY)
+                            displayWeatherData(holder, data, isOffline = false)
                         }
                     }
                 }
 
                 override fun onFailure(call: Call<FieldHistory>, t: Throwable) {
-                    runOnUiThread {
-                        holder.tvAdviceTitle.text = "Stan z pamięci (Brak sieci)"
-                        holder.tvAdviceTitle.setTextColor(Color.GRAY)
-                        // Nie zmieniamy treści wiadomości, żeby użytkownik wiedział z czego to pole się składa
-                    }
+                    // Nic nie robimy, bo dane z cache już wiszą na ekranie dzięki kodowi wyżej
                 }
             })
 
