@@ -33,7 +33,7 @@ class RainTileAdapter(
         if (tile.isAddButton) {
             holder.lengthText.visibility = View.GONE
             holder.commentText.visibility = View.GONE
-            holder.titleText.text = "Dodaj nową"
+            holder.titleText.text = "Dodaj"
             holder.icon.setImageResource(android.R.drawable.ic_input_add)
         } else {
             holder.lengthText.visibility = View.VISIBLE

@@ -352,8 +352,21 @@ class FullMapActivity : AppCompatActivity() {
         val recycler = findViewById<RecyclerView>(R.id.recyclerFields)
         recycler.layoutManager = LinearLayoutManager(this)
         recycler.adapter = MapSidebarAdapter(items) { item ->
-            map.controller.animateTo(GeoPoint(item.lat, item.lng))
-            map.controller.setZoom(15.0)
+            // 1. Znajdujemy pole w liście po ID
+            val field = fields.find { it.id.toString() == item.id }
+
+            if (field != null) {
+                val pts = field.coordinates.split(";").mapNotNull {
+                    val latLng = it.split(",")
+                    if (latLng.size == 2) GeoPoint(latLng[0].toDouble(), latLng[1].toDouble()) else null
+                }
+
+                if (pts.isNotEmpty()) {
+                    val box = BoundingBox.fromGeoPoints(pts)
+                    // Przybliż do granic pola z marginesem 150 pikseli
+                    map.zoomToBoundingBox(box, true, 150)
+                }
+            }
             drawerLayout.closeDrawers()
         }
     }
