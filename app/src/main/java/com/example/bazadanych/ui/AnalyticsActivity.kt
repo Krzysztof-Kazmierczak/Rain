@@ -1,6 +1,6 @@
 package com.example.bazadanych.ui
 
-import MultilineXAxisRenderer
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
 import android.view.MotionEvent
@@ -8,6 +8,7 @@ import android.widget.CheckBox
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.example.bazadanych.R
 import com.example.bazadanych.data.api.ApiClient
@@ -16,6 +17,7 @@ import com.example.bazadanych.data.db.FieldDao // ZMIENIONE Z RainDao na FieldDa
 import com.example.bazadanych.data.db.FieldHistory
 import com.example.bazadanych.data.db.toDomainModel
 import com.example.bazadanych.data.db.toEntity
+import com.example.bazadanych.data.model.MultilineXAxisRenderer
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.components.YAxis
@@ -44,8 +46,10 @@ class AnalyticsActivity : AppCompatActivity() {
     // Aktywne checkboxy (max 2 per wykres)
     private val activeWeatherParams = mutableListOf(R.id.cbTemp, R.id.cbRain)
     private val activeMachineParams = mutableListOf(R.id.cbSpeed)
-    private var currentInterval: Int = 1 // Domyślnie surowe dane z API to co 3h
+    private var currentInterval: Int = 3 // Domyślnie surowe dane z API to co 3h
     private var isForecastVisible: Boolean = true // Domyślnie prognoza jest włączona
+    private lateinit var btnToggleForecast: com.google.android.material.button.MaterialButton
+    private lateinit var btnClearDate: ImageButton
 
     // Inicjalizacja bazy
     private lateinit var database: DataBase
@@ -56,48 +60,75 @@ class AnalyticsActivity : AppCompatActivity() {
     private var cachedRawData: List<FieldHistory> = emptyList()
     private var startDateFilter: Long? = null
     private var endDateFilter: Long? = null
+    val visibleRange = 40f // Twój limit punktów
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_analytics)
 
-        // 1. Inicjalizacja bazy
+        // 1. Inicjalizacja bazy i danych podstawowych
         database = DataBase.getDatabase(this)
         fieldDao = database.fieldDao()
-
         fieldId = intent.getIntExtra("FIELD_ID", 1)
         fieldName = intent.getStringExtra("FIELD_NAME") ?: "Pole"
 
+        // Toolbar
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbarAnalytics)
         setSupportActionBar(toolbar)
         supportActionBar?.title = "Historia i Prognoza: $fieldName"
         toolbar.setNavigationOnClickListener { finish() }
 
+        // Wykresy
         chartWeather = findViewById(R.id.chartWeather)
         chartMachine = findViewById(R.id.chartMachine)
-
+        chartWeather.setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
+        chartMachine.setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
         setupChartStyle(chartWeather, isTopChart = true)
         setupChartStyle(chartMachine, isTopChart = false)
-
         syncCharts(chartWeather, chartMachine)
         syncCharts(chartMachine, chartWeather)
 
         setupCheckboxes()
 
-        // USUNIĘTO STARE loadDataFromServer(fieldId) Z TEGO MIEJSCA
+        // --- INICJALIZACJA PRZYCISKÓW ---
+        btnToggleForecast = findViewById<com.google.android.material.button.MaterialButton>(R.id.btnToggleForecast)
+        btnClearDate = findViewById<ImageButton>(R.id.btnClearDate)
+        val btnDateRange = findViewById<ImageButton>(R.id.btnDateRange)
 
-        // Obsługa przycisku oka (włącz/wyłącz prognozę)
-        val btnToggleForecast = findViewById<ImageButton>(R.id.btnToggleForecast)
+        // Obsługa przycisku prognozy (NOWA LOGIKA TEKSTOWA)
         btnToggleForecast.setOnClickListener {
             isForecastVisible = !isForecastVisible
-            val iconRes = if (isForecastVisible) R.drawable.ic_visibility else R.drawable.ic_visibility
-            btnToggleForecast.setImageResource(iconRes)
-            val msg = if (isForecastVisible) "Prognoza włączona" else "Prognoza ukryta"
-            android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show()
+            updateForecastButtonState() // Ta funkcja zmieni tekst na przycisku
             updateChartsData()
         }
 
-        // Zmodyfikowany nasłuchiwacz Chipów
+        // Wybór zakresu dat
+        btnDateRange.setOnClickListener {
+            val datePicker = com.google.android.material.datepicker.MaterialDatePicker.Builder.dateRangePicker()
+                .setTitleText("Wybierz zakres dat")
+                .build()
+
+            datePicker.addOnPositiveButtonClickListener { selection ->
+                startDateFilter = selection.first
+                endDateFilter = selection.second + 86399999L
+
+                btnClearDate.visibility = android.view.View.VISIBLE
+                updateForecastButtonState()
+                processAndDisplay(cachedRawData)
+            }
+            datePicker.show(supportFragmentManager, "DATE_PICKER")
+        }
+
+        // Przycisk "X" do kasowania daty
+        btnClearDate.setOnClickListener {
+            startDateFilter = null
+            endDateFilter = null
+            btnClearDate.visibility = android.view.View.GONE
+            updateForecastButtonState()
+            processAndDisplay(cachedRawData)
+        }
+
+        // Obsługa Chipów (interwały)
         findViewById<ChipGroup>(R.id.chipGroupInterval).setOnCheckedStateChangeListener { group, checkedIds ->
             val checkedId = checkedIds.firstOrNull() ?: return@setOnCheckedStateChangeListener
             val interval = when(checkedId) {
@@ -106,45 +137,15 @@ class AnalyticsActivity : AppCompatActivity() {
                 R.id.chipDay -> 24
                 else -> 3
             }
-            if (interval == 1) {
-                android.widget.Toast.makeText(this, "Skala 1h pokazuje tylko historię maszyny. Prognoza jest co 3h.", android.widget.Toast.LENGTH_LONG).show()
-            }
             currentInterval = interval
+            updateForecastButtonState() // Ważne: aktualizuje tekst przycisku przy zmianie na 1h
             applyAggregation(interval)
         }
 
-        val btnDateRange = findViewById<ImageButton>(R.id.btnDateRange)
-        btnDateRange.setOnClickListener {
-            val datePicker = com.google.android.material.datepicker.MaterialDatePicker.Builder.dateRangePicker()
-                .setTitleText("Wybierz zakres dat")
-                .build()
-
-            datePicker.addOnPositiveButtonClickListener { selection ->
-                startDateFilter = selection.first
-                // Dodajemy 24h minus 1ms, żeby objąć cały końcowy dzień (do 23:59:59)
-                endDateFilter = selection.second + 86399999L
-
-                processAndDisplay(cachedRawData) // Odśwież wykresy z filtrem
-            }
-            datePicker.show(supportFragmentManager, "DATE_PICKER")
-        }
-
-        // Sprytny dodatek: przytrzymanie przycisku kalendarza usuwa filtry daty!
-        btnDateRange.setOnLongClickListener {
-            if (startDateFilter != null) {
-                startDateFilter = null
-                endDateFilter = null
-                android.widget.Toast.makeText(this, "Zresetowano zakres dat", android.widget.Toast.LENGTH_SHORT).show()
-                processAndDisplay(cachedRawData)
-            }
-            true
-        }
-
-        // 2. Najpierw ładujemy to co mamy w bazie (Offline First)
+        // 2. Ładowanie danych
         loadDataFromRoom(fieldId)
-
-        // 3. Potem odświeżamy z serwera
         refreshDataFromServer(fieldId)
+        updateForecastButtonState()
     }
 
     private fun setupCheckboxes() {
@@ -282,7 +283,13 @@ class AnalyticsActivity : AppCompatActivity() {
 
             // 1. USTAW NOWY RENDERER DLA WYKRESU (dodaj te dwie linijki przed blokiem xAxis):
             chart.extraBottomOffset = 15f // Robimy miejsce pod wykresem, żeby druga linia tekstu nie została ucięta
-            chart.setXAxisRenderer(MultilineXAxisRenderer(chart.viewPortHandler, chart.xAxis, chart.getTransformer(YAxis.AxisDependency.LEFT)))
+            chart.setXAxisRenderer(
+                MultilineXAxisRenderer(
+                    chart.viewPortHandler,
+                    chart.xAxis,
+                    chart.getTransformer(YAxis.AxisDependency.LEFT)
+                )
+            )
 
             xAxis.apply {
                 position = XAxis.XAxisPosition.BOTTOM
@@ -381,12 +388,46 @@ class AnalyticsActivity : AppCompatActivity() {
         if (weatherData.dataSetCount > 0) chartWeather.data = weatherData else chartWeather.clear()
         if (machineData.dataSetCount > 0) chartMachine.data = machineData else chartMachine.clear()
 
+        val charts = listOf(chartWeather, chartMachine)
+        val now = System.currentTimeMillis()
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+
+        // 1. Obliczamy pozycję X dla "teraz"
+        var nowX = displayData.size.toFloat()
+        val firstTimeStr = displayData.firstOrNull()?.recorded_at
+
+        if (firstTimeStr != null) {
+            val firstDate = sdf.parse(firstTimeStr)
+            if (firstDate != null) {
+                val firstTimestamp = firstDate.time
+                nowX = (now - firstTimestamp).toFloat() / (1000 * 60 * 60)
+            }
+        }
+
+
+
+        charts.forEach { chart ->
+            if (startDateFilter == null && endDateFilter == null) {
+                chart.setVisibleXRangeMaximum(visibleRange)
+
+                // 2. POPRAWKA: Przesuwamy widok tak, aby nowX był na środku
+                // Odejmujemy połowę widocznego zakresu (20 pkt), żeby punkt trafił w centrum
+                val centerX = nowX - (visibleRange / 2f)
+                chart.moveViewToX(centerX)
+            } else {
+                chart.setVisibleXRangeMaximum(Float.MAX_VALUE)
+                chart.moveViewToX(0f)
+            }
+        }
+
         val markerView = CustomMarkerView(this, R.layout.view_marker)
         chartWeather.marker = markerView
         chartMachine.marker = markerView
 
         chartWeather.invalidate()
         chartMachine.invalidate()
+        // Dodaj to tutaj:
+        centerChartOnNow()
     }
 
     private fun addLineWithForecast(
@@ -421,15 +462,28 @@ class AnalyticsActivity : AppCompatActivity() {
             futureEntries.add(0, pastEntries.last())
         }
         if (pastEntries.isNotEmpty()) {
+            // HISTORY: Not dashed
             lineData.addDataSet(createDataSet(pastEntries, label, colorCode, axis, isDashed = false))
-        }
-        // JEST (Przekazujemy samo 'label'):
-        if (isForecastVisible && futureEntries.size > 1) {
-            lineData.addDataSet(createDataSet(futureEntries, label, colorCode, axis, isDashed = true))
+
+            if (isForecastVisible && futureEntries.size > 1) {
+                // FORECAST: Dashed. Pass the label so it functions correctly, but we'll hide it from the legend inside createDataSet
+                lineData.addDataSet(createDataSet(futureEntries, "", colorCode, axis, isDashed = true))
+            }
+        }else
+        {
+            if (isForecastVisible && futureEntries.size > 1) {
+                // FORECAST: Dashed. Pass the label so it functions correctly, but we'll hide it from the legend inside createDataSet
+                lineData.addDataSet(createDataSet(futureEntries, label, colorCode, axis, isDashed = false))
+            }
         }
     }
 
     private fun createDataSet(entries: List<Entry>, label: String, colorCode: Int, axis: YAxis.AxisDependency, isDashed: Boolean): LineDataSet {
+        // DODAJ LOGA, żeby sprawdzić w Logcat czy w ogóle tworzy się zestaw przerywany
+        if (isDashed) {
+            android.util.Log.d("ChartDebug", "Tworzę przerywaną linię dla: $label, ilość punktów: ${entries.size}")
+        }
+
         return LineDataSet(entries, label).apply {
             axisDependency = axis
             color = colorCode
@@ -437,22 +491,18 @@ class AnalyticsActivity : AppCompatActivity() {
             lineWidth = 2.5f
             circleRadius = 4f
             setDrawValues(false)
-            mode = LineDataSet.Mode.CUBIC_BEZIER
-            setDrawHighlightIndicators(true)
-            setDrawHorizontalHighlightIndicator(true)
-            setDrawVerticalHighlightIndicator(true)
-            highlightLineWidth = 2f
-            highLightColor = colorCode
-            enableDashedHighlightLine(10f, 5f, 0f)
 
-            if (label.contains("Opady")) {
-                setDrawFilled(true)
-                fillColor = Color.BLUE
-                fillAlpha = 50
-            }
+            // Zmień CUBIC_BEZIER na LINEAR lub HORIZONTAL_BEZIER dla testu
+            mode = if (isDashed) LineDataSet.Mode.LINEAR else LineDataSet.Mode.HORIZONTAL_BEZIER
+
+            setDrawHighlightIndicators(true)
+
             if (isDashed) {
-                enableDashedLine(10f, 10f, 0f)
+                // Spróbuj zwiększyć odstępy (np. 15f, 15f)
+                enableDashedLine(15f, 15f, 0f)
                 setDrawCircles(false)
+
+                // To ukrywa element z legendy
                 form = com.github.mikephil.charting.components.Legend.LegendForm.NONE
             }
         }
@@ -485,5 +535,83 @@ class AnalyticsActivity : AppCompatActivity() {
             R.id.cbHumidity -> Triple("Wilgotność (%)", Color.parseColor("#00BCD4")) { it.humidity?.toFloat() }
             else -> Triple("Błąd", Color.BLACK) { 0f }
         }
+    }
+
+    private fun centerChartOnNow() {
+        val now = System.currentTimeMillis()
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+
+        var nowX = displayData.size.toFloat()
+        val firstTimeStr = displayData.firstOrNull()?.recorded_at
+
+        if (firstTimeStr != null) {
+            val firstDate = sdf.parse(firstTimeStr)
+            if (firstDate != null) {
+                val firstTimestamp = firstDate.time
+                nowX = (now - firstTimestamp).toFloat() / (1000 * 60 * 60)
+            }
+        }
+
+        val visibleRange = 40f
+        val charts = listOf(chartWeather, chartMachine)
+
+        charts.forEach { chart ->
+            if (startDateFilter == null && endDateFilter == null) {
+                chart.setVisibleXRangeMaximum(visibleRange)
+                val centerX = nowX - (visibleRange / 2f)
+
+                // POPRAWKA: moveViewToAnimated zamiast moveViewToXAnimated
+                // Parametry: (xIndex, yValue, axis, duration)
+                // Ustawiamy yValue na 0f, bo moveViewToAnimated i tak centruje tylko w poziomie,
+                // jeśli wykres nie ma zablokowanego przewijania w pionie.
+                chart.moveViewToAnimated(centerX, 0f, YAxis.AxisDependency.LEFT, 500)
+            }
+        }
+    }
+
+    private fun updateForecastButtonState() {
+        val now = System.currentTimeMillis()
+
+        // Priorytet 1: Jeśli wybrano 1h, prognoza zawsze nie istnieje
+        if (currentInterval == 1) {
+            setButtonState(enabled = false)
+            return
+        }
+
+        // Priorytet 2: Ograniczenia wynikające z kalendarza
+        if (startDateFilter != null && endDateFilter != null) {
+
+            // Zakres całkowicie w przeszłości
+            if (endDateFilter!! < now) {
+                setButtonState(enabled = false, isError = true) // czerwony
+                return
+            }
+
+            // Zakres całkowicie w przyszłości
+            if (startDateFilter!! > now) {
+                setButtonState(enabled = false)
+                isForecastVisible = true
+                return
+            }
+        }
+
+        // Standardowy widok (aktywny)
+        setButtonState(enabled = true)
+    }
+    private fun setButtonState(enabled: Boolean, isError: Boolean = false) {
+        btnToggleForecast.isEnabled = enabled
+
+        // efekt "wyszarzenia"
+        btnToggleForecast.alpha = if (enabled) 1.0f else 0.4f
+
+        // zmiana koloru ikony
+        val color = when {
+            isError -> android.graphics.Color.GRAY
+            enabled -> android.graphics.Color.BLACK
+            else -> android.graphics.Color.GRAY
+        }
+
+        btnToggleForecast.iconTint =
+            ColorStateList.valueOf(color)
     }
 }

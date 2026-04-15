@@ -1,3 +1,5 @@
+package com.example.bazadanych.data.model
+
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.renderer.XAxisRenderer
 import com.github.mikephil.charting.utils.MPPointF

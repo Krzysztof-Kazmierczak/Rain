@@ -75,15 +75,15 @@
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="1h"
-                    android:checked="true"/>
+                    android:text="1h" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip3h"
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="3h"/>
+                    android:text="3h"
+                    android:checked="true" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip12h"
@@ -98,15 +98,48 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="1 Dzień"/>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnToggleForecast"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="top|end"
+                    android:layout_margin="8dp"
+
+                    android:background="@android:color/transparent"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    android:padding="8dp"
+
+                    app:icon="@drawable/ic_visibility"
+                    app:iconTint="@color/black"
+                    app:iconSize="24dp"
+
+                    android:contentDescription="Pokaż/ukryj prognozę"/>
             </com.google.android.material.chip.ChipGroup>
         </HorizontalScrollView>
+
+
+
+
+        <ImageButton
+            android:id="@+id/btnClearDate"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/baseline_close_24"
+            android:tooltipText="Wyczyść filtr daty"
+            android:visibility="gone"
+            app:tint="?attr/colorError" />
 
         <ImageButton
             android:id="@+id/btnDateRange"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/outline_calendar_month_24" android:tooltipText="Wybierz zakres dat"
+            android:src="@drawable/outline_calendar_month_24"
+            android:tooltipText="Wybierz zakres dat"
             app:tint="?attr/colorPrimary" />
     </LinearLayout>
 
@@ -148,18 +181,7 @@
             <com.github.mikephil.charting.charts.LineChart
                 android:id="@+id/chartWeather"
                 android:layout_width="match_parent"
-                android:layout_height="250dp" />
-
-            <ImageButton
-                android:id="@+id/btnToggleForecast"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_gravity="top|end"
-                android:layout_margin="8dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_visibility"
-                android:tooltipText="Pokaż/Ukryj Prognozę"
-                app:tint="@android:color/darker_gray" />
+                android:layout_height="300dp" />
         </FrameLayout>
 
 
