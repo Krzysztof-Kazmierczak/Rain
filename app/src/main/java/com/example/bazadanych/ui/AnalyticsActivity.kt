@@ -1,5 +1,6 @@
 package com.example.bazadanych.ui
 
+import MultilineXAxisRenderer
 import android.graphics.Color
 import android.os.Bundle
 import android.view.MotionEvent
@@ -51,6 +52,10 @@ class AnalyticsActivity : AppCompatActivity() {
     private lateinit var fieldDao: FieldDao // TUTAJ BYŁ BŁĄD (było RainDao)
 
     private var displayData: List<FieldHistory> = emptyList()
+    // NOWE ZMIENNE DO FILTROWANIA
+    private var cachedRawData: List<FieldHistory> = emptyList()
+    private var startDateFilter: Long? = null
+    private var endDateFilter: Long? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -106,6 +111,33 @@ class AnalyticsActivity : AppCompatActivity() {
             }
             currentInterval = interval
             applyAggregation(interval)
+        }
+
+        val btnDateRange = findViewById<ImageButton>(R.id.btnDateRange)
+        btnDateRange.setOnClickListener {
+            val datePicker = com.google.android.material.datepicker.MaterialDatePicker.Builder.dateRangePicker()
+                .setTitleText("Wybierz zakres dat")
+                .build()
+
+            datePicker.addOnPositiveButtonClickListener { selection ->
+                startDateFilter = selection.first
+                // Dodajemy 24h minus 1ms, żeby objąć cały końcowy dzień (do 23:59:59)
+                endDateFilter = selection.second + 86399999L
+
+                processAndDisplay(cachedRawData) // Odśwież wykresy z filtrem
+            }
+            datePicker.show(supportFragmentManager, "DATE_PICKER")
+        }
+
+        // Sprytny dodatek: przytrzymanie przycisku kalendarza usuwa filtry daty!
+        btnDateRange.setOnLongClickListener {
+            if (startDateFilter != null) {
+                startDateFilter = null
+                endDateFilter = null
+                android.widget.Toast.makeText(this, "Zresetowano zakres dat", android.widget.Toast.LENGTH_SHORT).show()
+                processAndDisplay(cachedRawData)
+            }
+            true
         }
 
         // 2. Najpierw ładujemy to co mamy w bazie (Offline First)
@@ -183,14 +215,30 @@ class AnalyticsActivity : AppCompatActivity() {
     // --- LOGIKA WIDOKÓW I WYKRESÓW ---
 
     private fun processAndDisplay(rawData: List<FieldHistory>) {
-        val lastHistoryPoint = rawData.lastOrNull { it.is_forecast == 0 }
-        fullHistoryData = if (lastHistoryPoint != null && lastHistoryPoint.recorded_at != null) {
-            rawData.filter {
-                it.is_forecast == 0 || (it.is_forecast == 1 && it.recorded_at!! > lastHistoryPoint.recorded_at!!)
-            }
-        } else {
-            rawData
+        cachedRawData = rawData
+
+        // 1. ZNAJDUJEMY OSTATNI HISTORYCZNY PUNKT W CAŁEJ BAZIE (Przed nałożeniem kalendarza)
+        val absoluteLastHistoryPoint = cachedRawData.lastOrNull { it.is_forecast == 0 }
+
+        // 2. USUŃ STARE PROGNOZY Z PRZESZŁOŚCI
+        // Zostawiamy tylko historię (0) ORAZ prognozę (1), ale tylko tę nowszą od ostatniego znanego pomiaru
+        var cleanData = cachedRawData.filter {
+            it.is_forecast == 0 || (it.is_forecast == 1 && absoluteLastHistoryPoint != null && it.recorded_at!! > absoluteLastHistoryPoint.recorded_at!!)
         }
+
+        // 3. FILTRUJEMY PO DACIE Z KALENDARZA
+        if (startDateFilter != null && endDateFilter != null) {
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+            cleanData = cleanData.filter {
+                val dateStr = it.recorded_at
+                if (dateStr != null) {
+                    val time = sdf.parse(dateStr)?.time ?: 0L
+                    time in startDateFilter!!..endDateFilter!!
+                } else false
+            }
+        }
+
+        fullHistoryData = cleanData
         applyAggregation(currentInterval)
     }
 
@@ -232,15 +280,17 @@ class AnalyticsActivity : AppCompatActivity() {
             setPinchZoom(true)
             axisRight.isEnabled = true
 
+            // 1. USTAW NOWY RENDERER DLA WYKRESU (dodaj te dwie linijki przed blokiem xAxis):
+            chart.extraBottomOffset = 15f // Robimy miejsce pod wykresem, żeby druga linia tekstu nie została ucięta
+            chart.setXAxisRenderer(MultilineXAxisRenderer(chart.viewPortHandler, chart.xAxis, chart.getTransformer(YAxis.AxisDependency.LEFT)))
+
             xAxis.apply {
                 position = XAxis.XAxisPosition.BOTTOM
                 setDrawGridLines(true)
                 granularity = 1f
-                chartWeather.setVisibleXRangeMaximum(24f)
-                chartMachine.setVisibleXRangeMaximum(24f)
-                isGranularityEnabled = true
-                setDrawLabels(true)
-                labelRotationAngle = -45f
+
+                // 2. USTAW KĄT NA ZERO (żeby tekst był w poziomie)
+                labelRotationAngle = 0f // Zamiast -45f
 
                 xAxis.valueFormatter = object : ValueFormatter() {
                     override fun getFormattedValue(value: Float): String {
@@ -252,10 +302,12 @@ class AnalyticsActivity : AppCompatActivity() {
                         calendar.add(java.util.Calendar.HOUR_OF_DAY, value.toInt())
 
                         val resultDate = calendar.time
+
+                        // 3. DODAJ ZNAK NOWEJ LINII (\n) DO FORMATU
                         val outSdf = if (currentInterval >= 24) {
-                            java.text.SimpleDateFormat("dd.MM", java.util.Locale.getDefault())
+                            java.text.SimpleDateFormat("dd.MM\nyyyy", java.util.Locale.getDefault()) // np. 15.04 (enter) 2024
                         } else {
-                            java.text.SimpleDateFormat("HH:00", java.util.Locale.getDefault())
+                            java.text.SimpleDateFormat("HH:00\ndd.MM", java.util.Locale.getDefault()) // np. 14:00 (enter) 15.04
                         }
                         return outSdf.format(resultDate)
                     }
@@ -371,8 +423,9 @@ class AnalyticsActivity : AppCompatActivity() {
         if (pastEntries.isNotEmpty()) {
             lineData.addDataSet(createDataSet(pastEntries, label, colorCode, axis, isDashed = false))
         }
+        // JEST (Przekazujemy samo 'label'):
         if (isForecastVisible && futureEntries.size > 1) {
-            lineData.addDataSet(createDataSet(futureEntries, "$label (Prognoza)", colorCode, axis, isDashed = true))
+            lineData.addDataSet(createDataSet(futureEntries, label, colorCode, axis, isDashed = true))
         }
     }
 
