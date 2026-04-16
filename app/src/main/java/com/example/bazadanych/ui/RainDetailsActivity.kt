@@ -5,7 +5,6 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
@@ -14,19 +13,10 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.bazadanych.R
 import com.example.bazadanych.data.db.Rain
 import com.example.bazadanych.data.db.RainStatus
-import com.example.bazadanych.data.calculation.GeoUtils
-import com.example.bazadanych.data.db.FieldItem
 import com.example.bazadanych.data.local_db.CacheHelper
 import com.example.bazadanych.data.repository.RainRemoteRepository
 import com.google.android.material.appbar.MaterialToolbar
 import org.osmdroid.config.Configuration
-import org.osmdroid.events.MapEventsReceiver
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.util.GeoPoint
-import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.MapEventsOverlay
-import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.Polygon
 
 class RainDetailsActivity : AppCompatActivity() {
 
@@ -34,35 +24,20 @@ class RainDetailsActivity : AppCompatActivity() {
     private val remoteRepo = RainRemoteRepository()
     private val refreshHandler = Handler(Looper.getMainLooper())
 
-    // UI Components
-    private lateinit var map: MapView
     private lateinit var nameEdit: EditText
     private lateinit var lengthEdit: EditText
     private lateinit var commentEdit: EditText
     private lateinit var statusText: TextView
     private lateinit var currentSpeedText: TextView
     private lateinit var timeFinishText: TextView
-    private lateinit var btnStartDrawing: Button
-    private lateinit var btnUndo: Button
-
-    // Map Elements
-    private var machineMarker: Marker? = null
-    //private var drawingPolygon = Polygon()
-    private var drawingPolyline = org.osmdroid.views.overlay.Polyline()
-    private val fieldPoints = mutableListOf<GeoPoint>()
-
-    // State
-    private var isDrawingMode = false
-    private var currentDrawingColor = "#604CAF50"
-    private var wasMapCenteredOnMachine = false
-
+    private lateinit var workTimeText: TextView
+    private lateinit var extensionText: TextView
     private val refreshRunnable = object : Runnable {
         override fun run() {
             loadLiveStatus()
             refreshHandler.postDelayed(this, 30000)
         }
     }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Configuration.getInstance().userAgentValue = packageName
@@ -71,7 +46,6 @@ class RainDetailsActivity : AppCompatActivity() {
         currentRainId = intent.getStringExtra("id") ?: ""
 
         initUI()
-        setupMap()
         loadInitialData()
     }
 
@@ -87,128 +61,36 @@ class RainDetailsActivity : AppCompatActivity() {
         statusText = findViewById(R.id.statusText)
         currentSpeedText = findViewById(R.id.currentSpeedText)
         timeFinishText = findViewById(R.id.timeFinishText)
-        btnStartDrawing = findViewById(R.id.btnStartDrawing)
-        btnUndo = findViewById(R.id.btnUndo)
-
-        btnStartDrawing.setOnClickListener { toggleDrawingMode() }
-
-        btnUndo.setOnClickListener {
-            if (isDrawingMode && fieldPoints.isNotEmpty()) {
-                fieldPoints.removeAt(fieldPoints.size - 1)
-                updateDrawingLine()
-            }
-        }
+        workTimeText = findViewById(R.id.workTimeText)
+        extensionText = findViewById(R.id.extensionText)
 
         findViewById<Button>(R.id.saveButton).setOnClickListener {
             saveMainData()
         }
 
-        findViewById<Button>(R.id.deleteButton).setOnClickListener {
-            deleteEntry()
+        findViewById<Button>(R.id.btnAdvancedSettings).setOnClickListener {
+            val intent = Intent(this, AdvancedSettingsActivity::class.java)
+            intent.putExtra("id", currentRainId)
+            // Pobieramy aktualną wartość z pola lengthEdit i wysyłamy dalej
+            intent.putExtra("max_hose_length", lengthEdit.text.toString())
+            startActivity(intent)
         }
     }
 
-    private fun setupMap() {
-        map = findViewById(R.id.map)
-        map.setTileSource(TileSourceFactory.MAPNIK)
-        map.setMultiTouchControls(true)
+    private fun refreshStatusUI(isWorking: Boolean, speed: Double, finishTime: String, workTime: String, extension: String, isOffline: Boolean) {
+        val label = if (isOffline) "[Offline] " else ""
 
-        val eventsOverlay = MapEventsOverlay(object : MapEventsReceiver {
-            override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
-                if (isDrawingMode && p != null) {
-                    fieldPoints.add(p)
-                    updateDrawingLine()
-                    return true
-                }
-                return false
-            }
-            override fun longPressHelper(p: GeoPoint?): Boolean = false
-        })
-        map.overlays.add(eventsOverlay)
-
-        // Domyślny widok na Polskę przed załadowaniem GPS
-        map.controller.setZoom(6.5)
-        map.controller.setCenter(GeoPoint(52.0689, 19.4797))
-    }
-
-    private fun toggleDrawingMode() {
-        isDrawingMode = !isDrawingMode
-        if (isDrawingMode) {
-            fieldPoints.clear()
-            updateDrawingLine()
-            btnStartDrawing.text = "ZAKOŃCZ RYSOWANIE"
-            btnStartDrawing.setBackgroundColor(Color.RED)
-            Toast.makeText(this, "Klikaj na mapie, aby obrysować pole", Toast.LENGTH_SHORT).show()
-        } else {
-            if (fieldPoints.size >= 3) {
-                goToFieldEdit()
-            } else {
-                Toast.makeText(this, "Musisz zaznaczyć min. 3 punkty!", Toast.LENGTH_SHORT).show()
-                isDrawingMode = true
-            }
-        }
-    }
-
-    private fun updateDrawingLine() {
-        // 1. Usuwamy starą linię z mapy
-        map.overlays.remove(drawingPolyline)
-
-        if (fieldPoints.isNotEmpty()) {
-            // 2. Tworzymy nową linię
-            drawingPolyline = org.osmdroid.views.overlay.Polyline().apply {
-                // ZAMIAST: points = fieldPoints
-                // UŻYWAMY: setPoints(fieldPoints)
-                setPoints(fieldPoints)
-
-                outlinePaint.color = Color.parseColor("#FF2196F3") // Niebieski
-                outlinePaint.strokeWidth = 5f
-            }
-            // 3. Dodajemy nową linię na mapę
-            map.overlays.add(drawingPolyline)
-        }
-
-        // 4. Odświeżamy mapę
-        map.invalidate()
-    }
-
-    private fun goToFieldEdit() {
-        val area = GeoUtils.calculateAreaInHectares(fieldPoints)
-        val coords = fieldPoints.joinToString(";") { "${it.latitude},${it.longitude}" }
-
-        val intent = Intent(this, FieldEditActivity::class.java).apply {
-            putExtra("field_id", "0") // Nowe pole
-            putExtra("coords", coords)
-            putExtra("area", area)
-
-            // Dla nowego pola wysyłamy puste napisy, żeby Hinty (podpowiedzi) działały
-            putExtra("name", "")
-            putExtra("crop", "")
-            putExtra("comment", "")
-            putExtra("color", "#604CAF50") // Domyślny zielony
-        }
-        startActivity(intent)
-
-        // Reset interfejsu rysowania
-        isDrawingMode = false
-        btnStartDrawing.text = "DODAJ POLE"
-        btnStartDrawing.setBackgroundColor(Color.parseColor("#4CAF50"))
-        fieldPoints.clear()
-        updateDrawingLine()
-    }
-
-    private fun refreshStatusUI(isWorking: Boolean, speed: Double, finishTime: String, isOffline: Boolean) {
-        val label = if (isOffline) "[Dane Offline] " else ""
-
-        // Ustawiamy napis PRACUJE/STOP
         statusText.text = "${label}Status: ${if (isWorking) "PRACUJE ✅" else "STOP 🛑"}"
         statusText.setTextColor(if (isWorking) Color.GREEN else Color.RED)
 
-        // Ustawiamy resztę
         currentSpeedText.text = "${label}Prędkość: $speed m/h"
         timeFinishText.text = "${label}Czas do końca: $finishTime"
+
+        // NOWE POLA
+        workTimeText.text = "${label}Czas pracy: $workTime"
+        extensionText.text = "${label}Rozwinięcie: $extension m"
     }
 
-    // 2. Poprawione ładowanie statusu na żywo
     private fun loadLiveStatus() {
         if (currentRainId.isEmpty()) return
 
@@ -216,179 +98,59 @@ class RainDetailsActivity : AppCompatActivity() {
             if (history.isNotEmpty()) {
                 val latest = history[0]
 
-                // AKTUALIZUJEMY UI (Tylko tu!)
+                // TODO: Zaktualizuj 'workTime' i 'extension', gdy dodasz te pola do bazy i obiektu RainStatus
                 refreshStatusUI(
                     isWorking = latest.isWorking,
                     speed = latest.currentSpeed,
                     finishTime = latest.timeToFinish,
+                    workTime = "00:00:00", // Atrapa - podmień na dane z bazy
+                    extension = "0", // Atrapa - podmień na dane z bazy
                     isOffline = false
                 )
-
-                updateMachineMarker(latest.lat, latest.lng)
-
-                // Zapisujemy do cache, żeby po powrocie od razu widzieć ostatni stan
                 CacheHelper.saveObject(this, "RAIN_LIVE_STATUS_$currentRainId", latest)
             } else {
-                // Jeśli historia pusta, pokazujemy to co mamy w cache (nie niszczymy statusu!)
                 val cached = CacheHelper.loadObject<RainStatus>(this, "RAIN_LIVE_STATUS_$currentRainId")
                 cached?.let {
-                    refreshStatusUI(it.isWorking, it.currentSpeed, it.timeToFinish, true)
+                    refreshStatusUI(it.isWorking, it.currentSpeed, it.timeToFinish, "00:00:00", "0", true)
                 }
             }
         }
     }
 
-    // 3. Poprawione ładowanie startowe
     private fun loadInitialData() {
         if (currentRainId.isEmpty()) return
 
         val detailCacheKey = "RAIN_DETAILS_$currentRainId"
-
-        // 1. NAJPIERW WCZYTUJEMY Z CACHE (Dla trybu offline)
         val cachedRain = CacheHelper.loadObject<Rain>(this, detailCacheKey)
         cachedRain?.let {
             nameEdit.setText(it.name)
             lengthEdit.setText(it.hoseLength)
             commentEdit.setText(it.comment)
-            // Możesz też dodać np. "[Cache]" do tytułu na toolbarze, żeby wiedzieć, że to offline
             supportActionBar?.title = "[Offline] ${it.name}"
         }
 
-        // 2. POBIERAMY ŚWIEŻE DANE Z SIECI
         remoteRepo.getRainDetails(currentRainId) { name, length, comment ->
             if (name.isNotEmpty()) {
-                // Aktualizujemy pola na ekranie
                 nameEdit.setText(name)
                 lengthEdit.setText(length)
                 commentEdit.setText(comment)
                 supportActionBar?.title = name
 
-                // 3. ZAPISUJEMY ŚWIEŻE DANE DO CACHE
-                // Tworzymy obiekt Rain, aby CacheHelper mógł go zapisać
-                val rainToCache = Rain(
-                    id = currentRainId,
-                    name = name,
-                    hoseLength = length,
-                    comment = comment,
-                    isWorking = false // To pole uzupełni nam loadLiveStatus
-                )
+                val rainToCache = Rain(currentRainId, name, length, comment, false)
                 CacheHelper.saveObject(this, detailCacheKey, rainToCache)
             }
         }
-
-        // 4. Pobieramy status (to już masz i działa)
         loadLiveStatus()
-    }
-
-    private fun loadAllAgriculturalFields() {
-        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
-        if (email.isEmpty()) return
-
-        // 1. ŁADOWANIE OFFLINE - zmieniamy <FieldEntity> na <FieldItem>
-        val cachedFields = com.example.bazadanych.data.local_db.CacheHelper.loadList<FieldItem>(this, "FIELDS_CACHE")
-        if (cachedFields != null && cachedFields.isNotEmpty()) {
-            // Usuwamy stare polygony (oprócz linii rysowania)
-            map.overlays.removeAll { overlay -> overlay is Polygon && overlay != drawingPolyline }
-            cachedFields.forEach { drawFieldOnMap(it) }
-            map.invalidate()
-        }
-
-        // 2. POBIERANIE Z SIECI - repo zwraca teraz List<FieldItem>
-        remoteRepo.getAgriculturalFields(email) { fields ->
-            runOnUiThread {
-                if (fields.isNotEmpty()) {
-                    com.example.bazadanych.data.local_db.CacheHelper.saveList(this@RainDetailsActivity, "FIELDS_CACHE", fields)
-
-                    map.overlays.removeAll { overlay -> overlay is Polygon && overlay != drawingPolyline }
-                    fields.forEach { drawFieldOnMap(it) }
-                    map.invalidate()
-                }
-            }
-        }
-    }
-
-    private fun drawFieldOnMap(field: FieldItem) {
-        val pts = field.coordinates.split(";").mapNotNull {
-            val latLng = it.split(",")
-            if (latLng.size == 2) GeoPoint(latLng[0].toDouble(), latLng[1].toDouble()) else null
-        }
-
-        val poly = Polygon().apply {
-            points = pts
-            fillPaint.color = Color.parseColor(field.color)
-            outlinePaint.color = Color.BLACK
-            outlinePaint.strokeWidth = 2f
-
-            // Dane do dymka informacyjnego
-            title = field.name ?: "Pole bez nazwy"
-            snippet = "🌾 Uprawa: ${field.cropType}\n📐 Powierzchnia: ${String.format("%.2f", field.areaHa)} ha\n\n(KLIKNIJ POLE PONOWNIE, ABY EDYTOWAĆ)"
-
-            // Używamy standardowego dymka bez kombinowania z dotykiem
-            infoWindow = org.osmdroid.views.overlay.infowindow.BasicInfoWindow(
-                org.osmdroid.library.R.layout.bonuspack_bubble, map
-            )
-        }
-
-        // ZWYKŁE KLIKNIĘCIE W POLE NA MAPIE
-        poly.setOnClickListener { polygon, _, _ ->
-            if (polygon.isInfoWindowOpen) {
-                // JEŚLI DYMEK BYŁ JUŻ OTWARTY - przechodzimy do edycji!
-                polygon.closeInfoWindow()
-
-                val intent = Intent(this@RainDetailsActivity, FieldEditActivity::class.java).apply {
-                    putExtra("field_id", field.id.toString())
-                    putExtra("coords", field.coordinates)
-                    putExtra("area", field.areaHa)
-                    putExtra("name", field.name)
-                    putExtra("crop", field.cropType)
-                    putExtra("comment", field.comment)
-                    putExtra("color", field.color)
-                }
-                startActivity(intent)
-            } else {
-                // JEŚLI DYMEK BYŁ ZAMKNIĘTY - zamykamy inne i otwieramy ten
-                org.osmdroid.views.overlay.infowindow.InfoWindow.closeAllInfoWindowsOn(map)
-                polygon.showInfoWindow()
-            }
-            true
-        }
-
-        map.overlays.add(poly)
-    }
-
-    private fun updateMachineMarker(lat: Double, lng: Double) {
-        if (lat == 0.0 && lng == 0.0) return
-        val point = GeoPoint(lat, lng)
-
-        machineMarker?.let { map.overlays.remove(it) }
-
-        machineMarker = Marker(map).apply {
-            position = point
-            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            title = nameEdit.text.toString()
-        }
-
-        map.overlays.add(machineMarker)
-
-        if (!isDrawingMode && !wasMapCenteredOnMachine) {
-            map.controller.setZoom(16.0)
-            map.controller.animateTo(point)
-            wasMapCenteredOnMachine = true
-        }
-        map.invalidate()
     }
 
     private fun saveMainData() {
         val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
-
-        // Tworzymy obiekt Rain, ale isWorking nas nie obchodzi przy zapisie danych maszyny
-        // Backend powinien aktualizować tylko nazwę, długość i komentarz.
         val rain = Rain(
             id = currentRainId,
             name = nameEdit.text.toString(),
             hoseLength = lengthEdit.text.toString(),
             comment = commentEdit.text.toString(),
-            isWorking = false // To pole w save_rain.php powinno być ignorowane
+            isWorking = false
         )
 
         remoteRepo.saveRain(email, rain) { success ->
@@ -396,17 +158,6 @@ class RainDetailsActivity : AppCompatActivity() {
                 if (success) {
                     CacheHelper.saveObject(this@RainDetailsActivity, "RAIN_DETAILS_$currentRainId", rain)
                     Toast.makeText(this, "Zapisano dane ✅", Toast.LENGTH_SHORT).show()
-                    finish() // Wracamy do Home, gdzie kafelki się odświeżą
-                }
-            }
-        }
-    }
-
-    private fun deleteEntry() {
-        remoteRepo.deleteRain(currentRainId) { success ->
-            runOnUiThread {
-                if (success) {
-                    Toast.makeText(this, "Usunięto pomyślnie 🗑️", Toast.LENGTH_SHORT).show()
                     finish()
                 }
             }
@@ -415,14 +166,11 @@ class RainDetailsActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        map.onResume()
         refreshHandler.post(refreshRunnable)
-        loadAllAgriculturalFields() // Odśwież pola po powrocie z FieldEditActivity
     }
 
     override fun onPause() {
         super.onPause()
-        map.onPause()
         refreshHandler.removeCallbacks(refreshRunnable)
     }
 }

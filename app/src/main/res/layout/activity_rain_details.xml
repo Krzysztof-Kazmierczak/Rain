@@ -58,8 +58,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:background="#DDDDDD"
-                android:layout_marginTop="4dp"
-                android:layout_marginBottom="4dp"/>
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"/>
 
             <TextView
                 android:id="@+id/statusHeader"
@@ -95,11 +95,27 @@
                 android:textSize="16sp"
                 android:padding="4dp"/>
 
+            <TextView
+                android:id="@+id/workTimeText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Czas pracy: --"
+                android:textSize="16sp"
+                android:padding="4dp"/>
+
+            <TextView
+                android:id="@+id/extensionText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Rozwinięcie: -- m"
+                android:textSize="16sp"
+                android:padding="4dp"/>
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="12dp"
                 android:gravity="center">
 
                 <Button
@@ -113,53 +129,16 @@
                     android:textColor="#FFFFFF" />
 
                 <Button
-                    android:id="@+id/deleteButton"
+                    android:id="@+id/btnAdvancedSettings"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="USUŃ"
+                    android:text="ZAAWANSOWANE"
                     android:layout_marginStart="8dp"
-                    android:backgroundTint="#F44336"
+                    android:backgroundTint="?attr/colorPrimary"
                     android:textColor="#FFFFFF" />
 
             </LinearLayout>
-
-            <org.osmdroid.views.MapView
-                android:id="@+id/map"
-                android:layout_width="match_parent"
-                android:layout_height="250dp"
-                android:layout_marginTop="4dp" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="0dp"
-                android:gravity="center">
-
-                <Button
-                    android:id="@+id/btnStartDrawing"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Dodaj Pole"
-                    android:layout_marginEnd="8dp"
-                    android:backgroundTint="#4CAF50"
-                    android:textColor="#FFFFFF" />
-
-                <Button
-                    android:id="@+id/btnUndo"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="USUŃ Znacznik"
-                    android:layout_marginStart="8dp"
-                    android:backgroundTint="#F44336"
-                    android:textColor="#FFFFFF" />
-
-            </LinearLayout>
-
-
 
         </LinearLayout>
     </ScrollView>
