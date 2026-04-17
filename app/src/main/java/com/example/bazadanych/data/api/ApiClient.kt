@@ -11,17 +11,17 @@ import retrofit2.http.Query
 interface RainTechApi {
 
     // Pobieranie aktualnej pogody z Twojej bazy
-    @GET("/get_current_weather.php") // UWAGA: upewnij się, że ścieżka na serwerze jest taka sama!
+    @GET("get_current_weather.php") // UWAGA: upewnij się, że ścieżka na serwerze jest taka sama!
     fun getCurrentWeather(@Query("field_id") fieldId: Int): Call<FieldHistory>
 
     // Pobieranie historii do wykresów
-    @GET("/get_history.php") // UWAGA: upewnij się, że ścieżka na serwerze jest taka sama!
+    @GET("get_history.php") // UWAGA: upewnij się, że ścieżka na serwerze jest taka sama!
     fun getFieldHistory(@Query("field_id") fieldId: Int): Call<List<FieldHistory>>
 }
 
 // 2. Klient uderzający do home.pl
 object ApiClient {
-    private const val BASE_URL = "https://rain-tech.pl/"
+    private const val BASE_URL = "https://rain-tech.pl/android/"
 
     val rainTech: RainTechApi by lazy {
         Retrofit.Builder()

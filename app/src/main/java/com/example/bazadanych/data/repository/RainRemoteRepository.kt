@@ -14,7 +14,7 @@ import java.io.IOException
 
 class RainRemoteRepository {
 
-    private val baseUrl = "https://rain-tech.pl/"
+    private val baseUrl = "https://rain-tech.pl/android/"
     private val client = OkHttpClient()
     private val TAG = "RainRepo"
     private val mainHandler = Handler(Looper.getMainLooper())

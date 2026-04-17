@@ -138,8 +138,8 @@ class AnalyticsActivity : AppCompatActivity() {
                 else -> 3
             }
             currentInterval = interval
-            updateForecastButtonState() // Ważne: aktualizuje tekst przycisku przy zmianie na 1h
-            applyAggregation(interval)
+            updateForecastButtonState()
+            applyAggregation(interval) // To wywoła updateChartsData -> centerChartOnNow
         }
 
         // 2. Ładowanie danych
@@ -245,29 +245,73 @@ class AnalyticsActivity : AppCompatActivity() {
 
     private fun applyAggregation(hours: Int) {
         if (hours == 1) {
+            // Dla 1h po prostu ukrywamy prognozę, bo ona fizycznie istnieje tylko co 3h
             displayData = fullHistoryData.filter { it.is_forecast != 1 }
-        } else if (hours == 0 || hours == 3) {
-            displayData = fullHistoryData
+        } else if (hours > 1) {
+            // ROZDZIELAMY DANE NA DWA STRUMIENIE
+            val history = fullHistoryData.filter { it.is_forecast == 0 }
+            val forecast = fullHistoryData.filter { it.is_forecast == 1 }
+
+            // 1. AGREGACJA HISTORII (Baza to 1h)
+            val historyStep = hours // np. dla 3h krok wynosi 3
+            val aggregatedHistory = if (history.isNotEmpty()) {
+                history.windowed(size = historyStep, step = historyStep, partialWindows = true).map { window ->
+                    FieldHistory(
+                        id = window[0].id,
+                        field_id = window[0].field_id,
+                        temperature = window.mapNotNull { it.temperature }.average(),
+                        rain_mm = window.mapNotNull { it.rain_mm }.sum(),
+                        humidity = window.mapNotNull { it.humidity }.average().toInt(),
+                        wind_speed = window.mapNotNull { it.wind_speed }.average(),
+                        is_forecast = window.last().is_forecast,
+                        recorded_at = window.last().recorded_at,
+                        machine_speed = window.mapNotNull { it.machine_speed }.average(),
+                        wind_deg = window[0].wind_deg,
+                        pressure = window[0].pressure,
+                        clouds = window[0].clouds,
+                        created_at = window[0].created_at
+                    )
+                }
+            } else emptyList()
+
+            // 2. AGREGACJA PROGNOZY (Baza to 3h)
+            // Jeśli hours = 3, to step = 1 (czyli nic nie agregujemy, bierzemy jak leci)
+            // Jeśli hours = 12, to step = 4 (bo 4 * 3h = 12h)
+            // Jeśli hours = 24, to step = 8 (bo 8 * 3h = 24h)
+            val forecastStep = (hours / 3).coerceAtLeast(1)
+
+            val aggregatedForecast = if (forecast.isNotEmpty()) {
+                if (forecastStep == 1) {
+                    forecast // Nie agregujemy, bo dane są domyślnie co 3h
+                } else {
+                    forecast.windowed(size = forecastStep, step = forecastStep, partialWindows = true).map { window ->
+                        FieldHistory(
+                            id = window[0].id,
+                            field_id = window[0].field_id,
+                            temperature = window.mapNotNull { it.temperature }.average(),
+                            rain_mm = window.mapNotNull { it.rain_mm }.sum(),
+                            humidity = window.mapNotNull { it.humidity }.average().toInt(),
+                            wind_speed = window.mapNotNull { it.wind_speed }.average(),
+                            is_forecast = window.last().is_forecast,
+                            recorded_at = window.last().recorded_at,
+                            machine_speed = window.mapNotNull { it.machine_speed }.average(),
+                            wind_deg = window[0].wind_deg,
+                            pressure = window[0].pressure,
+                            clouds = window[0].clouds,
+                            created_at = window[0].created_at
+                        )
+                    }
+                }
+            } else emptyList()
+
+            // SKLEJAMY OBUDOWANE DANE W JEDNĄ LISTĘ
+            displayData = aggregatedHistory + aggregatedForecast
+
         } else {
-            val step = (hours / 3).coerceAtLeast(1)
-            displayData = fullHistoryData.windowed(size = step, step = step, partialWindows = true).map { window ->
-                FieldHistory(
-                    id = window[0].id,
-                    field_id = window[0].field_id,
-                    temperature = window.mapNotNull { it.temperature }.average(),
-                    rain_mm = window.mapNotNull { it.rain_mm }.sum(),
-                    humidity = window.mapNotNull { it.humidity }.average().toInt(),
-                    wind_speed = window.mapNotNull { it.wind_speed }.average(),
-                    is_forecast = window.last().is_forecast,
-                    recorded_at = window.last().recorded_at,
-                    machine_speed = window.mapNotNull { it.machine_speed }.average(),
-                    wind_deg = window[0].wind_deg,
-                    pressure = window[0].pressure,
-                    clouds = window[0].clouds,
-                    created_at = window[0].created_at
-                )
-            }
+            // Zabezpieczenie np. dla hours = 0
+            displayData = fullHistoryData
         }
+
         updateChartsData()
     }
 
@@ -301,40 +345,45 @@ class AnalyticsActivity : AppCompatActivity() {
 
                 xAxis.valueFormatter = object : ValueFormatter() {
                     override fun getFormattedValue(value: Float): String {
-                        val firstTimeStr = displayData.firstOrNull()?.recorded_at ?: return ""
+                        val index = value.toInt()
+
+                        // Zabezpieczenie przed wyjściem poza zakres listy
+                        if (index < 0 || index >= displayData.size) return ""
+
+                        val dataItem = displayData[index]
+                        val dateStr = dataItem.recorded_at ?: return ""
+
                         val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
-                        val calendar = java.util.Calendar.getInstance()
+                        val date = sdf.parse(dateStr) ?: return ""
 
-                        calendar.time = sdf.parse(firstTimeStr) ?: return ""
-                        calendar.add(java.util.Calendar.HOUR_OF_DAY, value.toInt())
-
-                        val resultDate = calendar.time
-
-                        // 3. DODAJ ZNAK NOWEJ LINII (\n) DO FORMATU
+                        // Wyświetlamy dokładnie to, co jest w danych
                         val outSdf = if (currentInterval >= 24) {
-                            java.text.SimpleDateFormat("dd.MM\nyyyy", java.util.Locale.getDefault()) // np. 15.04 (enter) 2024
+                            java.text.SimpleDateFormat("dd.MM\nyyyy", java.util.Locale.getDefault())
                         } else {
-                            java.text.SimpleDateFormat("HH:00\ndd.MM", java.util.Locale.getDefault()) // np. 14:00 (enter) 15.04
+                            java.text.SimpleDateFormat("HH:00\ndd.MM", java.util.Locale.getDefault())
                         }
-                        return outSdf.format(resultDate)
+                        return outSdf.format(date)
                     }
                 }
             }
             setVisibleXRangeMaximum(10f)
-            moveViewToX(displayData.size.toFloat())
+            //moveViewToX(displayData.size.toFloat())
         }
     }
 
     private fun updateChartsData() {
+        // 1. Resetujemy podświetlenia (markery), aby nie wisiały przy zmianie danych
         chartWeather.highlightValues(null)
         chartMachine.highlightValues(null)
 
+        // 2. Jeśli nie ma danych, czyścimy wykresy i wychodzimy
         if (fullHistoryData.isEmpty()) {
             chartWeather.clear()
             chartMachine.clear()
             return
         }
 
+        // --- SEKCJA WYKRESU POGODOWEGO (Weather) ---
         val weatherData = LineData()
         val tvWeatherLeft = findViewById<TextView>(R.id.tvWeatherLeftLabel)
         val tvWeatherRight = findViewById<TextView>(R.id.tvWeatherRightLabel)
@@ -347,6 +396,8 @@ class AnalyticsActivity : AppCompatActivity() {
         activeWeatherParams.forEachIndexed { index, id ->
             val (label, color, extractor) = getParamInfo(id)
             val axis = if (index == 0) YAxis.AxisDependency.LEFT else YAxis.AxisDependency.RIGHT
+
+            // Funkcja addLineWithForecast dodaje punkty używając indeksów (0f, 1f, 2f...)
             addLineWithForecast(weatherData, label, color, axis, extractor)
 
             if (index == 0) {
@@ -360,6 +411,7 @@ class AnalyticsActivity : AppCompatActivity() {
             }
         }
 
+        // --- SEKCJA WYKRESU MASZYNOWEGO (Machine) ---
         val machineData = LineData()
         val tvMachineLeft = findViewById<TextView>(R.id.tvMachineLeftLabel)
         val tvMachineRight = findViewById<TextView>(R.id.tvMachineRightLabel)
@@ -372,6 +424,7 @@ class AnalyticsActivity : AppCompatActivity() {
         activeMachineParams.forEachIndexed { index, id ->
             val (label, color, extractor) = getParamInfo(id)
             val axis = if (index == 0) YAxis.AxisDependency.LEFT else YAxis.AxisDependency.RIGHT
+
             addLineWithForecast(machineData, label, color, axis, extractor)
 
             if (index == 0) {
@@ -385,48 +438,21 @@ class AnalyticsActivity : AppCompatActivity() {
             }
         }
 
+        // 3. Przypisanie danych do obiektów wykresów
         if (weatherData.dataSetCount > 0) chartWeather.data = weatherData else chartWeather.clear()
         if (machineData.dataSetCount > 0) chartMachine.data = machineData else chartMachine.clear()
 
-        val charts = listOf(chartWeather, chartMachine)
-        val now = System.currentTimeMillis()
-        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
-
-        // 1. Obliczamy pozycję X dla "teraz"
-        var nowX = displayData.size.toFloat()
-        val firstTimeStr = displayData.firstOrNull()?.recorded_at
-
-        if (firstTimeStr != null) {
-            val firstDate = sdf.parse(firstTimeStr)
-            if (firstDate != null) {
-                val firstTimestamp = firstDate.time
-                nowX = (now - firstTimestamp).toFloat() / (1000 * 60 * 60)
-            }
-        }
-
-
-
-        charts.forEach { chart ->
-            if (startDateFilter == null && endDateFilter == null) {
-                chart.setVisibleXRangeMaximum(visibleRange)
-
-                // 2. POPRAWKA: Przesuwamy widok tak, aby nowX był na środku
-                // Odejmujemy połowę widocznego zakresu (20 pkt), żeby punkt trafił w centrum
-                val centerX = nowX - (visibleRange / 2f)
-                chart.moveViewToX(centerX)
-            } else {
-                chart.setVisibleXRangeMaximum(Float.MAX_VALUE)
-                chart.moveViewToX(0f)
-            }
-        }
-
+        // 4. Konfiguracja markerów (dymków po kliknięciu)
         val markerView = CustomMarkerView(this, R.layout.view_marker)
         chartWeather.marker = markerView
         chartMachine.marker = markerView
 
+        // 5. Odświeżenie widoku (narysowanie linii)
         chartWeather.invalidate()
         chartMachine.invalidate()
-        // Dodaj to tutaj:
+
+        // 6. CENTROWANIE - To wywołanie musi być na samym końcu.
+        // Dzięki temu, że usunęliśmy stąd moveViewToX, nie ma już konfliktu dwóch komend przesunięcia.
         centerChartOnNow()
     }
 
@@ -440,20 +466,16 @@ class AnalyticsActivity : AppCompatActivity() {
         val pastEntries = mutableListOf<Entry>()
         val futureEntries = mutableListOf<Entry>()
 
-        val firstTimeStr = displayData.firstOrNull()?.recorded_at ?: return
-        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
-        val firstDate = sdf.parse(firstTimeStr) ?: return
-        val firstTimestamp = firstDate.time
-
-        displayData.forEach { d ->
+        // Używamy indeksu (index.toFloat()), a nie obliczeń na datach
+        displayData.forEachIndexed { index, d ->
             val value = valueExtractor(d)
             if (value != null) {
-                val currentDate = sdf.parse(d.recorded_at ?: "") ?: return@forEach
-                val hoursOffset = (currentDate.time - firstTimestamp).toFloat() / (1000 * 60 * 60)
+                val xPos = index.toFloat() // Każdy kolejny punkt to +1 na osi X
+
                 if (d.is_forecast != 1) {
-                    pastEntries.add(Entry(hoursOffset, value, d))
+                    pastEntries.add(Entry(xPos, value, d))
                 } else {
-                    futureEntries.add(Entry(hoursOffset, value, d))
+                    futureEntries.add(Entry(xPos, value, d))
                 }
             }
         }
@@ -538,33 +560,44 @@ class AnalyticsActivity : AppCompatActivity() {
     }
 
     private fun centerChartOnNow() {
-        val now = System.currentTimeMillis()
-        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+        if (displayData.isEmpty()) return
 
-        var nowX = displayData.size.toFloat()
-        val firstTimeStr = displayData.firstOrNull()?.recorded_at
-
-        if (firstTimeStr != null) {
-            val firstDate = sdf.parse(firstTimeStr)
-            if (firstDate != null) {
-                val firstTimestamp = firstDate.time
-                nowX = (now - firstTimestamp).toFloat() / (1000 * 60 * 60)
-            }
-        }
-
-        val visibleRange = 40f
+        val lastHistoryIndex = displayData.indexOfLast { it.is_forecast == 0 }
+        val targetX = 1000f//if (lastHistoryIndex != -1) lastHistoryIndex.toFloat() else 0f
         val charts = listOf(chartWeather, chartMachine)
 
         charts.forEach { chart ->
-            if (startDateFilter == null && endDateFilter == null) {
-                chart.setVisibleXRangeMaximum(visibleRange)
-                val centerX = nowX - (visibleRange / 2f)
+            // KLUCZOWE: Powiedz wykresowi, że dane i osie się zmieniły
+            chart.data?.notifyDataChanged()
+            chart.notifyDataSetChanged()
 
-                // POPRAWKA: moveViewToAnimated zamiast moveViewToXAnimated
-                // Parametry: (xIndex, yValue, axis, duration)
-                // Ustawiamy yValue na 0f, bo moveViewToAnimated i tak centruje tylko w poziomie,
-                // jeśli wykres nie ma zablokowanego przewijania w pionie.
-                chart.moveViewToAnimated(centerX, 0f, YAxis.AxisDependency.LEFT, 500)
+            if (startDateFilter == null && endDateFilter == null) {
+                val (dynamicRange, forecastOffset) = when(currentInterval) {
+                    24 -> 14f to 7f
+                    12 -> 30f to 14f
+                    else -> 100f to 50f
+                }
+
+                // Ustawiamy widoczny zakres
+                chart.setVisibleXRangeMaximum(dynamicRange)
+
+                // OBLICZANIE STARTX (Poprawione, żeby nie było dziur)
+                val startX = if (!isForecastVisible || currentInterval == 1) {
+                    targetX //- dynamicRange + 1f
+                } else {
+                    targetX// + forecastOffset) - dynamicRange
+                }
+
+                val finalX = if (startX < 0f) 0f else startX
+
+                // WYMUSZENIE: Najpierw przelicz macierz, potem przesuń
+                chart.post {
+                    chart.moveViewToX(finalX)
+                }
+
+            } else {
+                chart.setVisibleXRangeMaximum(displayData.size.toFloat())
+                chart.moveViewToX(0f)
             }
         }
     }

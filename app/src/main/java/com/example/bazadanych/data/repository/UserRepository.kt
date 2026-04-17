@@ -15,7 +15,7 @@ class UserRepository {
         Thread {
 
             try {
-                val url = URL("https://rain-tech.pl/login.php")
+                val url = URL("https://rain-tech.pl/android/login.php")
                 val connection = url.openConnection() as HttpURLConnection
 
                 connection.requestMethod = "POST"
@@ -49,7 +49,7 @@ class UserRepository {
 
         Thread {
 
-            val url = URL("https://rain-tech.pl/register.php")
+            val url = URL("https://rain-tech.pl/android/register.php")
             val connection = url.openConnection() as HttpURLConnection
 
             connection.requestMethod = "POST"

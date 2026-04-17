@@ -164,7 +164,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
     private fun loadDataFromServer() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val url = URL("https://TWOJ-SERWER.PL/get_rain_adv.php?id=$currentRainId")
+                val url = URL("https://TWOJ-SERWER.PL/android/get_rain_adv.php?id=$currentRainId")
                 val response = url.readText()
                 val json = JSONObject(response)
 
@@ -215,7 +215,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val url = URL("https://TWOJ-SERWER.PL/save_rain_adv.php")
+                val url = URL("https://TWOJ-SERWER.PL/android/save_rain_adv.php")
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "POST"
                 conn.doOutput = true
