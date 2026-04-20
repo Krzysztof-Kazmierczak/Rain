@@ -248,19 +248,24 @@ class AnalyticsActivity : AppCompatActivity() {
             // Dla 1h po prostu ukrywamy prognozę, bo ona fizycznie istnieje tylko co 3h
             displayData = fullHistoryData.filter { it.is_forecast != 1 }
         } else if (hours > 1) {
-            // ROZDZIELAMY DANE NA DWA STRUMIENIE
             val history = fullHistoryData.filter { it.is_forecast == 0 }
             val forecast = fullHistoryData.filter { it.is_forecast == 1 }
 
             // 1. AGREGACJA HISTORII (Baza to 1h)
-            val historyStep = hours // np. dla 3h krok wynosi 3
+            val historyStep = hours
             val aggregatedHistory = if (history.isNotEmpty()) {
                 history.windowed(size = historyStep, step = historyStep, partialWindows = true).map { window ->
+
+                    // --- LOGI DLA HISTORII ---
+                    val rainValues = window.mapNotNull { it.rain_mm }
+                    val summedRain = rainValues.sum()
+                    android.util.Log.d("RainDebug", "HISTORIA [Krok ${hours}h] Czas: ${window.last().recorded_at} | Składowe opady: $rainValues -> WYNIK: $summedRain")
+
                     FieldHistory(
                         id = window[0].id,
                         field_id = window[0].field_id,
                         temperature = window.mapNotNull { it.temperature }.average(),
-                        rain_mm = window.mapNotNull { it.rain_mm }.sum(),
+                        rain_mm = summedRain, // Używamy naszej obliczonej i wylogowanej sumy
                         humidity = window.mapNotNull { it.humidity }.average().toInt(),
                         wind_speed = window.mapNotNull { it.wind_speed }.average(),
                         is_forecast = window.last().is_forecast,
@@ -275,21 +280,24 @@ class AnalyticsActivity : AppCompatActivity() {
             } else emptyList()
 
             // 2. AGREGACJA PROGNOZY (Baza to 3h)
-            // Jeśli hours = 3, to step = 1 (czyli nic nie agregujemy, bierzemy jak leci)
-            // Jeśli hours = 12, to step = 4 (bo 4 * 3h = 12h)
-            // Jeśli hours = 24, to step = 8 (bo 8 * 3h = 24h)
             val forecastStep = (hours / 3).coerceAtLeast(1)
 
             val aggregatedForecast = if (forecast.isNotEmpty()) {
                 if (forecastStep == 1) {
-                    forecast // Nie agregujemy, bo dane są domyślnie co 3h
+                    forecast
                 } else {
                     forecast.windowed(size = forecastStep, step = forecastStep, partialWindows = true).map { window ->
+
+                        // --- LOGI DLA PROGNOZY ---
+                        val rainValues = window.mapNotNull { it.rain_mm }
+                        val summedRain = rainValues.sum()
+                        android.util.Log.d("RainDebug", "PROGNOZA [Krok ${hours}h] Czas: ${window.last().recorded_at} | Składowe opady: $rainValues -> WYNIK: $summedRain")
+
                         FieldHistory(
                             id = window[0].id,
                             field_id = window[0].field_id,
                             temperature = window.mapNotNull { it.temperature }.average(),
-                            rain_mm = window.mapNotNull { it.rain_mm }.sum(),
+                            rain_mm = summedRain, // Używamy naszej obliczonej i wylogowanej sumy
                             humidity = window.mapNotNull { it.humidity }.average().toInt(),
                             wind_speed = window.mapNotNull { it.wind_speed }.average(),
                             is_forecast = window.last().is_forecast,
@@ -304,11 +312,8 @@ class AnalyticsActivity : AppCompatActivity() {
                 }
             } else emptyList()
 
-            // SKLEJAMY OBUDOWANE DANE W JEDNĄ LISTĘ
             displayData = aggregatedHistory + aggregatedForecast
-
         } else {
-            // Zabezpieczenie np. dla hours = 0
             displayData = fullHistoryData
         }
 
