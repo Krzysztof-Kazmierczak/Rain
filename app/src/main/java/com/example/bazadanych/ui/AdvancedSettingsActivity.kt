@@ -198,20 +198,23 @@ class AdvancedSettingsActivity : AppCompatActivity() {
     }
 
     private fun saveDataToServer() {
+        // 1. Logowanie wysyłanych danych (żeby sprawdzić czy JSON jest poprawny)
         val jsonParams = JSONObject().apply {
             put("id", currentRainId)
-            put("target_speed", editTargetSpeed.text.toString())
+            put("target_speed", editTargetSpeed.text.toString().ifEmpty { "0" })
             put("zone_watering", if (cbZoneWatering.isChecked) 1 else 0)
-            put("z1_end", z1End.text.toString())
-            put("z2_end", z2End.text.toString())
-            put("z3_end", z3End.text.toString())
-            put("z1_speed", editZ1Speed.text.toString())
-            put("z2_speed", editZ2Speed.text.toString())
-            put("z3_speed", editZ3Speed.text.toString())
-            put("delay_start", findViewById<EditText>(R.id.editDelayStart).text.toString())
-            put("delay_wind", findViewById<EditText>(R.id.editDelayWind).text.toString())
-            put("delay_end", findViewById<EditText>(R.id.editDelayEnd).text.toString())
+            put("z1_end", z1End.text.toString().ifEmpty { "0" })
+            put("z2_end", z2End.text.toString().ifEmpty { "0" })
+            put("z3_end", z3End.text.toString().ifEmpty { "0" })
+            put("z1_speed", editZ1Speed.text.toString().ifEmpty { "0" })
+            put("z2_speed", editZ2Speed.text.toString().ifEmpty { "0" })
+            put("z3_speed", editZ3Speed.text.toString().ifEmpty { "0" })
+            put("delay_start", findViewById<EditText>(R.id.editDelayStart).text.toString().ifEmpty { "00:00:00" })
+            put("delay_wind", findViewById<EditText>(R.id.editDelayWind).text.toString().ifEmpty { "00:00:00" })
+            put("delay_end", findViewById<EditText>(R.id.editDelayEnd).text.toString().ifEmpty { "00:00:00" })
         }
+
+        android.util.Log.d("DEBUG_SAVE", "Wysyłam JSON: $jsonParams")
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -220,16 +223,37 @@ class AdvancedSettingsActivity : AppCompatActivity() {
                 conn.requestMethod = "POST"
                 conn.doOutput = true
                 conn.setRequestProperty("Content-Type", "application/json")
+                conn.connectTimeout = 5000 // 5 sekund na połączenie
 
                 OutputStreamWriter(conn.outputStream).use { it.write(jsonParams.toString()) }
 
-                if (conn.responseCode == 200) {
+                val responseCode = conn.responseCode
+
+                if (responseCode == 200) {
+                    // Czytamy odpowiedź sukcesu (opcjonalnie)
+                    val response = conn.inputStream.bufferedReader().readText()
+                    android.util.Log.d("DEBUG_SAVE", "Sukces serwera: $response")
+
                     withContext(Dispatchers.Main) {
                         Toast.makeText(this@AdvancedSettingsActivity, "Zapisano! ✅", Toast.LENGTH_SHORT).show()
                         finish()
                     }
+                } else {
+                    // TUTAJ KLUCZ: Czytamy co serwer wyrzucił jako błąd (np. błąd SQL z PHP)
+                    val errorResponse = conn.errorStream?.bufferedReader()?.readText() ?: "Brak szczegółów błędu"
+                    android.util.Log.e("DEBUG_SAVE", "Błąd serwera ($responseCode): $errorResponse")
+
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@AdvancedSettingsActivity, "Błąd serwera: $responseCode", Toast.LENGTH_LONG).show()
+                    }
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                android.util.Log.e("DEBUG_SAVE", "Wyjątek: ${e.message}")
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@AdvancedSettingsActivity, "Błąd połączenia: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
         }
     }
 
