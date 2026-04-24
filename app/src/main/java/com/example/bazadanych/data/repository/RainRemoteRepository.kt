@@ -50,15 +50,20 @@ class RainRemoteRepository {
 
     fun getRains(email: String, callback: (List<Rain>) -> Unit) {
         val url = "${baseUrl}get_rains_with_status.php?email=$email"
+        Log.d(TAG, "Pobieram maszyny z URL: $url") // DODAJ TO
+
         val request = Request.Builder().url(url).get().build()
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                Log.e(TAG, "Błąd sieci: ${e.message}")
                 postOnMain { callback(emptyList()) }
             }
 
             override fun onResponse(call: Call, response: Response) {
                 val jsonResponse = response.body?.string()
+                Log.d(TAG, "Odpowiedź serwera: $jsonResponse") // DODAJ TO
+
                 val list = mutableListOf<Rain>()
                 if (!jsonResponse.isNullOrEmpty()) {
                     try {
@@ -74,26 +79,47 @@ class RainRemoteRepository {
                             ))
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "Błąd JSON maszyn: ${e.message}")
+                        Log.e(TAG, "Błąd parsowania: ${e.message}")
                     }
                 }
                 postOnMain { callback(list) }
             }
         })
     }
-    // W RainRemoteRepository.kt
-    fun getRainDetails(id: String, callback: (name: String, length: String, comment: String) -> Unit) {
-        val url = "${baseUrl}get_rain_details.php?id=$id"
+
+    fun getRainDetails(id: String, email: String, callback: (name: String, length: String, comment: String) -> Unit) {
+        val url = "${baseUrl}get_rain_details.php?id=$id&email=$email"
+        Log.d("RainRepoDetails", "---> Wywołuję URL: $url")
+
         client.newCall(Request.Builder().url(url).get().build()).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) { postOnMain { callback("", "", "") } }
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("RainRepoDetails", "Błąd połączenia: ${e.message}")
+                postOnMain { callback("", "", "") }
+            }
+
             override fun onResponse(call: Call, response: Response) {
                 val body = response.body?.string()
+                Log.d("RainRepoDetails", "<--- Odpowiedź serwera: $body")
+
                 try {
-                    val obj = JSONObject(body ?: "{}")
-                    postOnMain {
-                        callback(obj.optString("name", ""), obj.optString("hose_length", "0"), obj.optString("comment", ""))
+                    if (body.isNullOrEmpty() || body.contains("error")) {
+                        Log.e("RainRepoDetails", "Serwer zwrócił błąd lub pustkę!")
+                        postOnMain { callback("", "", "") }
+                        return
                     }
-                } catch (e: Exception) { postOnMain { callback("", "", "") } }
+
+                    val obj = JSONObject(body)
+                    postOnMain {
+                        callback(
+                            obj.optString("name", ""),
+                            obj.optString("hose_length", "0"),
+                            obj.optString("comment", "")
+                        )
+                    }
+                } catch (e: Exception) {
+                    Log.e("RainRepoDetails", "Błąd parsowania JSON: ${e.message}")
+                    postOnMain { callback("", "", "") }
+                }
             }
         })
     }
@@ -128,37 +154,39 @@ class RainRemoteRepository {
         })
     }
 
-    fun getRainHistory(rainId: String, callback: (List<RainStatus>) -> Unit) {
-        val url = "${baseUrl}get_rain_history.php?rain_id=$rainId"
+    fun getRainHistory(rainId: String, email: String, callback: (List<RainStatus>) -> Unit) {
+        // Dodajemy email do adresu URL
+        val url = "${baseUrl}get_rain_history.php?rain_id=$rainId&email=$email"
+
         client.newCall(Request.Builder().url(url).get().build()).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                Log.e("REPO", "Błąd sieci: ${e.message}")
                 postOnMain { callback(emptyList()) }
             }
+
             override fun onResponse(call: Call, response: Response) {
                 val body = response.body?.string()
-                Log.d("REPO", "Odebrano z serwera: $body") // ZOBACZYSZ TO W LOGCAT
                 val list = mutableListOf<RainStatus>()
                 try {
                     val jsonArray = JSONArray(body ?: "[]")
                     for (i in 0 until jsonArray.length()) {
                         val obj = jsonArray.getJSONObject(i)
                         list.add(RainStatus(
-                            id = obj.optInt("id", 0),
-                            rainId = obj.optString("rain_id", ""),
-                            isWorking = obj.optBoolean("is_working", false),
-                            setSpeed = obj.optDouble("set_speed", 0.0),
-                            currentSpeed = obj.optDouble("current_speed", 0.0),
-                            currentDistance = obj.optDouble("current_distance", 0.0),
+                            id = obj.optInt("id"),
+                            rainId = obj.optString("rain_id"),
+                            isWorking = obj.optBoolean("is_working"),
+                            setSpeed = obj.optDouble("set_speed"),
+                            currentSpeed = obj.optDouble("current_speed"),
+                            currentDistance = obj.optDouble("current_distance"),
+                            extension = obj.optDouble("extension"), // Pobieranie nowej danej
+                            workTime = obj.optString("work_time", "00:00:00"), // Pobieranie nowej danej
                             timeToFinish = obj.optString("time_to_finish", "--:--"),
-                            updatedAt = obj.optString("updated_at", ""),
-                            lat = obj.optDouble("lat", 0.0),
-                            lng = obj.optDouble("lng", 0.0)
+                            updatedAt = obj.optString("updated_at"),
+                            lat = obj.optDouble("lat"),
+                            lng = obj.optDouble("lng"),
+                            signalStrength = obj.optInt("signal")
                         ))
                     }
-                } catch (e: Exception) {
-                    Log.e("REPO", "Błąd parsowania JSON: ${e.message}")
-                }
+                } catch (e: Exception) { e.printStackTrace() }
                 postOnMain { callback(list) }
             }
         })

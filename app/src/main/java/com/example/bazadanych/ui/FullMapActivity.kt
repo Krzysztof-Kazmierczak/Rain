@@ -210,6 +210,8 @@ class FullMapActivity : AppCompatActivity() {
 
     private fun addRainMarker(rain: Rain) {
         val HISTORY_KEY = "HISTORY_${rain.id}"
+        // Pobieramy email z SharedPreferences
+        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
 
         Thread {
             // 1. Sprawdzanie cache w TLE
@@ -221,8 +223,8 @@ class FullMapActivity : AppCompatActivity() {
                 }
             }
 
-            // 2. Pobieranie online
-            remoteRepo.getRainHistory(rain.id) { history ->
+            // 2. Pobieranie online - TUTAJ DODAJEMY email
+            remoteRepo.getRainHistory(rain.id, email) { history ->
                 if (history.isNotEmpty()) {
                     CacheHelper.saveList(this, HISTORY_KEY, history)
                     runOnUiThread {
@@ -375,7 +377,9 @@ class FullMapActivity : AppCompatActivity() {
         val recycler = findViewById<RecyclerView>(R.id.recyclerRains)
         recycler.layoutManager = LinearLayoutManager(this)
 
-        // Tworzymy listę i adapter na starcie
+        // Pobieramy email raz, przed pętlą dla wszystkich maszyn
+        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+
         val sidebarItems = mutableListOf<MapSidebarAdapter.SidebarItem>()
         val adapter = MapSidebarAdapter(sidebarItems) { item ->
             if (item.lat == 0.0 && item.lng == 0.0) {
@@ -392,7 +396,7 @@ class FullMapActivity : AppCompatActivity() {
             val HISTORY_KEY = "HISTORY_${rain.id}"
 
             Thread {
-                // 1. NAJPIERW PRÓBUJEMY WYCIĄGNĄĆ POZYCJĘ Z CACHE
+                // 1. CACHE (Tu nie potrzebujemy maila, bo to dane lokalne)
                 val cachedHistory = CacheHelper.loadList<com.example.bazadanych.data.db.RainStatus>(this, HISTORY_KEY)
                 if (cachedHistory != null && cachedHistory.isNotEmpty()) {
                     val cachedItem = MapSidebarAdapter.SidebarItem(
@@ -403,7 +407,6 @@ class FullMapActivity : AppCompatActivity() {
                     )
 
                     runOnUiThread {
-                        // Dodaj tylko jeśli jeszcze nie ma tej maszyny na liście
                         if (!sidebarItems.any { it.id == cachedItem.id }) {
                             sidebarItems.add(cachedItem)
                             adapter.notifyDataSetChanged()
@@ -411,8 +414,8 @@ class FullMapActivity : AppCompatActivity() {
                     }
                 }
 
-                // 2. POTEM (JEŚLI JEST NET) PRÓBUJEMY ODŚWIEŻYĆ Z SERWERA
-                remoteRepo.getRainHistory(rain.id) { history ->
+                // 2. SERWER - DODANO email jako drugi parametr
+                remoteRepo.getRainHistory(rain.id, email) { history ->
                     if (history.isNotEmpty()) {
                         val newItem = MapSidebarAdapter.SidebarItem(
                             rain.id,
@@ -422,7 +425,6 @@ class FullMapActivity : AppCompatActivity() {
                         )
 
                         runOnUiThread {
-                            // Szukamy czy maszyna już jest, żeby ją zaktualizować zamiast dublować
                             val index = sidebarItems.indexOfFirst { it.id == newItem.id }
                             if (index != -1) {
                                 sidebarItems[index] = newItem
@@ -436,7 +438,6 @@ class FullMapActivity : AppCompatActivity() {
             }.start()
         }
     }
-
     private fun isOnline(): Boolean {
         val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         return cm.activeNetworkInfo?.isConnected ?: false
@@ -513,7 +514,9 @@ class FullMapActivity : AppCompatActivity() {
     }
 
     private fun downloadRainTiles(rain: Rain) {
-        remoteRepo.getRainHistory(rain.id) { history ->
+        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+
+        remoteRepo.getRainHistory(rain.id, email) { history ->
             if (history.isNotEmpty()) {
                 val latest = history[0]
                 val center = GeoPoint(latest.lat, latest.lng)

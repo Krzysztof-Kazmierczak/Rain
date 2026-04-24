@@ -139,7 +139,15 @@ class AdvancedSettingsActivity : AppCompatActivity() {
 
         cb.setOnCheckedChangeListener { _, isChecked ->
             et.isEnabled = isChecked
-            if (!isChecked) et.setText("") else if (et.text.isEmpty()) showTimePickerDialog(et)
+            if (!isChecked) {
+                et.setText("")
+            } else {
+                // Pokazuj dialog TYLKO jeśli CheckBox został zaznaczony, a pole tekstowe jest puste
+                // i (opcjonalnie) użytkownik dotknął ekranu (ma fokus)
+                if (et.text.isEmpty()) {
+                    showTimePickerDialog(et)
+                }
+            }
         }
         et.setOnClickListener { if (cb.isChecked) showTimePickerDialog(et) }
     }
@@ -192,8 +200,11 @@ class AdvancedSettingsActivity : AppCompatActivity() {
 
     private fun checkAndSetDelay(cbId: Int, etId: Int, value: String) {
         if (value.isNotEmpty() && value != "00:00:00") {
-            findViewById<CheckBox>(cbId).isChecked = true
-            findViewById<EditText>(etId).setText(value)
+            val et = findViewById<EditText>(etId)
+            val cb = findViewById<CheckBox>(cbId)
+
+            et.setText(value) // 1. Najpierw ustawiamy tekst
+            cb.isChecked = true // 2. Potem zaznaczamy - listener sprawdzi et.text i zobaczy, że nie jest puste
         }
     }
 

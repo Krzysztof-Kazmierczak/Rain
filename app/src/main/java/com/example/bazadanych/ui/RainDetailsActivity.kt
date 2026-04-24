@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
@@ -32,6 +33,7 @@ class RainDetailsActivity : AppCompatActivity() {
     private lateinit var timeFinishText: TextView
     private lateinit var workTimeText: TextView
     private lateinit var extensionText: TextView
+    private lateinit var signalText: TextView
     private val refreshRunnable = object : Runnable {
         override fun run() {
             loadLiveStatus()
@@ -63,6 +65,7 @@ class RainDetailsActivity : AppCompatActivity() {
         timeFinishText = findViewById(R.id.timeFinishText)
         workTimeText = findViewById(R.id.workTimeText)
         extensionText = findViewById(R.id.extensionText)
+        signalText = findViewById(R.id.signalText)
 
         findViewById<Button>(R.id.saveButton).setOnClickListener {
             saveMainData()
@@ -77,7 +80,7 @@ class RainDetailsActivity : AppCompatActivity() {
         }
     }
 
-    private fun refreshStatusUI(isWorking: Boolean, speed: Double, finishTime: String, workTime: String, extension: String, isOffline: Boolean) {
+    private fun refreshStatusUI(isWorking: Boolean, speed: Double, finishTime: String, workTime: String, extension: String, isOffline: Boolean, signal: Int) {
         val label = if (isOffline) "[Offline] " else ""
 
         statusText.text = "${label}Status: ${if (isWorking) "PRACUJE ✅" else "STOP 🛑"}"
@@ -89,29 +92,42 @@ class RainDetailsActivity : AppCompatActivity() {
         // NOWE POLA
         workTimeText.text = "${label}Czas pracy: $workTime"
         extensionText.text = "${label}Rozwinięcie: $extension m"
+
+        signalText.text = "${label}Zasięg: $signal dBm"
     }
 
     private fun loadLiveStatus() {
         if (currentRainId.isEmpty()) return
 
-        remoteRepo.getRainHistory(currentRainId) { history ->
+        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+
+        remoteRepo.getRainHistory(currentRainId, email) { history ->
             if (history.isNotEmpty()) {
                 val latest = history[0]
 
-                // TODO: Zaktualizuj 'workTime' i 'extension', gdy dodasz te pola do bazy i obiektu RainStatus
                 refreshStatusUI(
                     isWorking = latest.isWorking,
                     speed = latest.currentSpeed,
                     finishTime = latest.timeToFinish,
-                    workTime = "00:00:00", // Atrapa - podmień na dane z bazy
-                    extension = "0", // Atrapa - podmień na dane z bazy
-                    isOffline = false
+                    workTime = latest.workTime,
+                    extension = latest.extension.toString(),
+                    isOffline = false,
+                    signal = latest.signalStrength // Przekazujemy sygnał z serwera
                 )
                 CacheHelper.saveObject(this, "RAIN_LIVE_STATUS_$currentRainId", latest)
             } else {
+                // TUTAJ BYŁ BŁĄD - brakowało siódmego parametru
                 val cached = CacheHelper.loadObject<RainStatus>(this, "RAIN_LIVE_STATUS_$currentRainId")
                 cached?.let {
-                    refreshStatusUI(it.isWorking, it.currentSpeed, it.timeToFinish, "00:00:00", "0", true)
+                    refreshStatusUI(
+                        isWorking = it.isWorking,
+                        speed = it.currentSpeed,
+                        finishTime = it.timeToFinish,
+                        workTime = it.workTime,       // Lepiej brać z cache niż wpisywać "00:00:00"
+                        extension = it.extension.toString(),
+                        isOffline = true,
+                        signal = it.signalStrength    // DODANO BRAKUJĄCY PARAMETR
+                    )
                 }
             }
         }
@@ -121,6 +137,8 @@ class RainDetailsActivity : AppCompatActivity() {
         if (currentRainId.isEmpty()) return
 
         val detailCacheKey = "RAIN_DETAILS_$currentRainId"
+        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+        Log.d("RainRepoDetails", "Pobrany email z sesji: '$email' dla ID: $currentRainId")
         val cachedRain = CacheHelper.loadObject<Rain>(this, detailCacheKey)
         cachedRain?.let {
             nameEdit.setText(it.name)
@@ -129,15 +147,16 @@ class RainDetailsActivity : AppCompatActivity() {
             supportActionBar?.title = "[Offline] ${it.name}"
         }
 
-        remoteRepo.getRainDetails(currentRainId) { name, length, comment ->
+        remoteRepo.getRainDetails(currentRainId, email) { name, length, comment ->
             if (name.isNotEmpty()) {
                 nameEdit.setText(name)
                 lengthEdit.setText(length)
                 commentEdit.setText(comment)
                 supportActionBar?.title = name
 
+                // Zapisz do cache
                 val rainToCache = Rain(currentRainId, name, length, comment, false)
-                CacheHelper.saveObject(this, detailCacheKey, rainToCache)
+                CacheHelper.saveObject(this, "RAIN_DETAILS_$currentRainId", rainToCache)
             }
         }
         loadLiveStatus()
