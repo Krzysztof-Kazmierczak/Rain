@@ -42,6 +42,8 @@ class FullMapActivity : AppCompatActivity() {
     private lateinit var map: MapView
     private val remoteRepo = RainRemoteRepository()
     private var isDrawingMode = false
+    private var isPlacingRainMode = false
+    private var rainIdToPlace: String? = null
     private var drawingPolyline = Polyline()
     private val fieldPoints = mutableListOf<GeoPoint>()
     private lateinit var drawerLayout: DrawerLayout
@@ -114,18 +116,50 @@ class FullMapActivity : AppCompatActivity() {
     private fun setupMap() {
         val eventsOverlay = MapEventsOverlay(object : MapEventsReceiver {
             override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
+                // Rysowanie pól (Twój stary kod)
                 if (isDrawingMode && p != null) {
                     fieldPoints.add(p)
                     btnUndo.visibility = View.VISIBLE
                     updateDrawingLine()
                     return true
                 }
+
+                // NOWY KOD: Ręczne ustawianie deszczowni
+                if (isPlacingRainMode && p != null && rainIdToPlace != null) {
+                    saveRainManualLocation(rainIdToPlace!!, p)
+                    return true
+                }
+
                 org.osmdroid.views.overlay.infowindow.InfoWindow.closeAllInfoWindowsOn(map)
                 return false
             }
             override fun longPressHelper(p: GeoPoint?): Boolean = false
         })
         map.overlays.add(eventsOverlay)
+    }
+
+    private fun saveRainManualLocation(rainId: String, p: GeoPoint) {
+        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+
+        // LOG 5: Sprawdzamy, czy tryb 'placing' złapał kliknięcie
+        Log.d("FullMapDebug", "Próba zapisu dla RainID: $rainId, Email: $email na koordynatach: ${p.latitude}, ${p.longitude}")
+
+        remoteRepo.updateRainManualLocation(rainId, email, p.latitude, p.longitude) { success ->
+            runOnUiThread {
+                if (success) {
+                    Log.d("FullMapDebug", "Sukces! Lokalizacja zapisana w bazie.")
+                    Toast.makeText(this, "Lokalizacja ustawiona!", Toast.LENGTH_SHORT).show()
+                    isPlacingRainMode = false
+                    rainIdToPlace = null
+                    loadData()
+                } else {
+                    Log.e("FullMapDebug", "Porażka! Sprawdź Logcat dla RainRepoDebug.")
+                    Toast.makeText(this, "Błąd zapisu! Zobacz logi.", Toast.LENGTH_LONG).show()
+                    isPlacingRainMode = false
+                    rainIdToPlace = null
+                }
+            }
+        }
     }
 
     private fun initUI() {
@@ -189,6 +223,11 @@ class FullMapActivity : AppCompatActivity() {
         }
 
         poly.setOnClickListener { polygon, _, _ ->
+
+            if (isPlacingRainMode || isDrawingMode) {
+                return@setOnClickListener false
+            }
+
             if (polygon.isInfoWindowOpen) {
                 val intent = Intent(this, FieldEditActivity::class.java).apply {
                     putExtra("field_id", field.id.toString())
@@ -237,6 +276,7 @@ class FullMapActivity : AppCompatActivity() {
 
     // Pomocnicza funkcja, żeby nie powtarzać kodu rysowania markera
     private fun drawRainMarkerOnMap(rain: Rain, lat: Double, lng: Double) {
+        if (lat == 0.0 && lng == 0.0) return
         // Usuń stary marker tej maszyny, jeśli istnieje (żeby się nie dublowały po odświeżeniu)
         map.overlays.removeAll { it is Marker && it.title == rain.name }
 
@@ -383,7 +423,18 @@ class FullMapActivity : AppCompatActivity() {
         val sidebarItems = mutableListOf<MapSidebarAdapter.SidebarItem>()
         val adapter = MapSidebarAdapter(sidebarItems) { item ->
             if (item.lat == 0.0 && item.lng == 0.0) {
-                Toast.makeText(this, "Brak sygnału GPS", Toast.LENGTH_SHORT).show()
+                // ZAMIAST TOASTA - WYŚWIETLAMY DIALOG
+                androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle("Brak sygnału GPS")
+                    .setMessage("Brak sygnału GPS. Czy chcesz samemu ustawić aktualne miejsce urządzenia na mapie?")
+                    .setPositiveButton("Tak") { _, _ ->
+                        isPlacingRainMode = true
+                        rainIdToPlace = item.id
+                        Toast.makeText(this, "Kliknij na mapie miejsce, w którym stoi maszyna", Toast.LENGTH_LONG).show()
+                        drawerLayout.closeDrawers() // Zamykamy pasek boczny
+                    }
+                    .setNegativeButton("Nie", null)
+                    .show()
             } else {
                 map.controller.animateTo(GeoPoint(item.lat, item.lng))
                 map.controller.setZoom(18.0)

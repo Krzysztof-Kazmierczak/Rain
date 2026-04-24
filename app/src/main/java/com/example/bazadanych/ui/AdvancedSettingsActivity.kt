@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.*
 import android.text.Editable
+import android.util.Log
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -13,13 +14,19 @@ import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.FormBody
+import okhttp3.Request
+import okhttp3.Response
 import org.json.JSONObject
+import java.io.IOException
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 
 class AdvancedSettingsActivity : AppCompatActivity() {
-
+    private val remoteRepo = com.example.bazadanych.data.repository.RainRemoteRepository()
     private lateinit var currentRainId: String
     private var maxHoseLength: Int = 0
 
@@ -82,6 +89,40 @@ class AdvancedSettingsActivity : AppCompatActivity() {
 
         findViewById<MaterialButton>(R.id.btnSaveAdvanced).setOnClickListener {
             saveDataToServer()
+        }
+
+        findViewById<MaterialButton>(R.id.btnDeleteLocalization).setOnClickListener {
+            deleteLocalization()
+        }
+    }
+
+    private fun deleteLocalization() {
+        val userEmail = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+        val rainId = intent.getStringExtra("id") ?: ""
+
+        // Wyświetlamy proste pytanie przed usunięciem
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Usuwanie lokalizacji")
+            .setMessage("Czy na pewno chcesz zresetować pozycję tej maszyny? Przestanie być widoczna na mapie.")
+            .setPositiveButton("Tak, usuń") { _, _ ->
+                performDelete(rainId, userEmail)
+            }
+            .setNegativeButton("Anuluj", null)
+            .show()
+    }
+
+    // Przeniosłem logikę do osobnej funkcji dla czystości kodu
+    private fun performDelete(rainId: String, userEmail: String) {
+        if (rainId.isNotEmpty() && userEmail.isNotEmpty()) {
+            remoteRepo.updateRainManualLocation(rainId, userEmail, 0.0, 0.0) { success ->
+                if (success) {
+                    Toast.makeText(this, "Lokalizacja została zresetowana", Toast.LENGTH_SHORT).show()
+                    // Jeśli chcesz, żeby po usunięciu od razu wróciło do mapy:
+                    // finish()
+                } else {
+                    Toast.makeText(this, "Błąd podczas resetowania lokalizacji", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 

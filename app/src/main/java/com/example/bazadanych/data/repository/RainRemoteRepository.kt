@@ -236,6 +236,50 @@ class RainRemoteRepository {
         })
     }
 
+    fun updateRainManualLocation(id: String, email: String, lat: Double, lng: Double, callback: (Boolean) -> Unit) {
+        val url = baseUrl + "update_rain_location.php"
+
+        // LOG 1: Sprawdzamy co wysyłamy
+        Log.d("RainRepoDebug", "===> WYSYŁAM LOKALIZACJĘ:")
+        Log.d("RainRepoDebug", "URL: $url")
+        Log.d("RainRepoDebug", "ID: $id, Email: $email, Lat: $lat, Lng: $lng")
+
+        val formBody = FormBody.Builder()
+            .add("id", id)
+            .add("email", email)
+            .add("lat", lat.toString())
+            .add("lng", lng.toString())
+            .build()
+
+        val request = Request.Builder()
+            .url(url)
+            .post(formBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                // LOG 2: Błąd połączenia (np. brak internetu, zły URL)
+                Log.e("RainRepoDebug", "!!! BŁĄD SIECI: ${e.message}")
+                postOnMain { callback(false) }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val responseBody = response.body?.string()?.trim()
+
+                // LOG 3: Surowa odpowiedź z serwera
+                Log.d("RainRepoDebug", "<=== ODPOWIEDŹ SERWERA: '$responseBody'")
+
+                if (responseBody == "OK") {
+                    postOnMain { callback(true) }
+                } else {
+                    // LOG 4: Serwer odpisał, ale coś mu się nie spodobało
+                    Log.w("RainRepoDebug", "Serwer nie zwrócił OK. Treść: $responseBody")
+                    postOnMain { callback(false) }
+                }
+            }
+        })
+    }
+
 
     fun deleteAgriculturalField(email: String, id: String, callback: (Boolean) -> Unit) {
         val formBody = FormBody.Builder().add("email", email).add("id", id).build()
