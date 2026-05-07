@@ -151,7 +151,9 @@ class ProfileActivity : AppCompatActivity() {
                 currentUserLevel = myLevel,
                 currentUserEmail = userEmail,
                 onSaveClick = { worker, newLevel ->
-                    saveWorker(worker.id, worker.worker_email, newLevel)
+                    // Sprawdzamy czy to ja i czy nie mam jeszcze potwierdzonego dostępu
+                    val isConfirming = (worker.worker_email == userEmail && worker.access_confirm == 0)
+                    saveWorker(worker.id, worker.worker_email, newLevel, isConfirming)
                 },
                 onDeleteClick = { worker ->
                     confirmDeleteWorker(worker.id)
@@ -161,13 +163,14 @@ class ProfileActivity : AppCompatActivity() {
         }
     }
 
-    private fun saveWorker(id: Int, emailToSave: String, levelToSave: Int) {
-        // PHP spodziewa się danych POST (application/x-www-form-urlencoded)
+    // Wewnątrz ProfileActivity:
+    private fun saveWorker(id: Int, emailToSave: String, levelToSave: Int, isConfirming: Boolean = false) {
         val formBody = FormBody.Builder()
             .add("id", id.toString())
             .add("worker_email", emailToSave)
             .add("access_level", levelToSave.toString())
             .add("current_user", userEmail)
+            .add("confirm_action", if (isConfirming) "1" else "0")
             .build()
 
         val request = Request.Builder()
@@ -184,8 +187,8 @@ class ProfileActivity : AppCompatActivity() {
                 val result = response.body?.string()?.trim()
                 runOnUiThread {
                     if (result == "OK") {
-                        if (id == 0) etNewUserEmail.text.clear() // Czyszczenie po dodaniu
-                        loadWorkers() // Odśwież listę
+                        if (id == 0) etNewUserEmail.text.clear()
+                        loadWorkers() // To odświeży listę i zaktualizuje access_confirm w UI
                     } else {
                         Toast.makeText(this@ProfileActivity, "Błąd: $result", Toast.LENGTH_LONG).show()
                     }
@@ -193,6 +196,8 @@ class ProfileActivity : AppCompatActivity() {
             }
         })
     }
+
+
 
     private fun confirmDeleteWorker(id: Int) {
         AlertDialog.Builder(this)

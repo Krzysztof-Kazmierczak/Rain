@@ -31,16 +31,18 @@ class WorkerAdapter(
 
     override fun onBindViewHolder(holder: WorkerViewHolder, position: Int) {
         val worker = workers[position]
-        val isMe = worker.worker_email == currentUserEmail
         val wLevel = worker.access_level
+        val isMe = worker.worker_email == currentUserEmail
+        val hasConfirmed = worker.access_confirm == 1
 
-        // Ustawienie tekstu
+        // 1. Ustawienie tekstów podstawowych
         holder.tvEmail.text = if (isMe) "${worker.worker_email} (Ty)" else worker.worker_email
         holder.spinnerRole.setSelection(wLevel)
 
-        // Logika uprawnień (skopiowana z Twojego JS)
+        // 2. Logika uprawnień (Kto co może widzieć/klikać)
         var canEdit = false
         var canDelete = false
+        var isConfirmingAction = false
 
         if (currentUserRole == "owner") {
             canEdit = true
@@ -49,17 +51,22 @@ class WorkerAdapter(
             if (isMe) {
                 canEdit = true
                 canDelete = true
+                if (!hasConfirmed) isConfirmingAction = true
             } else if (currentUserLevel < wLevel) {
+                // Możesz edytować kogoś o niższym statusie (wyższy numer levelu)
                 canEdit = true
                 canDelete = true
             }
         }
 
-        // Dostosowanie widoczności elementów
+        // 3. Zarządzanie widocznością UI
         if (canEdit) {
             holder.spinnerRole.visibility = View.VISIBLE
             holder.tvRoleReadOnly.visibility = View.GONE
             holder.btnSave.visibility = View.VISIBLE
+
+            // Zmiana tekstu przycisku jeśli wymagane potwierdzenie
+            holder.btnSave.text = if (isConfirmingAction) "Potwierdź i Zapisz" else "Zapisz"
         } else {
             holder.spinnerRole.visibility = View.GONE
             holder.tvRoleReadOnly.visibility = View.VISIBLE
@@ -74,9 +81,10 @@ class WorkerAdapter(
             holder.btnDelete.visibility = View.GONE
         }
 
-        // Akcje przycisków
+        // 4. Akcje przycisków
         holder.btnSave.setOnClickListener {
             val selectedLevel = holder.spinnerRole.selectedItemPosition
+            // WYWOŁUJEMY funkcję przekazaną w konstruktorze, a nie definiujemy jej na nowo!
             onSaveClick(worker, selectedLevel)
         }
 

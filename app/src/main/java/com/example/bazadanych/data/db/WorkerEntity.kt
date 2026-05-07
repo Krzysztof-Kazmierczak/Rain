@@ -12,5 +12,6 @@ data class Worker(
     val owner_email: String,
     val worker_email: String,
     val access_level: Int,
+    val access_confirm: Int, // Dodaj to pole
     val created_at: String
 )
