@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="?android:attr/selectableItemBackground">
+
+    <!-- Wiersz 1: Email (lewa) i Rola (prawa) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tvWorkerEmail"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="worker@email.com"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#2c3e50"
+            android:layout_marginEnd="12dp" />
+
+        <Spinner
+            android:id="@+id/spinnerRole"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:entries="@array/roles_array" />
+
+        <TextView
+            android:id="@+id/tvRoleReadOnly"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Rola"
+            android:textColor="#666666"
+            android:textSize="14sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Wiersz 2: Przyciski Zapisz / Usuń (wyrównane do prawej) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end"
+        android:layout_marginTop="8dp">
+
+        <Button
+            android:id="@+id/btnSave"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Zapisz"
+            android:textColor="#38b2ac" />
+
+        <Button
+            android:id="@+id/btnDelete"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Usuń"
+            android:textColor="#e53e3e" />
+    </LinearLayout>
+</LinearLayout>

@@ -11,4 +11,11 @@
     <string name="open">Open</string>
     <string name="close">Close</string>
 
+    <string-array name="roles_array">
+        <item>Administrator</item>
+        <item>Kierownik</item>
+        <item>Operator</item>
+        <item>Odczyt</item>
+    </string-array>
+
 </resources>
