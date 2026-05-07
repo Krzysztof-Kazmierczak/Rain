@@ -24,6 +24,7 @@ class WorkerAdapter(
         notifyDataSetChanged()
     }
 
+    // TA METODA BYŁA BRAKUJĄCA:
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WorkerViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_worker, parent, false)
         return WorkerViewHolder(view)
@@ -35,11 +36,21 @@ class WorkerAdapter(
         val isMe = worker.worker_email == currentUserEmail
         val hasConfirmed = worker.access_confirm == 1
 
-        // 1. Ustawienie tekstów podstawowych
         holder.tvEmail.text = if (isMe) "${worker.worker_email} (Ty)" else worker.worker_email
+
+        // 1. Ustawienie niestandardowego adaptera dla Spinnera (blokowanie poziomów)
+        val rolesArray = holder.itemView.context.resources.getStringArray(R.array.roles_array)
+        val customAdapter = RoleSpinnerAdapter(
+            holder.itemView.context,
+            android.R.layout.simple_spinner_item,
+            rolesArray,
+            currentUserLevel
+        )
+        customAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        holder.spinnerRole.adapter = customAdapter
         holder.spinnerRole.setSelection(wLevel)
 
-        // 2. Logika uprawnień (Kto co może widzieć/klikać)
+        // 2. Logika uprawnień
         var canEdit = false
         var canDelete = false
         var isConfirmingAction = false
@@ -53,24 +64,21 @@ class WorkerAdapter(
                 canDelete = true
                 if (!hasConfirmed) isConfirmingAction = true
             } else if (currentUserLevel < wLevel) {
-                // Możesz edytować kogoś o niższym statusie (wyższy numer levelu)
                 canEdit = true
                 canDelete = true
             }
         }
 
-        // 3. Zarządzanie widocznością UI
+        // 3. Widoczność UI
         if (canEdit) {
             holder.spinnerRole.visibility = View.VISIBLE
             holder.tvRoleReadOnly.visibility = View.GONE
             holder.btnSave.visibility = View.VISIBLE
-
-            // Zmiana tekstu przycisku jeśli wymagane potwierdzenie
             holder.btnSave.text = if (isConfirmingAction) "Potwierdź i Zapisz" else "Zapisz"
         } else {
             holder.spinnerRole.visibility = View.GONE
             holder.tvRoleReadOnly.visibility = View.VISIBLE
-            holder.tvRoleReadOnly.text = holder.itemView.context.resources.getStringArray(R.array.roles_array)[wLevel]
+            holder.tvRoleReadOnly.text = rolesArray[wLevel]
             holder.btnSave.visibility = View.GONE
         }
 
@@ -81,10 +89,9 @@ class WorkerAdapter(
             holder.btnDelete.visibility = View.GONE
         }
 
-        // 4. Akcje przycisków
+        // 4. Akcje
         holder.btnSave.setOnClickListener {
             val selectedLevel = holder.spinnerRole.selectedItemPosition
-            // WYWOŁUJEMY funkcję przekazaną w konstruktorze, a nie definiujemy jej na nowo!
             onSaveClick(worker, selectedLevel)
         }
 

@@ -120,6 +120,14 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun handleWorkersResponse(data: WorkerResponse) {
         val myLevel = data.my_level?.toIntOrNull() ?: 0
+        val rolesArray = resources.getStringArray(R.array.roles_array)
+
+        val customAddAdapter = RoleSpinnerAdapter(this, android.R.layout.simple_spinner_item, rolesArray, myLevel)
+        customAddAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerNewUserRole.adapter = customAddAdapter
+
+        // Ustawiamy domyślnie najniższy możliwy poziom, aby uniknąć wybrania zablokowanego 0
+        spinnerNewUserRole.setSelection(myLevel)
 
         // Widoczność formularza dodawania
         if (data.role == "none") {
@@ -148,7 +156,7 @@ class ProfileActivity : AppCompatActivity() {
             workerAdapter = WorkerAdapter(
                 workers = data.workers,
                 currentUserRole = data.role,
-                currentUserLevel = myLevel,
+                currentUserLevel = myLevel, // Przekazujemy poziom
                 currentUserEmail = userEmail,
                 onSaveClick = { worker, newLevel ->
                     // Sprawdzamy czy to ja i czy nie mam jeszcze potwierdzonego dostępu
