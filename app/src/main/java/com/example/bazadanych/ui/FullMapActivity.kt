@@ -190,10 +190,6 @@ class FullMapActivity : AppCompatActivity() {
         findViewById<LinearLayout>(R.id.btnBackToMainMenu).setOnClickListener { finish() }
     }
 
-    // ... DALEJ MASZ loadData I RESZTĘ METOD, KTÓRE SĄ OK ...
-
-
-
     private fun drawFieldOnMap(field: FieldItem) {
         val pts = field.coordinates.split(";").mapNotNull {
             val latLng = it.split(",")
@@ -264,10 +260,18 @@ class FullMapActivity : AppCompatActivity() {
 
             // 2. Pobieranie online - TUTAJ DODAJEMY email
             remoteRepo.getRainHistory(rain.id, email) { history ->
-                if (history.isNotEmpty()) {
-                    CacheHelper.saveList(this, HISTORY_KEY, history)
-                    runOnUiThread {
+                // 1. Zapisujemy ZAWSZE.
+                // Jeśli history jest pusta, to nadpiszemy stary cache pustą listą.
+                CacheHelper.saveList(this, HISTORY_KEY, history)
+
+                runOnUiThread {
+                    if (history.isNotEmpty()) {
+                        // Rysujemy marker tylko, gdy mamy koordynaty
                         drawRainMarkerOnMap(rain, history[0].lat, history[0].lng)
+                    } else {
+                        // OPCJONALNIE: Jeśli historia jest pusta, usuwamy marker z mapy
+                        map.overlays.removeAll { it is Marker && it.title == rain.name }
+                        map.invalidate()
                     }
                 }
             }
@@ -500,7 +504,7 @@ class FullMapActivity : AppCompatActivity() {
         val RAINS_KEY = "CACHED_RAINS"
 
         Thread {
-            // --- POLA (Cache w tle) ---
+            // --- 1. WCZYTYWANIE CACHE (to zostaje bez zmian) ---
             val cachedFields = CacheHelper.loadList<FieldItem>(this, FIELDS_KEY)
             runOnUiThread {
                 if (cachedFields != null) {
@@ -509,7 +513,6 @@ class FullMapActivity : AppCompatActivity() {
                 }
             }
 
-            // --- MASZYNY (Cache w tle) ---
             val cachedRains = CacheHelper.loadList<Rain>(this, RAINS_KEY)
             runOnUiThread {
                 if (cachedRains != null) {
@@ -517,23 +520,27 @@ class FullMapActivity : AppCompatActivity() {
                 }
             }
 
-            // --- POBIERANIE Z SERWERA (Tło) ---
+            // --- 2. POBIERANIE Z SERWERA (TUTAJ POPRAWKA) ---
+
             remoteRepo.getAgriculturalFields(email) { fields ->
-                if (fields.isNotEmpty()) {
-                    CacheHelper.saveList(this, FIELDS_KEY, fields)
-                    runOnUiThread {
-                        updateFieldsUI(fields)
-                        if (isOnline()) {
-                            fields.forEach { downloadFieldTiles(it) }
-                        }
+                // USUNIĘTO: if (fields.isNotEmpty())
+                // Zapisujemy listę ZAWSZE (nawet pustą), aby wyczyścić cache
+                CacheHelper.saveList(this, FIELDS_KEY, fields)
+
+                runOnUiThread {
+                    updateFieldsUI(fields) // To wyczyści polygony na mapie, jeśli lista jest pusta
+                    if (isOnline() && fields.isNotEmpty()) {
+                        fields.forEach { downloadFieldTiles(it) }
                     }
                 }
             }
 
             remoteRepo.getRains(email) { rains ->
-                if (rains.isNotEmpty()) {
-                    CacheHelper.saveList(this, RAINS_KEY, rains)
-                    runOnUiThread { updateRainsUI(rains) }
+                // USUNIĘTO: if (rains.isNotEmpty())
+                CacheHelper.saveList(this, RAINS_KEY, rains)
+
+                runOnUiThread {
+                    updateRainsUI(rains) // To wyczyści markery maszyn, jeśli lista jest pusta
                 }
             }
         }.start()

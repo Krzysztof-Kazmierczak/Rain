@@ -77,7 +77,6 @@ class HomeActivity : AppCompatActivity() {
                 R.id.nav_logout -> logout()
                 R.id.nav_map -> goFullMap()
                 R.id.nav_weather -> goWeather()
-               // R.id.nav_analytics -> goAnalytics()
                 }
             drawer.closeDrawers()
             true
@@ -174,10 +173,6 @@ class HomeActivity : AppCompatActivity() {
     }
     private fun goWeather() {
         val intent = Intent(this, WeatherActivity::class.java)
-        startActivity(intent)
-    }
-    private fun goAnalytics() {
-        val intent = Intent(this, AnalyticsActivity::class.java)
         startActivity(intent)
     }
 

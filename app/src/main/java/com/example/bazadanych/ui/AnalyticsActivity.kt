@@ -192,7 +192,13 @@ class AnalyticsActivity : AppCompatActivity() {
     }
 
     private fun refreshDataFromServer(fieldId: Int) {
-        ApiClient.rainTech.getFieldHistory(fieldId).enqueue(object : Callback<List<FieldHistory>> {
+        // POPRAWNY KOD:
+// 1. Najpierw pobierz email (jeśli jeszcze go nie masz w tej metodzie)
+        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+
+// 2. Przekaż go do funkcji
+        ApiClient.rainTech.getFieldHistory(fieldId, email).enqueue(object : Callback<List<FieldHistory>> {
+            // ... reszta kodu (onResponse, onFailure) bez zmian
             override fun onResponse(call: Call<List<FieldHistory>>, response: Response<List<FieldHistory>>) {
                 if (response.isSuccessful && response.body() != null) {
                     val rawData = response.body()!!

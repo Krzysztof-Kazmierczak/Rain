@@ -3,6 +3,7 @@ package com.example.bazadanych.ui
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -45,23 +46,28 @@ class WeatherActivity : AppCompatActivity() {
         val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
         if (email.isEmpty()) return
 
-        // 1. WCZYTAJ CACHE PÓL (Musisz importować CacheHelper na górze pliku!)
+        // 1. WCZYTAJ CACHE PÓL (na start)
         val cachedFields: List<FieldItem>? = com.example.bazadanych.data.local_db.CacheHelper.loadList(this, "WEATHER_FIELDS_CACHE")
-        if (cachedFields != null && cachedFields.isNotEmpty()) {
-            adapter = WeatherAdapter(cachedFields)
-            recyclerWeather.adapter = adapter
-        }
+
+        // Inicjalizujemy adapter tym co mamy (nawet jeśli to null/pusta lista)
+        adapter = WeatherAdapter(cachedFields ?: emptyList())
+        recyclerWeather.adapter = adapter
 
         // 2. Pobierz z internetu
         remoteRepo.getAgriculturalFields(email) { fields ->
             runOnUiThread {
-                if (fields.isNotEmpty()) {
-                    // Zapisz do pamięci na przyszłość
-                    com.example.bazadanych.data.local_db.CacheHelper.saveList(this@WeatherActivity, "WEATHER_FIELDS_CACHE", fields)
+                // USUWAMY WARUNEK: if (fields.isNotEmpty())
+                // Chcemy, żeby pusta lista z serwera NADPISAŁA stary cache.
 
-                    adapter = WeatherAdapter(fields)
-                    recyclerWeather.adapter = adapter
-                }
+                // Zapisz do pamięci (jeśli fields jest puste, zapisze pustą listę - i o to chodzi!)
+                com.example.bazadanych.data.local_db.CacheHelper.saveList(this@WeatherActivity, "WEATHER_FIELDS_CACHE", fields)
+
+                // Odświeżamy adapter nowymi danymi
+                adapter = WeatherAdapter(fields)
+                recyclerWeather.adapter = adapter
+
+                // Opcjonalnie: jeśli adapter ma metodę update, lepiej użyć notifyDataSetChanged,
+                // ale ponowne przypisanie adaptera (jak robisz wyżej) też zadziała.
             }
         }
     }
@@ -113,6 +119,8 @@ class WeatherActivity : AppCompatActivity() {
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val email = holder.itemView.context.getSharedPreferences("user_session", MODE_PRIVATE)
+                .getString("user_email", "") ?: ""
             val field = fields[position]
             holder.tvFieldName.text = field.name ?: "Pole bez nazwy"
             holder.tvFieldCrop.text = "🌾 Uprawa: ${field.cropType}"
@@ -129,22 +137,26 @@ class WeatherActivity : AppCompatActivity() {
                 holder.tvAdviceMessage.text = "Pobieranie aktualnej pogody..."
             }
 
+
+
+
             // --- POBIERANIE Z SIECI ---
-            ApiClient.rainTech.getCurrentWeather(field.id.toInt()).enqueue(object : Callback<FieldHistory> {
+            ApiClient.rainTech.getCurrentWeather(field.id.toInt(), email).enqueue(object : Callback<FieldHistory> {
                 override fun onResponse(call: Call<FieldHistory>, response: Response<FieldHistory>) {
                     val data = response.body()
-                    if (response.isSuccessful && data != null && data.recorded_at != "Brak danych") {
-                        // Zapisujemy nową pogodę do cache
+                    if (response.isSuccessful && data != null && data.recorded_at != "Brak danych lub brak uprawnień") {
                         com.example.bazadanych.data.local_db.CacheHelper.saveObject(holder.itemView.context, weatherCacheKey, data)
 
                         runOnUiThread {
                             displayWeatherData(holder, data, isOffline = false)
                         }
+                    } else {
+                        Log.e("API_ERROR", "Błąd serwera: ${response.errorBody()?.string()}")
                     }
                 }
 
                 override fun onFailure(call: Call<FieldHistory>, t: Throwable) {
-                    // Nic nie robimy, bo dane z cache już wiszą na ekranie dzięki kodowi wyżej
+                    Log.e("API_ERROR", "Błąd sieci: ${t.message}")
                 }
             })
 
