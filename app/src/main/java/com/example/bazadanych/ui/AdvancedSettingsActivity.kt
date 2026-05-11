@@ -1,5 +1,6 @@
 package com.example.bazadanych.ui
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.*
@@ -91,8 +92,65 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             saveDataToServer()
         }
 
+        findViewById<MaterialButton>(R.id.btnDeleteMachine).setOnClickListener {
+            confirmDeleteMachine()
+        }
+
         findViewById<MaterialButton>(R.id.btnDeleteLocalization).setOnClickListener {
             deleteLocalization()
+        }
+    }
+
+    private fun confirmDeleteMachine() {
+        val userEmail = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+
+        AlertDialog.Builder(this)
+            .setTitle("USUWANIE MASZYNY")
+            .setMessage("Czy na pewno chcesz CAŁKOWICIE usunąć tę maszynę z systemu? Tej operacji nie można cofnąć.")
+            .setPositiveButton("USUŃ") { _, _ ->
+                performDeleteMachine(currentRainId, userEmail)
+            }
+            .setNegativeButton("Anuluj", null)
+            .setIcon(android.R.drawable.ic_dialog_alert)
+            .show()
+    }
+
+    private fun performDeleteMachine(rainId: String, userEmail: String) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val url = URL("https://rain-tech.PL/android/delete_rain.php")
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.doOutput = true
+                conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+
+                val postData = "id=$rainId&email=$userEmail"
+
+                OutputStreamWriter(conn.outputStream).use { it.write(postData) }
+
+                val responseCode = conn.responseCode
+                val response = conn.inputStream.bufferedReader().readText().trim()
+
+                withContext(Dispatchers.Main) {
+                    if (responseCode == 200 && response == "OK") {
+                        Toast.makeText(this@AdvancedSettingsActivity, "Maszyna została usunięta", Toast.LENGTH_SHORT).show()
+                        val intent = Intent(this@AdvancedSettingsActivity, HomeActivity::class.java)
+
+                        // Flagi: Czyścimy stos, aby HomeActivity była "na górze", a poprzednie ekrany usunięte
+                        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+
+                        startActivity(intent)
+                        finish() // Zamykamy AdvancedSettingsActivity
+                    } else {
+                        Log.e("DELETE_ERROR", "Serwer zwrócił: $response")
+                        Toast.makeText(this@AdvancedSettingsActivity, "Błąd: $response", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@AdvancedSettingsActivity, "Błąd połączenia: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
@@ -211,9 +269,18 @@ class AdvancedSettingsActivity : AppCompatActivity() {
 
     // --- SERWER ---
     private fun loadDataFromServer() {
+        // 1. Pobieramy email z SharedPreferences
+        val userEmail = getSharedPreferences("user_session", MODE_PRIVATE)
+            .getString("user_email", "") ?: ""
+
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val url = URL("https://rain-tech.PL/android/get_rain_adv.php?id=$currentRainId")
+                // 2. Dodajemy email do adresu URL
+                val urlString = "https://rain-tech.PL/android/get_rain_adv.php?id=$currentRainId&email=$userEmail"
+                val url = URL(urlString)
+
+                Log.d("DEBUG_ADV", "Wywołuję URL: $urlString")
+
                 val response = url.readText()
                 val json = JSONObject(response)
 
@@ -250,9 +317,14 @@ class AdvancedSettingsActivity : AppCompatActivity() {
     }
 
     private fun saveDataToServer() {
-        // 1. Logowanie wysyłanych danych (żeby sprawdzić czy JSON jest poprawny)
+        // 1. POBIERZ EMAIL Z SESJI
+        val userEmail = getSharedPreferences("user_session", MODE_PRIVATE)
+            .getString("user_email", "") ?: ""
+
+        // 2. DODAJ EMAIL DO JSONA
         val jsonParams = JSONObject().apply {
             put("id", currentRainId)
+            put("email", userEmail) // <--- TEGO BRAKOWAŁO!
             put("target_speed", editTargetSpeed.text.toString().ifEmpty { "0" })
             put("zone_watering", if (cbZoneWatering.isChecked) 1 else 0)
             put("z1_end", z1End.text.toString().ifEmpty { "0" })

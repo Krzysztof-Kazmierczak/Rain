@@ -80,16 +80,18 @@ class RainDetailsActivity : AppCompatActivity() {
         }
     }
 
-    private fun refreshStatusUI(isWorking: Boolean, speed: Double, finishTime: String, workTime: String, extension: String, isOffline: Boolean, signal: Int) {
+    private fun refreshStatusUI(isWorking: Int, speed: Double, finishTime: String, workTime: String, extension: String, isOffline: Boolean, signal: Int) {
         val label = if (isOffline) "[Offline] " else ""
 
-        statusText.text = "${label}Status: ${if (isWorking) "PRACUJE ✅" else "STOP 🛑"}"
-        statusText.setTextColor(if (isWorking) Color.GREEN else Color.RED)
+        // Zmiana: isWorking == 1
+        statusText.text = "${label}Status: ${if (isWorking == 1) "PRACUJE ✅" else "STOP 🛑"}"
+
+        // Zmiana: isWorking == 1
+        statusText.setTextColor(if (isWorking == 1) Color.GREEN else Color.RED)
 
         currentSpeedText.text = "${label}Prędkość: $speed m/h"
         timeFinishText.text = "${label}Czas do końca: $finishTime"
 
-        // NOWE POLA
         workTimeText.text = "${label}Czas pracy: $workTime"
         extensionText.text = "${label}Rozwinięcie: $extension m"
 
@@ -148,6 +150,7 @@ class RainDetailsActivity : AppCompatActivity() {
         }
 
         remoteRepo.getRainDetails(currentRainId, email) { name, length, comment ->
+            Log.d("MOJ_TEST", "Odebrano z repo: name='$name', length='$length'")
             if (name.isNotEmpty()) {
                 nameEdit.setText(name)
                 lengthEdit.setText(length)
@@ -157,6 +160,9 @@ class RainDetailsActivity : AppCompatActivity() {
                 // Zapisz do cache
                 val rainToCache = Rain(currentRainId, name, length, comment, false)
                 CacheHelper.saveObject(this, "RAIN_DETAILS_$currentRainId", rainToCache)
+            }
+            else {
+                Log.e("MOJ_TEST", "Nazwa jest pusta, dlatego napis [Offline] został!")
             }
         }
         loadLiveStatus()

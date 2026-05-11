@@ -3,7 +3,7 @@ package com.example.bazadanych.data.db
 data class RainStatus(
     val id: Int = 0,
     val rainId: String,
-    val isWorking: Boolean,
+    val isWorking: Int,
     val setSpeed: Double,
     val currentSpeed: Double,
     val currentDistance: Double,

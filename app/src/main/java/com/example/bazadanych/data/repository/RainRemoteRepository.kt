@@ -125,12 +125,13 @@ class RainRemoteRepository {
     }
 
     fun saveRain(email: String, rain: Rain, callback: (Boolean) -> Unit) {
+        // Jeśli ID jest puste, wysyłamy "0", co dla PHP oznacza nową pozycję
         val finalId = if (rain.id.isEmpty()) "0" else rain.id
 
         val formBody = FormBody.Builder()
             .add("id", finalId)
             .add("name", rain.name)
-            .add("length", rain.hoseLength)
+            .add("length", rain.hoseLength) // Klucz "length" pasuje do $_REQUEST['length'] w PHP
             .add("comment", rain.comment)
             .add("email", email)
             .build()
@@ -142,14 +143,16 @@ class RainRemoteRepository {
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                Log.e(TAG, "saveRain - Błąd połączenia: ${e.message}")
+                Log.e("RainRepo", "Błąd połączenia: ${e.message}")
                 callback(false)
             }
 
             override fun onResponse(call: Call, response: Response) {
-                val result = response.body?.string()?.trim()
-                Log.d(TAG, "saveRain - Odpowiedź: $result")
-                callback(result == "OK")
+                val result = response.body?.string()?.trim() ?: ""
+                Log.d("RainRepo", "Odpowiedź serwera: $result")
+
+                // Sprawdzamy czy odpowiedź zawiera OK
+                callback(result.contains("OK"))
             }
         })
     }
@@ -173,7 +176,7 @@ class RainRemoteRepository {
                         list.add(RainStatus(
                             id = obj.optInt("id"),
                             rainId = obj.optString("rain_id"),
-                            isWorking = obj.optBoolean("is_working"),
+                            isWorking = obj.optInt("is_working"),
                             setSpeed = obj.optDouble("set_speed"),
                             currentSpeed = obj.optDouble("current_speed"),
                             currentDistance = obj.optDouble("current_distance"),
