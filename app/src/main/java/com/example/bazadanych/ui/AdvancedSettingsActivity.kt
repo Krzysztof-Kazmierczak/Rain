@@ -173,12 +173,22 @@ class AdvancedSettingsActivity : AppCompatActivity() {
     private fun performDelete(rainId: String, userEmail: String) {
         if (rainId.isNotEmpty() && userEmail.isNotEmpty()) {
             remoteRepo.updateRainManualLocation(rainId, userEmail, 0.0, 0.0) { success ->
-                if (success) {
-                    Toast.makeText(this, "Lokalizacja została zresetowana", Toast.LENGTH_SHORT).show()
-                    // Jeśli chcesz, żeby po usunięciu od razu wróciło do mapy:
-                    // finish()
-                } else {
-                    Toast.makeText(this, "Błąd podczas resetowania lokalizacji", Toast.LENGTH_SHORT).show()
+                runOnUiThread {
+                    if (success) {
+                        // --- TO DODAJEMY: ---
+                        // Musimy wyczyścić cache historii dla tej konkretnej maszyny
+                        val historyKey = "HISTORY_$rainId"
+                        val sharedPrefs = getSharedPreferences("CachePrefs", MODE_PRIVATE) // Upewnij się, że nazwa SP pasuje do CacheHelper
+                        sharedPrefs.edit().remove(historyKey).apply()
+                        // --------------------
+
+                        Toast.makeText(this, "Lokalizacja zresetowana", Toast.LENGTH_SHORT).show()
+
+                        //val intent = Intent(this, HomeActivity::class.java)
+                       // intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                      //  startActivity(intent)
+                        finish()
+                    }
                 }
             }
         }

@@ -280,10 +280,16 @@ class FullMapActivity : AppCompatActivity() {
 
     // Pomocnicza funkcja, żeby nie powtarzać kodu rysowania markera
     private fun drawRainMarkerOnMap(rain: Rain, lat: Double, lng: Double) {
-        if (lat == 0.0 && lng == 0.0) return
-        // Usuń stary marker tej maszyny, jeśli istnieje (żeby się nie dublowały po odświeżeniu)
+        // 1. Zawsze usuwamy stary marker tej maszyny (jeśli był)
         map.overlays.removeAll { it is Marker && it.title == rain.name }
 
+        // 2. Jeśli nowe koordynaty to 0,0 - kończymy (marker już jest usunięty linią wyżej)
+        if (lat == 0.0 && lng == 0.0) {
+            map.invalidate()
+            return
+        }
+
+        // 3. Jeśli są poprawne dane, rysujemy nowy marker
         val marker = Marker(map).apply {
             position = GeoPoint(lat, lng)
             title = rain.name
@@ -608,6 +614,7 @@ class FullMapActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         map.onResume()
+        loadData()
     }
 
     override fun onPause() {
