@@ -48,6 +48,28 @@ class RainRemoteRepository {
         })
     }
 
+    fun toggleRainWorkStatus(id: String, email: String, newStatus: Int, callback: (Boolean) -> Unit) {
+        val url = "${baseUrl}update_rain_work_status.php"
+
+        val formBody = FormBody.Builder()
+            .add("id", id)
+            .add("email", email)
+            .add("is_working", newStatus.toString())
+            .build()
+
+        val request = Request.Builder().url(url).post(formBody).build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                postOnMain { callback(false) }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                val responseBody = response.body?.string()?.trim()
+                postOnMain { callback(responseBody == "OK") }
+            }
+        })
+    }
+
     fun getRains(email: String, callback: (List<Rain>) -> Unit) {
         val url = "${baseUrl}get_rains_with_status.php?email=$email"
         Log.d(TAG, "Pobieram maszyny z URL: $url") // DODAJ TO

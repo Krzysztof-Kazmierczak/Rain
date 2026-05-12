@@ -207,32 +207,85 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <Button
+            <!-- Sekcja Sterowania - Dynamiczny przycisk Start/Stop -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#DDDDDD">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="STATUS PRACY"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="#757575"
+                        android:layout_marginBottom="8dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnToggleWork"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:text="POBIERANIE STATUSU..."
+                        android:textSize="18sp"
+                        app:iconGravity="textStart"
+                        app:cornerRadius="8dp"
+                        android:backgroundTint="#9E9E9E" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Sekcja Akcji (Zapisz / Usuń) -->
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSaveAdvanced"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="ZAPISZ USTAWIENIA ZAAWANSOWANE"
+                android:text="ZAPISZ USTAWIENIA"
                 android:layout_marginTop="24dp"
-                android:backgroundTint="#4CAF50"
-                android:textColor="#FFFFFF" />
+                app:icon="@android:drawable/ic_menu_save"
+                app:backgroundTint="#4CAF50" />
 
-            <Button
-                android:id="@+id/btnDeleteMachine"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="USUŃ MASZYNĘ"
-                android:layout_marginTop="24dp"
-                android:layout_marginBottom="16dp"
-                android:backgroundTint="#F44336"
-                android:textColor="#FFFFFF" />
+                android:orientation="horizontal"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="32dp"
+                android:weightSum="2">
 
-            <Button
-                android:id="@+id/btnDeleteLocalization"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="USUŃ LOKALIZACJĘ"
-                android:backgroundTint="?attr/colorPrimary"
-                android:textColor="#FFFFFF" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDeleteLocalization"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    android:text="RESET POZYCJI"
+                    android:textSize="12sp"
+                    app:strokeColor="#2196F3"
+                    android:textColor="#2196F3" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDeleteMachine"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:text="USUŃ MASZYNĘ"
+                    android:textSize="12sp"
+                    app:strokeColor="#F44336"
+                    android:textColor="#F44336" />
+            </LinearLayout>
 
         </LinearLayout>
     </ScrollView>
