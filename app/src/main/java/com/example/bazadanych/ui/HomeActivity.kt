@@ -104,7 +104,7 @@ class HomeActivity : AppCompatActivity() {
             tiles.clear()
             tiles.addAll(cachedRains)
             if (tiles.none { it.isAddButton }) {
-                tiles.add(RainTile("", "Dodaj deszczownię", "", "", true, false))
+                tiles.add(RainTile("", "Dodaj deszczownię", "", "", true, 0))
             }
             adapter.notifyDataSetChanged()
             Log.d("AGRO_DEBUG", "2. Wczytano z cache: ${tiles.size} kafelków.")
@@ -121,19 +121,15 @@ class HomeActivity : AppCompatActivity() {
                 tiles.clear() // Zawsze czyścimy listę, żeby wrzucić świeże dane
 
                 if (rainsFromServer.isNotEmpty()) {
-                    val workingRains = rainsFromServer.filter { it.isWorking == 1 }
-                    val stoppedRains = rainsFromServer.filter { it.isWorking != 1 }
-
-                    workingRains.forEach {
-                        tiles.add(RainTile(it.id, it.name, it.hoseLength, it.comment, false, true))
-                    }
-                    stoppedRains.forEach {
-                        tiles.add(RainTile(it.id, it.name, it.hoseLength, it.comment, false, false))
+                    // Nie filtrujemy już na pracujące/stojące, tylko lecimy po kolei
+                    // i przekazujemy oryginalny status 'isWorking' z serwera
+                    rainsFromServer.forEach {
+                        tiles.add(RainTile(it.id, it.name, it.hoseLength, it.comment, false, it.isWorking))
                     }
                 }
 
                 // Przycisk "Dodaj" musi być ZAWSZE na końcu
-                tiles.add(RainTile("", "Dodaj deszczownię", "", "", true, false))
+                tiles.add(RainTile("", "Dodaj deszczownię", "", "", true, 0))
 
                 Log.d("AGRO_DEBUG", "5. Zapisano nową listę do UI. Łączna ilość kafelków: ${tiles.size}")
 

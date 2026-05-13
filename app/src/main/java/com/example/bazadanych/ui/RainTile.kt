@@ -6,5 +6,5 @@ data class RainTile(
     val hoseLength: String,
     val comment: String,
     val isAddButton: Boolean,
-    val isWorking: Boolean
+    val isWorking: Int
 )

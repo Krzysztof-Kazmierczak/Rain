@@ -30,29 +30,38 @@ class RainTileAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val tile = tiles[position]
 
+        // 1. Domyślny wygląd (reset dla kafelków z recyklingu)
+        holder.itemView.alpha = 1.0f
+
         if (tile.isAddButton) {
             holder.lengthText.visibility = View.GONE
             holder.commentText.visibility = View.GONE
+            holder.statusDot.visibility = View.GONE
             holder.titleText.text = "Dodaj"
             holder.icon.setImageResource(android.R.drawable.ic_input_add)
         } else {
             holder.lengthText.visibility = View.VISIBLE
             holder.commentText.visibility = View.VISIBLE
-
-            // Używamy pól z ViewHoldera!
-            holder.titleText.text = tile.title // Jeśli w klasie RainTile masz 'name' zamiast 'title'
+            holder.statusDot.visibility = View.VISIBLE
+            holder.titleText.text = tile.title
             holder.lengthText.text = "Wąż: ${tile.hoseLength}m"
             holder.commentText.text = tile.comment
             holder.icon.setImageResource(R.drawable.ic_rain_reel)
-        }
 
-        // Status kropki
-        if (tile.isAddButton) {
-            holder.statusDot.visibility = View.GONE
-        } else {
-            holder.statusDot.visibility = View.VISIBLE
-            val colorRes = if (tile.isWorking) R.drawable.circle_green else R.drawable.circle_red
-            holder.statusDot.setBackgroundResource(colorRes)
+            // 2. LOGIKA STATUSÓW (KOLORY I ZASZARZENIE)
+            when (tile.isWorking) {
+                0 -> {
+                    // Szary/zaszarzały kafelek
+                    holder.itemView.alpha = 0.4f // To sprawi, że kafelek będzie wyblakły
+                    holder.statusDot.visibility = View.GONE // Dla 0 możemy ukryć kropkę lub dać szarą
+                }
+                1 -> holder.statusDot.setBackgroundResource(R.drawable.circle_red)
+                2 -> holder.statusDot.setBackgroundResource(R.drawable.circle_green)
+                5 -> holder.statusDot.setBackgroundResource(R.drawable.circle_dark_green)
+                6 -> holder.statusDot.setBackgroundResource(R.drawable.circle_dark_red)
+                7 -> holder.statusDot.setBackgroundResource(R.drawable.circle_dark_yellow)
+                else -> holder.statusDot.setBackgroundResource(R.drawable.circle_orange)
+            }
         }
 
         holder.itemView.setOnClickListener { onTileClick(tile) }

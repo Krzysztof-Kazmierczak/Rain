@@ -252,7 +252,7 @@ class ProfileActivity : AppCompatActivity() {
 
         if (cachedTiles != null && cachedTiles.isNotEmpty()) {
             val actualMachines = cachedTiles.filter { !it.isAddButton }
-            val activeRains = actualMachines.count { it.isWorking }
+            val activeRains = actualMachines.count { it.isWorking == 1 }
             tvStats.text = "$activeRains / ${actualMachines.size}"
         } else {
             tvStats.text = "0 / 0"
