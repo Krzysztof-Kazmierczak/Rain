@@ -121,8 +121,8 @@ class HomeActivity : AppCompatActivity() {
                 tiles.clear() // Zawsze czyścimy listę, żeby wrzucić świeże dane
 
                 if (rainsFromServer.isNotEmpty()) {
-                    val workingRains = rainsFromServer.filter { it.isWorking }
-                    val stoppedRains = rainsFromServer.filter { !it.isWorking }
+                    val workingRains = rainsFromServer.filter { it.isWorking == 1 }
+                    val stoppedRains = rainsFromServer.filter { it.isWorking == 0 }
 
                     workingRains.forEach {
                         tiles.add(RainTile(it.id, it.name, it.hoseLength, it.comment, false, true))

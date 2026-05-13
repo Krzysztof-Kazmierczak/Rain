@@ -7,5 +7,5 @@ data class Rain(
     val name: String,
     val hoseLength: String,
     val comment: String,
-    val isWorking: Boolean
+    val isWorking: Int
 )

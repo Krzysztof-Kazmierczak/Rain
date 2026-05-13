@@ -207,7 +207,6 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Sekcja Sterowania - Dynamiczny przycisk Start/Stop -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -264,27 +263,28 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnDeleteLocalization"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    style="@style/Widget.MaterialComponents.Button"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="4dp"
-                    android:text="RESET POZYCJI"
+                    android:text="RESET Lokalizacji"
                     android:textSize="12sp"
-                    app:strokeColor="#2196F3"
-                    android:textColor="#2196F3" />
+                    android:textColor="@android:color/white"
+                    app:backgroundTint="#2196F3"
+                    app:strokeColor="#2196F3" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnDeleteMachine"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    style="@style/Widget.MaterialComponents.Button"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginStart="4dp"
                     android:text="USUŃ MASZYNĘ"
                     android:textSize="12sp"
-                    app:strokeColor="#F44336"
-                    android:textColor="#F44336" />
+                    android:textColor="@android:color/white"
+                    app:backgroundTint="#F44336"/>
             </LinearLayout>
 
         </LinearLayout>

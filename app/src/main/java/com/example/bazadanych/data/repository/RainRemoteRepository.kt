@@ -97,7 +97,7 @@ class RainRemoteRepository {
                                 name = obj.optString("name", "Maszyna"),
                                 hoseLength = obj.optString("hose_length", "0"),
                                 comment = obj.optString("comment", ""),
-                                isWorking = obj.optInt("is_working", 0) == 1
+                                isWorking = obj.optInt("is_working", 0)
                             ))
                         }
                     } catch (e: Exception) {

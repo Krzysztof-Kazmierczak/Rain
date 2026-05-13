@@ -86,7 +86,7 @@ class CreateRainActivity : AppCompatActivity() {
                 name = name,
                 hoseLength = length,
                 comment = comment,
-                isWorking = false
+                isWorking = 0
             )
 
             // Pobieranie e-maila zalogowanego użytkownika z SharedPreferences

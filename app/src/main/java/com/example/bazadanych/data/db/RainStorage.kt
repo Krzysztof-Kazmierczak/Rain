@@ -62,7 +62,7 @@ object RainStorage {
                     name = obj.getString("name"),
                     hoseLength = obj.getString("hose_length"),
                     comment = obj.getString("comment"),
-                    isWorking = obj.optBoolean("is_working", false)
+                    isWorking = obj.optInt("is_working", 0)
                 )
             )
         }

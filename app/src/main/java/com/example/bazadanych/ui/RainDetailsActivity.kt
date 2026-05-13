@@ -158,7 +158,7 @@ class RainDetailsActivity : AppCompatActivity() {
                 supportActionBar?.title = name
 
                 // Zapisz do cache
-                val rainToCache = Rain(currentRainId, name, length, comment, false)
+                val rainToCache = Rain(currentRainId, name, length, comment, 0)
                 CacheHelper.saveObject(this, "RAIN_DETAILS_$currentRainId", rainToCache)
             }
             else {
@@ -175,7 +175,7 @@ class RainDetailsActivity : AppCompatActivity() {
             name = nameEdit.text.toString(),
             hoseLength = lengthEdit.text.toString(),
             comment = commentEdit.text.toString(),
-            isWorking = false
+            isWorking = 0
         )
 
         remoteRepo.saveRain(email, rain) { success ->

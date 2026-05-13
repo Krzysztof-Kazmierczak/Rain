@@ -30,8 +30,6 @@ class AdvancedSettingsActivity : AppCompatActivity() {
     private val remoteRepo = com.example.bazadanych.data.repository.RainRemoteRepository()
     private lateinit var currentRainId: String
     private var maxHoseLength: Int = 0
-
-    // Referencje do widoków dla łatwiejszego dostępu
     private lateinit var editTargetSpeed: EditText
     private lateinit var cbZoneWatering: CheckBox
     private lateinit var z1End: EditText
@@ -39,10 +37,11 @@ class AdvancedSettingsActivity : AppCompatActivity() {
     private lateinit var z3End: EditText
     private lateinit var tvZ2Start: TextView
     private lateinit var tvZ3Start: TextView
-
     private lateinit var editZ1Speed: EditText
     private lateinit var editZ2Speed: EditText
     private lateinit var editZ3Speed: EditText
+    private lateinit var btnToggleWork: MaterialButton
+    private var isMachineWorking: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,6 +69,8 @@ class AdvancedSettingsActivity : AppCompatActivity() {
     }
 
     private fun initViewReferences() {
+        btnToggleWork = findViewById(R.id.btnToggleWork)
+
         editTargetSpeed = findViewById(R.id.editTargetSpeed)
         cbZoneWatering = findViewById(R.id.cbZoneWatering)
         z1End = findViewById(R.id.editZ1End)
@@ -98,6 +99,65 @@ class AdvancedSettingsActivity : AppCompatActivity() {
 
         findViewById<MaterialButton>(R.id.btnDeleteLocalization).setOnClickListener {
             deleteLocalization()
+        }
+
+        btnToggleWork.setOnClickListener {
+            val newStatus = if (isMachineWorking == 1) 0 else 1
+            toggleMachineWork(newStatus)
+        }
+    }
+
+    private fun updateWorkStatusUI(isWorking: Int) {
+        isMachineWorking = isWorking
+
+        if (isWorking == 1) {
+            btnToggleWork.text = "ZATRZYMAJ PRACĘ"
+            btnToggleWork.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#F44336")) // Czerwony
+            btnToggleWork.setIconResource(android.R.drawable.ic_media_pause) // Przykładowa ikona pauzy
+        } else {
+            btnToggleWork.text = "URUCHOM PRACĘ"
+            btnToggleWork.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#4CAF50")) // Zielony
+            btnToggleWork.setIconResource(android.R.drawable.ic_media_play) // Przykładowa ikona startu
+        }
+    }
+
+    private fun toggleMachineWork(newStatus: Int) {
+        val userEmail = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+
+        // Pokazujemy, że coś się dzieje
+        btnToggleWork.isEnabled = false
+        btnToggleWork.text = "PROSZĘ CZEKAĆ..."
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                // Przykładowy endpoint do zmiany statusu
+                val url = URL("https://rain-tech.pl/android/update_work_status.php")
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.doOutput = true
+                conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+
+                val postData = "id=$currentRainId&email=$userEmail&status=$newStatus"
+                OutputStreamWriter(conn.outputStream).use { it.write(postData) }
+
+                val response = conn.inputStream.bufferedReader().readText().trim()
+
+                withContext(Dispatchers.Main) {
+                    btnToggleWork.isEnabled = true
+                    if (response == "OK") {
+                        updateWorkStatusUI(newStatus)
+                        Toast.makeText(this@AdvancedSettingsActivity, "Zmieniono status pracy", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@AdvancedSettingsActivity, "Błąd serwera: $response", Toast.LENGTH_SHORT).show()
+                        loadDataFromServer() // Odświeżamy dane, by wrócić do realnego stanu
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    btnToggleWork.isEnabled = true
+                    Toast.makeText(this@AdvancedSettingsActivity, "Błąd połączenia", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
@@ -314,6 +374,16 @@ class AdvancedSettingsActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }
+
+        remoteRepo.getRains(userEmail) { rains ->
+            val currentRain = rains.find { it.id == currentRainId }
+            runOnUiThread {
+                if (currentRain != null) {
+                    updateWorkStatusUI(currentRain.isWorking)
+                }
+            }
+        }
+
     }
 
     private fun checkAndSetDelay(cbId: Int, etId: Int, value: String) {

@@ -262,7 +262,7 @@ class ProfileActivity : AppCompatActivity() {
             runOnUiThread {
                 if (rains.isNotEmpty()) {
                     val totalRains = rains.size
-                    val activeRains = rains.count { it.isWorking }
+                    val activeRains = rains.count { it.isWorking == 1 }
                     tvStats.text = "$activeRains / $totalRains"
                 }
             }
