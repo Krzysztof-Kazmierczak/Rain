@@ -48,24 +48,34 @@ class RainRemoteRepository {
         })
     }
 
-    fun toggleRainWorkStatus(id: String, email: String, newStatus: Int, callback: (Boolean) -> Unit) {
-        val url = "${baseUrl}update_rain_work_status.php"
+    fun getStmUpdateInfo(id: String, email: String, callback: (JSONObject?) -> Unit) {
+        // Przy GET parametry dodajemy bezpośrednio do adresu URL
+        val url = "${baseUrl}get_stm_update_info.php?id=$id&email=$email"
 
-        val formBody = FormBody.Builder()
-            .add("id", id)
-            .add("email", email)
-            .add("is_working", newStatus.toString())
+        val request = Request.Builder()
+            .url(url)
+            .get() // Wyraźnie wskazujemy, że to pobieranie danych
             .build()
-
-        val request = Request.Builder().url(url).post(formBody).build()
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                postOnMain { callback(false) }
+                Log.e("REPO_ERROR", "Błąd pobierania info: ${e.message}")
+                postOnMain { callback(null) }
             }
+
             override fun onResponse(call: Call, response: Response) {
-                val responseBody = response.body?.string()?.trim()
-                postOnMain { callback(responseBody == "OK") }
+                val responseBody = response.body?.string()
+                try {
+                    if (responseBody != null) {
+                        val json = JSONObject(responseBody)
+                        postOnMain { callback(json) }
+                    } else {
+                        postOnMain { callback(null) }
+                    }
+                } catch (e: Exception) {
+                    Log.e("JSON_ERROR", "Błąd parsowania: ${e.message}")
+                    postOnMain { callback(null) }
+                }
             }
         })
     }

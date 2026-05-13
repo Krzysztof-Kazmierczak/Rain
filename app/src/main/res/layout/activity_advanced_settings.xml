@@ -258,7 +258,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:layout_marginTop="16dp"
-                android:layout_marginBottom="32dp"
+                android:layout_marginBottom="20dp"
                 android:weightSum="2">
 
                 <com.google.android.material.button.MaterialButton
@@ -286,6 +286,7 @@
                     android:textColor="@android:color/white"
                     app:backgroundTint="#F44336"/>
             </LinearLayout>
+
 
         </LinearLayout>
     </ScrollView>

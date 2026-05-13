@@ -18,6 +18,9 @@ import com.example.bazadanych.data.local_db.CacheHelper
 import com.example.bazadanych.data.repository.RainRemoteRepository
 import com.google.android.material.appbar.MaterialToolbar
 import org.osmdroid.config.Configuration
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 class RainDetailsActivity : AppCompatActivity() {
 
@@ -34,6 +37,9 @@ class RainDetailsActivity : AppCompatActivity() {
     private lateinit var workTimeText: TextView
     private lateinit var extensionText: TextView
     private lateinit var signalText: TextView
+    private lateinit var tvLastUpdate: TextView
+    private lateinit var tvNextUpdate: TextView
+
     private val refreshRunnable = object : Runnable {
         override fun run() {
             loadLiveStatus()
@@ -66,6 +72,9 @@ class RainDetailsActivity : AppCompatActivity() {
         workTimeText = findViewById(R.id.workTimeText)
         extensionText = findViewById(R.id.extensionText)
         signalText = findViewById(R.id.signalText)
+
+        tvLastUpdate = findViewById(R.id.tvLastUpdate)
+        tvNextUpdate = findViewById(R.id.tvNextUpdate)
 
         findViewById<Button>(R.id.saveButton).setOnClickListener {
             saveMainData()
@@ -149,6 +158,16 @@ class RainDetailsActivity : AppCompatActivity() {
             supportActionBar?.title = "[Offline] ${it.name}"
         }
 
+        remoteRepo.getStmUpdateInfo(currentRainId, email) { json ->
+            if (json != null && !json.has("error")) {
+                val lastUpdate = json.optString("last_update")
+                val delay = json.optInt("update_delay")
+                val status = json.optInt("is_working")
+
+                displayUpdateTimes(lastUpdate, delay)
+            }
+        }
+
         remoteRepo.getRainDetails(currentRainId, email) { name, length, comment ->
             Log.d("MOJ_TEST", "Odebrano z repo: name='$name', length='$length'")
             if (name.isNotEmpty()) {
@@ -186,6 +205,51 @@ class RainDetailsActivity : AppCompatActivity() {
                     finish()
                 }
             }
+        }
+    }
+
+    private fun displayUpdateTimes(lastUpdateStr: String?, delayMinutes: Int) {
+        if (lastUpdateStr.isNullOrEmpty() || lastUpdateStr == "null") return
+
+        try {
+            val dbFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val displayFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+
+            val lastDate = dbFormat.parse(lastUpdateStr) ?: return
+            val currentTime = Calendar.getInstance().time
+
+            // 1. Ustawienie tekstu ostatniej aktualizacji (zostawiamy standardowy kolor, np. szary/biały)
+            tvLastUpdate.text = "Ostatnia aktualizacja z urządzenia: ${displayFormat.format(lastDate)}"
+
+            // 2. Obliczanie planowanej następnej aktualizacji
+            val calendar = Calendar.getInstance()
+            calendar.time = lastDate
+            calendar.add(Calendar.MINUTE, delayMinutes)
+            val nextDate = calendar.time
+
+            // 3. Obliczanie różnicy między aktualnym czasem a planowanym
+
+            val diffMillis: Long = currentTime.time - nextDate.time
+            val diffMinutes = diffMillis / (1000 * 60)
+
+            when {
+                diffMinutes > delayMinutes * 2 -> {
+                    tvNextUpdate.setTextColor(Color.RED)
+                    tvNextUpdate.text = "Przewidywana następna: ${displayFormat.format(nextDate)}\n" +
+                            "Utracono łączność z urządzeniem."
+                }
+                diffMinutes > 0 -> {
+                    tvNextUpdate.setTextColor(Color.DKGRAY)
+                    tvNextUpdate.text = "Przewidywana następna: ${displayFormat.format(nextDate)}\n"
+                }
+                else -> {
+                    tvNextUpdate.setTextColor(Color.GRAY)
+                    tvNextUpdate.text = "Przewidywana następna: ${displayFormat.format(nextDate)}"
+                }
+            }
+
+        } catch (e: Exception) {
+            Log.e("TIME_ERROR", "Błąd formatowania daty: ${e.message}")
         }
     }
 

@@ -1,6 +1,7 @@
 package com.example.bazadanych.ui
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.widget.*
@@ -25,6 +26,9 @@ import java.io.IOException
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 class AdvancedSettingsActivity : AppCompatActivity() {
     private val remoteRepo = com.example.bazadanych.data.repository.RainRemoteRepository()
@@ -42,6 +46,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
     private lateinit var editZ3Speed: EditText
     private lateinit var btnToggleWork: MaterialButton
     private var isMachineWorking: Int = 0
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -383,7 +388,6 @@ class AdvancedSettingsActivity : AppCompatActivity() {
                 }
             }
         }
-
     }
 
     private fun checkAndSetDelay(cbId: Int, etId: Int, value: String) {

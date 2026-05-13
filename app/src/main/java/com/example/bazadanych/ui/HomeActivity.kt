@@ -122,7 +122,7 @@ class HomeActivity : AppCompatActivity() {
 
                 if (rainsFromServer.isNotEmpty()) {
                     val workingRains = rainsFromServer.filter { it.isWorking == 1 }
-                    val stoppedRains = rainsFromServer.filter { it.isWorking == 0 }
+                    val stoppedRains = rainsFromServer.filter { it.isWorking != 1 }
 
                     workingRains.forEach {
                         tiles.add(RainTile(it.id, it.name, it.hoseLength, it.comment, false, true))
