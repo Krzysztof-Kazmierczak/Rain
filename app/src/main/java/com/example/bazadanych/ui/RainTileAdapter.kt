@@ -17,7 +17,7 @@ class RainTileAdapter(
         val titleText: TextView = view.findViewById(R.id.tileTitle)
         val lengthText: TextView = view.findViewById(R.id.tileLength)
         val commentText: TextView = view.findViewById(R.id.tileComment)
-        val statusDot: View = view.findViewById(R.id.statusDot) // 🔴 Mapujemy naszą kropkę
+        val statusDot: View = view.findViewById(R.id.statusDot)
         val icon: ImageView = view.findViewById(R.id.tileIcon)
     }
 
@@ -57,8 +57,8 @@ class RainTileAdapter(
                 }
                 1 -> holder.statusDot.setBackgroundResource(R.drawable.circle_red)
                 2 -> holder.statusDot.setBackgroundResource(R.drawable.circle_green)
-                5 -> holder.statusDot.setBackgroundResource(R.drawable.circle_dark_green)
-                6 -> holder.statusDot.setBackgroundResource(R.drawable.circle_dark_red)
+                5 -> holder.statusDot.setBackgroundResource(R.drawable.circle_dark_red)
+                6 -> holder.statusDot.setBackgroundResource(R.drawable.circle_dark_green)
                 7 -> holder.statusDot.setBackgroundResource(R.drawable.circle_dark_yellow)
                 else -> holder.statusDot.setBackgroundResource(R.drawable.circle_orange)
             }

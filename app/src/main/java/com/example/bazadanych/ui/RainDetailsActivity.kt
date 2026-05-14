@@ -162,9 +162,9 @@ class RainDetailsActivity : AppCompatActivity() {
             if (json != null && !json.has("error")) {
                 val lastUpdate = json.optString("last_update")
                 val delay = json.optInt("update_delay")
-                val status = json.optInt("is_working")
+                val dane = json.optInt("dane_stm")
 
-                displayUpdateTimes(lastUpdate, delay)
+                displayUpdateTimes(lastUpdate, delay, dane)
             }
         }
 
@@ -208,40 +208,65 @@ class RainDetailsActivity : AppCompatActivity() {
         }
     }
 
-    private fun displayUpdateTimes(lastUpdateStr: String?, delayMinutes: Int) {
+    private fun displayUpdateTimes(lastUpdateStr: String?, delayMinutes: Int, dane: Int) {
         if (lastUpdateStr.isNullOrEmpty() || lastUpdateStr == "null") return
+
+        // Unikalny klucz dla zapamiętania daty kontaktu dla konkretnej maszyny
+        val cacheKey = "LAST_SUCCESSFUL_CONTACT_$currentRainId"
 
         try {
             val dbFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-            val displayFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+            val displayFormat = SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault())
 
             val lastDate = dbFormat.parse(lastUpdateStr) ?: return
             val currentTime = Calendar.getInstance().time
 
-            // 1. Ustawienie tekstu ostatniej aktualizacji (zostawiamy standardowy kolor, np. szary/biały)
-            tvLastUpdate.text = "Ostatnia aktualizacja z urządzenia: ${displayFormat.format(lastDate)}"
+            // 1. Obsługa pola Ostatnia Aktualizacja + Cache
+            when (dane) {
+                6 -> {
+                    // Jeśli utracono łączność, próbujemy wyciągnąć ostatnią dobrą datę z pamięci telefonu
+                    val cachedDate = CacheHelper.loadObject<String>(this, cacheKey)
+                    if (!cachedDate.isNullOrEmpty()) {
+                        tvLastUpdate.text = "Ostatnia aktualizacja z urządzenia: $cachedDate"
+                    } else {
+                        tvLastUpdate.text = ""
+                    }
+                }
+                else -> {
+                    // Jeśli urządzenie jest online (!= 6), formatujemy datę, wyświetlamy i zapisujemy do cache
+                    val formattedDate = displayFormat.format(lastDate)
+                    tvLastUpdate.text = "Ostatnia aktualizacja z urządzenia: $formattedDate"
+                    CacheHelper.saveObject(this, cacheKey, formattedDate)
+                }
+            }
 
-            // 2. Obliczanie planowanej następnej aktualizacji
+            // 2. Planowana następna aktualizacja (Obliczenia czasu)
             val calendar = Calendar.getInstance()
             calendar.time = lastDate
             calendar.add(Calendar.MINUTE, delayMinutes)
             val nextDate = calendar.time
 
-            // 3. Obliczanie różnicy między aktualnym czasem a planowanym
-
             val diffMillis: Long = currentTime.time - nextDate.time
             val diffMinutes = diffMillis / (1000 * 60)
 
+            // 3. Obsługa pola Przewidywana Następna
             when {
+                dane == 6 -> {
+                    tvNextUpdate.setTextColor(Color.RED)
+                    tvNextUpdate.text = "Brak danych z urządzenia - utracono łączność."
+                }
+
                 diffMinutes > delayMinutes * 2 -> {
                     tvNextUpdate.setTextColor(Color.RED)
                     tvNextUpdate.text = "Przewidywana następna: ${displayFormat.format(nextDate)}\n" +
                             "Utracono łączność z urządzeniem."
                 }
+
                 diffMinutes > 0 -> {
                     tvNextUpdate.setTextColor(Color.DKGRAY)
-                    tvNextUpdate.text = "Przewidywana następna: ${displayFormat.format(nextDate)}\n"
+                    tvNextUpdate.text = "Przewidywana następna: ${displayFormat.format(nextDate)}"
                 }
+
                 else -> {
                     tvNextUpdate.setTextColor(Color.GRAY)
                     tvNextUpdate.text = "Przewidywana następna: ${displayFormat.format(nextDate)}"
