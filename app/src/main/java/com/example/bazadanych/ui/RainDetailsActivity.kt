@@ -40,12 +40,63 @@ class RainDetailsActivity : AppCompatActivity() {
     private lateinit var tvLastUpdate: TextView
     private lateinit var tvNextUpdate: TextView
 
+    // --- ZMIENNE DO ODLICZANIA NA ŻYWO (TICKER) ---
+    private val tickerHandler = Handler(Looper.getMainLooper())
+    private var baseWorkTimeSec = 0L
+    private var baseExtension = 0.0
+    private var baseSpeed = 0.0
+    private var isMachineWorking = false
+    private var lastDataTimestamp = 0L
+    private var currentIsOffline = false
+
     private val refreshRunnable = object : Runnable {
         override fun run() {
             loadLiveStatus()
             refreshHandler.postDelayed(this, 30000)
         }
     }
+
+    // --- LOGIKA TICKERA (Aktualizacja co 1 sekundę) ---
+    private val liveTickerRunnable = object : Runnable {
+        override fun run() {
+            if (!isMachineWorking) return
+
+            val now = System.currentTimeMillis()
+
+            // Obliczamy ile sekund upłynęło od momentu wygenerowania danych
+            val diffSec = if (lastDataTimestamp > 0) {
+                ((now - lastDataTimestamp) / 1000).coerceAtLeast(0)
+            } else {
+                0L
+            }
+
+            // 1. CZAS PRACY (dodajemy upłynięte sekundy)
+            val currentWorkTimeSec = baseWorkTimeSec + diffSec
+            val formattedWorkTime = formatSecondsToTimeStr(currentWorkTimeSec)
+
+            // 2. ROZWINIĘCIE (odejmujemy przebyty dystans)
+            // Prędkość z bazy jest w m/h, zamieniamy na m/s
+            val speedPerSecond = baseSpeed / 3600.0
+            var currentExtension = baseExtension - (speedPerSecond * diffSec)
+            if (currentExtension < 0) currentExtension = 0.0 // Zapobiegamy wartościom ujemnym
+
+            // 3. CZAS DO KOŃCA (wyliczamy na nowo na podstawie pozostałego rozwinięcia)
+            val timeToFinishSec = if (baseSpeed > 0) {
+                (currentExtension / speedPerSecond).toLong()
+            } else 0L
+            val formattedFinishTime = formatSecondsToTimeStr(timeToFinishSec)
+
+            // Aktualizujemy ekran
+            val label = if (currentIsOffline) "[Offline] " else ""
+            workTimeText.text = "${label}Czas pracy: $formattedWorkTime"
+            extensionText.text = String.format(Locale.getDefault(), "%sRozwinięcie: %.1f m", label, currentExtension)
+            timeFinishText.text = "${label}Czas do końca: $formattedFinishTime"
+
+            // Zapętlamy - uruchom ponownie za 1 sekundę
+            tickerHandler.postDelayed(this, 1000)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Configuration.getInstance().userAgentValue = packageName
@@ -83,7 +134,6 @@ class RainDetailsActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnAdvancedSettings).setOnClickListener {
             val intent = Intent(this, AdvancedSettingsActivity::class.java)
             intent.putExtra("id", currentRainId)
-            // Pobieramy aktualną wartość z pola lengthEdit i wysyłamy dalej
             intent.putExtra("max_hose_length", lengthEdit.text.toString())
             startActivity(intent)
         }
@@ -92,29 +142,56 @@ class RainDetailsActivity : AppCompatActivity() {
     private fun refreshStatusUI(isWorking: Int, speed: Double, finishTime: String, workTime: String, extension: String, isOffline: Boolean, signal: Int) {
         val label = if (isOffline) "[Offline] " else ""
 
-        // Zmiana: isWorking == 1
-        statusText.text = "${label}Status: ${if (isWorking == 1) "PRACUJE ✅" else "STOP 🛑"}"
-
-        // Zmiana: isWorking == 1
-        statusText.setTextColor(if (isWorking == 1) Color.GREEN else Color.RED)
+        // LOGIKA STATUSÓW
+        when (isWorking) {
+            0 -> {
+                statusText.text = "${label}Status: WYŁĄCZONE ⚪"
+                statusText.setTextColor(Color.GRAY)
+            }
+            1 -> {
+                statusText.text = "${label}Status: GOTOWOŚĆ (Aktywna) 🟡"
+                statusText.setTextColor(Color.BLUE)
+            }
+            2 -> {
+                statusText.text = "${label}Status: PRACUJE ✅"
+                statusText.setTextColor(Color.GREEN)
+            }
+            5 -> {
+                statusText.text = "${label}Status: BRAK KONTAKTU (Oczekiwanie) ⚠️"
+                statusText.setTextColor(Color.parseColor("#FFA500")) // Pomarańczowy
+            }
+            6 -> {
+                statusText.text = "${label}Status: BRAK KONTAKTU (W pracy?) ⚠️"
+                statusText.setTextColor(Color.RED)
+            }
+        }
 
         currentSpeedText.text = "${label}Prędkość: $speed m/h"
-        timeFinishText.text = "${label}Czas do końca: $finishTime"
-
-        workTimeText.text = "${label}Czas pracy: $workTime"
-        extensionText.text = "${label}Rozwinięcie: $extension m"
-
         signalText.text = "${label}Zasięg: $signal dBm"
+
+        // Jeśli maszyna nie jest w trybie pracy (2 lub 6), wyświetlamy dane statyczne
+        if (isWorking != 2 && isWorking != 6) {
+            workTimeText.text = "${label}Czas pracy: $workTime"
+            extensionText.text = "${label}Rozwinięcie: $extension m"
+            timeFinishText.text = "${label}Czas do końca: $finishTime"
+        }
     }
 
     private fun loadLiveStatus() {
         if (currentRainId.isEmpty()) return
-
         val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
 
         remoteRepo.getRainHistory(currentRainId, email) { history ->
             if (history.isNotEmpty()) {
                 val latest = history[0]
+
+                currentIsOffline = false
+                // LICZNIK DZIAŁA DLA STATUSU 2 (Praca) i 6 (Błąd podczas pracy)
+                isMachineWorking = (latest.isWorking == 2 || latest.isWorking == 6)
+
+                baseWorkTimeSec = parseTimeStrToSeconds(latest.workTime)
+                baseExtension = latest.extension.toString().toDoubleOrNull() ?: 0.0
+                baseSpeed = latest.currentSpeed
 
                 refreshStatusUI(
                     isWorking = latest.isWorking,
@@ -122,23 +199,22 @@ class RainDetailsActivity : AppCompatActivity() {
                     finishTime = latest.timeToFinish,
                     workTime = latest.workTime,
                     extension = latest.extension.toString(),
-                    isOffline = false,
-                    signal = latest.signalStrength // Przekazujemy sygnał z serwera
+                    isOffline = currentIsOffline,
+                    signal = latest.signalStrength
                 )
                 CacheHelper.saveObject(this, "RAIN_LIVE_STATUS_$currentRainId", latest)
+
+                tickerHandler.removeCallbacks(liveTickerRunnable)
+                if (isMachineWorking) {
+                    tickerHandler.post(liveTickerRunnable)
+                }
             } else {
-                // TUTAJ BYŁ BŁĄD - brakowało siódmego parametru
+                // Logika cache (bez zmian)
                 val cached = CacheHelper.loadObject<RainStatus>(this, "RAIN_LIVE_STATUS_$currentRainId")
                 cached?.let {
-                    refreshStatusUI(
-                        isWorking = it.isWorking,
-                        speed = it.currentSpeed,
-                        finishTime = it.timeToFinish,
-                        workTime = it.workTime,       // Lepiej brać z cache niż wpisywać "00:00:00"
-                        extension = it.extension.toString(),
-                        isOffline = true,
-                        signal = it.signalStrength    // DODANO BRAKUJĄCY PARAMETR
-                    )
+                    currentIsOffline = true
+                    isMachineWorking = false
+                    refreshStatusUI(it.isWorking, it.currentSpeed, it.timeToFinish, it.workTime, it.extension.toString(), true, it.signalStrength)
                 }
             }
         }
@@ -149,7 +225,7 @@ class RainDetailsActivity : AppCompatActivity() {
 
         val detailCacheKey = "RAIN_DETAILS_$currentRainId"
         val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
-        Log.d("RainRepoDetails", "Pobrany email z sesji: '$email' dla ID: $currentRainId")
+
         val cachedRain = CacheHelper.loadObject<Rain>(this, detailCacheKey)
         cachedRain?.let {
             nameEdit.setText(it.name)
@@ -164,24 +240,21 @@ class RainDetailsActivity : AppCompatActivity() {
                 val delay = json.optInt("update_delay")
                 val dane = json.optInt("dane_stm")
 
-                displayUpdateTimes(lastUpdate, delay, dane)
+                runOnUiThread {
+                    displayUpdateTimes(lastUpdate, delay, dane)
+                }
             }
         }
 
         remoteRepo.getRainDetails(currentRainId, email) { name, length, comment ->
-            Log.d("MOJ_TEST", "Odebrano z repo: name='$name', length='$length'")
             if (name.isNotEmpty()) {
                 nameEdit.setText(name)
                 lengthEdit.setText(length)
                 commentEdit.setText(comment)
                 supportActionBar?.title = name
 
-                // Zapisz do cache
                 val rainToCache = Rain(currentRainId, name, length, comment, 0)
                 CacheHelper.saveObject(this, "RAIN_DETAILS_$currentRainId", rainToCache)
-            }
-            else {
-                Log.e("MOJ_TEST", "Nazwa jest pusta, dlatego napis [Offline] został!")
             }
         }
         loadLiveStatus()
@@ -211,7 +284,6 @@ class RainDetailsActivity : AppCompatActivity() {
     private fun displayUpdateTimes(lastUpdateStr: String?, delayMinutes: Int, dane: Int) {
         if (lastUpdateStr.isNullOrEmpty() || lastUpdateStr == "null") return
 
-        // Unikalny klucz dla zapamiętania daty kontaktu dla konkretnej maszyny
         val cacheKey = "LAST_SUCCESSFUL_CONTACT_$currentRainId"
 
         try {
@@ -219,12 +291,14 @@ class RainDetailsActivity : AppCompatActivity() {
             val displayFormat = SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault())
 
             val lastDate = dbFormat.parse(lastUpdateStr) ?: return
+
+            // --- ZAPISUJEMY TIMESTAMP DLA TICKERA ---
+            lastDataTimestamp = lastDate.time
+
             val currentTime = Calendar.getInstance().time
 
-            // 1. Obsługa pola Ostatnia Aktualizacja + Cache
             when (dane) {
                 6 -> {
-                    // Jeśli utracono łączność, próbujemy wyciągnąć ostatnią dobrą datę z pamięci telefonu
                     val cachedDate = CacheHelper.loadObject<String>(this, cacheKey)
                     if (!cachedDate.isNullOrEmpty()) {
                         tvLastUpdate.text = "Ostatnia aktualizacja z urządzenia: $cachedDate"
@@ -233,14 +307,12 @@ class RainDetailsActivity : AppCompatActivity() {
                     }
                 }
                 else -> {
-                    // Jeśli urządzenie jest online (!= 6), formatujemy datę, wyświetlamy i zapisujemy do cache
                     val formattedDate = displayFormat.format(lastDate)
                     tvLastUpdate.text = "Ostatnia aktualizacja z urządzenia: $formattedDate"
                     CacheHelper.saveObject(this, cacheKey, formattedDate)
                 }
             }
 
-            // 2. Planowana następna aktualizacja (Obliczenia czasu)
             val calendar = Calendar.getInstance()
             calendar.time = lastDate
             calendar.add(Calendar.MINUTE, delayMinutes)
@@ -249,7 +321,6 @@ class RainDetailsActivity : AppCompatActivity() {
             val diffMillis: Long = currentTime.time - nextDate.time
             val diffMinutes = diffMillis / (1000 * 60)
 
-            // 3. Obsługa pola Przewidywana Następna
             when {
                 dane == 6 -> {
                     tvNextUpdate.setTextColor(Color.RED)
@@ -278,13 +349,40 @@ class RainDetailsActivity : AppCompatActivity() {
         }
     }
 
+    // --- FUNKCJE POMOCNICZE DLA TICKERA ---
+    private fun parseTimeStrToSeconds(timeStr: String?): Long {
+        if (timeStr.isNullOrEmpty()) return 0L
+        val parts = timeStr.split(":")
+        return try {
+            when (parts.size) {
+                3 -> parts[0].toLong() * 3600 + parts[1].toLong() * 60 + parts[2].toLong()
+                2 -> parts[0].toLong() * 60 + parts[1].toLong()
+                1 -> parts[0].toLong()
+                else -> 0L
+            }
+        } catch (e: Exception) {
+            0L
+        }
+    }
+
+    private fun formatSecondsToTimeStr(totalSecs: Long): String {
+        val h = totalSecs / 3600
+        val m = (totalSecs % 3600) / 60
+        val s = totalSecs % 60
+        return String.format(Locale.getDefault(), "%02d:%02d:%02d", h, m, s)
+    }
+
     override fun onResume() {
         super.onResume()
         refreshHandler.post(refreshRunnable)
+        if (isMachineWorking) {
+            tickerHandler.post(liveTickerRunnable)
+        }
     }
 
     override fun onPause() {
         super.onPause()
         refreshHandler.removeCallbacks(refreshRunnable)
+        tickerHandler.removeCallbacks(liveTickerRunnable) // Usypiamy ticker w tle oszczędzając baterię
     }
 }
