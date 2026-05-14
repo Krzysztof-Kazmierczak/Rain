@@ -11,6 +11,7 @@ import okhttp3.*
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
+import java.net.URLEncoder
 
 class RainRemoteRepository {
 
@@ -48,33 +49,72 @@ class RainRemoteRepository {
         })
     }
 
-    fun getStmUpdateInfo(id: String, email: String, callback: (JSONObject?) -> Unit) {
-        // Przy GET parametry dodajemy bezpośrednio do adresu URL
-        val url = "${baseUrl}get_stm_update_info.php?id=$id&email=$email"
+    fun getStmUpdateInfo(id: String, email: String, callback: (czasStm: String?, opoznienieAktualizacji: String?) -> Unit)
+    {
+        val encodedEmail = URLEncoder.encode(email, "UTF-8")
+        val url = "${baseUrl}get_stm_update_info.php?id=$id&email=$encodedEmail"
 
         val request = Request.Builder()
             .url(url)
-            .get() // Wyraźnie wskazujemy, że to pobieranie danych
+            .get()
             .build()
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                Log.e("REPO_ERROR", "Błąd pobierania info: ${e.message}")
-                postOnMain { callback(null) }
+                Log.e("REPO_ERROR", "Błąd sieci: ${e.message}")
+                postOnMain {
+                    callback(null, null)
+                }
             }
 
             override fun onResponse(call: Call, response: Response) {
-                val responseBody = response.body?.string()
-                try {
-                    if (responseBody != null) {
-                        val json = JSONObject(responseBody)
-                        postOnMain { callback(json) }
-                    } else {
-                        postOnMain { callback(null) }
+                response.use { res ->
+                    if (!res.isSuccessful) {
+                        Log.e("REPO_ERROR", "Błąd serwera: ${res.code}")
+                        postOnMain {
+                            callback(null, null)
+                        }
+                        return
                     }
-                } catch (e: Exception) {
-                    Log.e("JSON_ERROR", "Błąd parsowania: ${e.message}")
-                    postOnMain { callback(null) }
+
+                    val responseBody = res.body?.string()
+
+                    try {
+                        if (responseBody.isNullOrEmpty()) {
+                            postOnMain {
+                                callback(null, null)
+                            }
+                            return
+                        }
+
+                        val json = JSONObject(responseBody)
+
+                        // Jeśli PHP zwrócił błąd
+                        if (json.has("error")) {
+                            Log.w(
+                                "REPO_WARNING",
+                                "Serwer zwrócił błąd: ${json.getString("error")}"
+                            )
+                            postOnMain {
+                                callback(null, null)
+                            }
+                            return
+                        }
+
+                        val czasStm = json.optString("czas_stm", null)
+                        val opoznienieAktualizacji =
+                            json.optString("opoznienie_aktualizacji", null)
+
+                        postOnMain {
+                            callback(czasStm, opoznienieAktualizacji)
+                        }
+
+                    } catch (e: Exception) {
+                        Log.e("JSON_ERROR", "Błąd parsowania: ${e.message}")
+                        postOnMain {
+                            callback(null, null)
+                        }
+                    }
                 }
             }
         })
