@@ -13,7 +13,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.bazadanych.R
 import com.example.bazadanych.data.db.Rain
-import com.example.bazadanych.data.db.RainStatus
 import com.example.bazadanych.data.local_db.CacheHelper
 import com.example.bazadanych.data.repository.RainRemoteRepository
 import com.google.android.material.appbar.MaterialToolbar
@@ -50,6 +49,15 @@ class RainDetailsActivity : AppCompatActivity() {
     var lastStmTimeStr: String? = null
     private var currentIsOffline = false
 
+    // --- POLA DLA PODLEWANIA STREFOWEGO ---
+    private var isZonedWatering = false
+    private var zone1Speed = 0.0
+    private var zone2Speed = 0.0
+    private var zone3Speed = 0.0
+    private var zone1Start = 0.0
+    private var zone2Start = 0.0
+    private var zone3Start = 0.0
+
     private val refreshRunnable = object : Runnable {
         override fun run() {
             loadLiveStatus()
@@ -63,32 +71,151 @@ class RainDetailsActivity : AppCompatActivity() {
             if (!isMachineWorking || lastDataTimestamp == 0L) return
 
             val now = System.currentTimeMillis()
-
-            // Używamy gotowego timestampa zamiast parsować Stringa co sekundę
             val diffSec = (now - lastDataTimestamp) / 1000
 
             if (diffSec >= 0) {
-                // 1. CZAS PRACY
-                val currentWorkTimeSec = baseWorkTimeSec + diffSec
+                var currentExtension = baseExtension
+                var secondsToReachZero = 0L
+                var reachedZero = false
 
-                // 2. ROZWINIĘCIE
-                val speedPerSecond = baseSpeed / 3600.0
-                val distanceTraveled = speedPerSecond * diffSec
-                val currentExtension = (baseExtension - distanceTraveled).coerceAtLeast(0.0)
+                // 1. SYMULACJA RUCHU SEKUNDA PO SEKUNDZIE
+                for (i in 1..diffSec) {
+                    val activeSpeed = getSpeedForExtension(currentExtension)
+                    val speedPerSecond = activeSpeed / 3600.0
+                    currentExtension -= speedPerSecond
 
-                // 3. CZAS DO KOŃCA
-                val timeToFinishSec = if (baseSpeed > 0) {
-                    (currentExtension / speedPerSecond).toLong()
-                } else 0L
+                    if (currentExtension <= 0.0) {
+                        currentExtension = 0.0
+                        if (!reachedZero) {
+                            secondsToReachZero = i.toLong()
+                            reachedZero = true
+                        }
+                        break
+                    }
+                }
+
+                // 2. OBLICZENIE CZASU PRACY
+                val currentWorkTimeSec = if (reachedZero) {
+                    baseWorkTimeSec + secondsToReachZero
+                } else {
+                    baseWorkTimeSec + diffSec
+                }
+
+                // 3. OBLICZENIE CZASU DO KOŃCA (Analityczne uwzględnienie stref odwróconych)
+                val timeToFinishSec = calculateTimeToFinishAnallytically(currentExtension)
 
                 // Aktualizacja UI
                 val label = if (currentIsOffline) "[Offline] " else ""
                 workTimeText.text = "${label}Czas pracy: ${formatSecondsToTimeStr(currentWorkTimeSec)}"
                 extensionText.text = String.format(Locale.getDefault(), "%sRozwinięcie: %.1f m", label, currentExtension)
                 timeFinishText.text = "${label}Czas do końca: ${formatSecondsToTimeStr(timeToFinishSec)}"
+
+                // POPRAWIONE: Odwrócone warunki sprawdzania strefy dla tickera
+                if (isZonedWatering) {
+                    val (currentZone, zoneSpeed) = when {
+                        currentExtension <= zone1Start -> Pair("Strefa 1", zone1Speed)
+                        currentExtension <= zone2Start -> Pair("Strefa 2", zone2Speed)
+                        currentExtension <= zone3Start -> Pair("Strefa 3", zone3Speed)
+                        else -> Pair("Dojazdowa (Baza)", baseSpeed)
+                    }
+                    currentSpeedText.text = String.format(Locale.getDefault(), "%sPrędkość: %.1f m/h (%s)", label, zoneSpeed, currentZone)
+                } else {
+                    currentSpeedText.text = "${label}Prędkość: $baseSpeed m/h"
+                }
+
+                if (currentExtension <= 0.0) {
+                    Log.d("TICKER", "Rozwinięcie osiągnęło 0.0 - zatrzymuję licznik.")
+                    return
+                }
             }
 
             tickerHandler.postDelayed(this, 1000)
+        }
+    }
+
+    // POPRAWIONE: Zwraca prędkość dla nowej logiki stref (0 -> strefa1 -> strefa2 -> strefa3 -> baza)
+    private fun getSpeedForExtension(ext: Double): Double {
+        if (!isZonedWatering) return baseSpeed
+
+        return when {
+            ext <= zone1Start -> zone1Speed
+            ext <= zone2Start -> zone2Speed
+            ext <= zone3Start -> zone3Speed
+            else -> baseSpeed
+        }
+    }
+
+    // POPRAWIONE: Precyzyjne obliczanie czasu do końca dla nowej kolejności stref
+    private fun calculateTimeToFinishAnallytically(ext: Double): Long {
+        if (ext <= 0.0) return 0L
+        if (!isZonedWatering) {
+            return if (baseSpeed > 0) (ext / (baseSpeed / 3600.0)).toLong() else 0L
+        }
+
+        var remainingDist = ext
+        var totalTimeSec = 0.0
+
+        // 1. Odcinek powyżej Strefy 3 (Dojazdowa) -> od aktualnej pozycji do zone3Start
+        if (remainingDist > zone3Start) {
+            val chunk = remainingDist - zone3Start
+            if (baseSpeed > 0) totalTimeSec += chunk / (baseSpeed / 3600.0) else return 0L
+            remainingDist = zone3Start
+        }
+
+        // 2. Odcinek w Strefie 3 -> od pozycji do zone2Start
+        if (remainingDist > zone2Start && remainingDist <= zone3Start) {
+            val chunk = remainingDist - zone2Start
+            if (zone3Speed > 0) totalTimeSec += chunk / (zone3Speed / 3600.0) else return 0L
+            remainingDist = zone2Start
+        }
+
+        // 3. Odcinek w Strefie 2 -> od pozycji do zone1Start
+        if (remainingDist > zone1Start && remainingDist <= zone2Start) {
+            val chunk = remainingDist - zone1Start
+            if (zone2Speed > 0) totalTimeSec += chunk / (zone2Speed / 3600.0) else return 0L
+            remainingDist = zone1Start
+        }
+
+        // 4. Odcinek w Strefie 1 -> od pozycji do samego końca (0m)
+        if (remainingDist > 0.0 && remainingDist <= zone1Start) {
+            val chunk = remainingDist
+            if (zone1Speed > 0) totalTimeSec += chunk / (zone1Speed / 3600.0) else return 0L
+        }
+
+        return totalTimeSec.toLong()
+    }
+
+    private fun pobierzUstawieniaStrefowe(onComplete: () -> Unit) {
+        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+
+        remoteRepo.getRainAdvInt(currentRainId, email) { advInt ->
+            if (advInt != null) {
+                isZonedWatering = advInt.podlewanieStrefowe
+                if (isZonedWatering) {
+                    zone1Speed = advInt.predkoscStrefa1.toDouble()
+                    zone2Speed = advInt.predkoscStrefa2.toDouble()
+                    zone3Speed = advInt.predkoscStrefa3.toDouble()
+                }
+            } else {
+                Log.e("TEST_DANYCH", "Brak danych INT")
+            }
+
+            remoteRepo.getRainAdvUInt(currentRainId, email) { advUInt ->
+                if (advUInt != null) {
+                    zone1Start = advUInt.strefa1Start?.toDouble() ?: 0.0
+                    zone2Start = advUInt.strefa2Start?.toDouble() ?: 0.0
+                    zone3Start = advUInt.strefa3Start?.toDouble() ?: 0.0
+                } else {
+                    Log.e("TEST_DANYCH", "Brak danych UINT")
+                }
+
+                Log.d("TEST_DANYCH", "--- DANE STREFOWE POBRANE ---")
+                Log.d("TEST_DANYCH", "Czy strefowe: $isZonedWatering")
+                Log.d("TEST_DANYCH", "Prędkości: $zone1Speed | $zone2Speed | $zone3Speed")
+                Log.d("TEST_DANYCH", "Miejsca startu: $zone1Start | $zone2Start | $zone3Start")
+
+                onComplete()
+            }
         }
     }
 
@@ -101,68 +228,6 @@ class RainDetailsActivity : AppCompatActivity() {
 
         initUI()
         loadInitialData()
-    }
-
-    private fun testPobieraniaIWyświetlaniaLogow() {
-        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
-
-        // Pobieramy dane z tabeli INT
-        remoteRepo.getRainAdvInt(currentRainId, email) { advInt ->
-            if (advInt != null) {
-                Log.d("TEST_DANYCH", "=== DANE INT POBRANE ===")
-                Log.d("TEST_DANYCH", advInt.toString()) // Wypisze wszystkie zmienne w konsoli
-            } else {
-                Log.e("TEST_DANYCH", "Brak danych INT")
-            }
-        }
-
-        // Pobieramy dane z tabeli UINT
-        remoteRepo.getRainAdvUInt(currentRainId, email) { advUInt ->
-            if (advUInt != null) {
-                Log.d("TEST_DANYCH", "=== DANE UINT POBRANE ===")
-                Log.d("TEST_DANYCH", advUInt.toString()) // Wypisze wszystkie zmienne w konsoli
-            } else {
-                Log.e("TEST_DANYCH", "Brak danych UINT")
-            }
-        }
-    }
-
-    private fun wyslijWartosciDziewiec() {
-        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
-
-        // 1. Aktualizacja INT (dane_stm = 9)
-        remoteRepo.getRainAdvInt(currentRainId, email) { stareDaneInt ->
-            if (stareDaneInt != null) {
-                // Kopiujemy cały stary obiekt, zmieniając TYLKO daneStm
-                val noweDaneInt = stareDaneInt.copy(daneStm = 10)
-
-                remoteRepo.saveRainAdvInt(email, noweDaneInt) { success ->
-                    runOnUiThread {
-                        if (success) Log.d("TEST_ZAPISU", "Zapisano INT z dane_stm=9")
-                        else Log.e("TEST_ZAPISU", "Błąd zapisu INT")
-                    }
-                }
-            }
-        }
-
-        // 2. Aktualizacja UINT (zrodlo_danych = 9)
-        remoteRepo.getRainAdvUInt(currentRainId, email) { stareDaneUInt ->
-            if (stareDaneUInt != null) {
-                // Kopiujemy cały stary obiekt, zmieniając TYLKO zrodloDanych
-                val noweDaneUInt = stareDaneUInt.copy(zrodloDanych = 9)
-
-                remoteRepo.saveRainAdvUInt(email, noweDaneUInt) { success ->
-                    runOnUiThread {
-                        if (success) {
-                            Log.d("TEST_ZAPISU", "Zapisano UINT z zrodlo_danych=9")
-                            Toast.makeText(this@RainDetailsActivity, "Wysłano sygnał (9)", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Log.e("TEST_ZAPISU", "Błąd zapisu UINT")
-                        }
-                    }
-                }
-            }
-        }
     }
 
     private fun initUI() {
@@ -186,8 +251,6 @@ class RainDetailsActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.saveButton).setOnClickListener {
             saveMainData()
-            //wyslijWartosciDziewiec()
-
         }
 
         findViewById<Button>(R.id.btnAdvancedSettings).setOnClickListener {
@@ -198,10 +261,10 @@ class RainDetailsActivity : AppCompatActivity() {
         }
     }
 
+    // POPRAWIONE: Odwrócone warunki sprawdzania strefy dla głównej metody UI
     private fun refreshStatusUI(isWorking: Int, speed: Double, finishTime: String, workTime: String, extension: String, isOffline: Boolean, signal: Int) {
         val label = if (isOffline) "[Offline] " else ""
 
-        // LOGIKA STATUSÓW
         when (isWorking) {
             0 -> {
                 statusText.text = "${label}Status: WYŁĄCZONE ⚪"
@@ -217,19 +280,35 @@ class RainDetailsActivity : AppCompatActivity() {
             }
             5 -> {
                 statusText.text = "${label}Status: Utracono łączność. Poprzedni stan: Praca ⚠️"
-                statusText.setTextColor(Color.parseColor("#FFA500")) // Pomarańczowy
+                statusText.setTextColor(Color.parseColor("#FFA500"))
             }
             6 -> {
                 statusText.text = "${label}Status: Utracono łączność. Poprzedni stan: Gotowość ⚠️"
                 statusText.setTextColor(Color.RED)
             }
+            9 -> {
+                statusText.text = "${label}Status: Utracono łączność (ponad 3h). Poprzedni stan: Gotowość ⚠️"
+                statusText.setTextColor(Color.RED)
+            }
         }
 
-        currentSpeedText.text = "${label}Prędkość: $speed m/h"
+        // --- LOGIKA WYŚWIETLANIA STREFY I PRĘDKOŚCI ---
+        val extDouble = extension.toDoubleOrNull() ?: 0.0
+        if (isZonedWatering) {
+            val (currentZone, zoneSpeed) = when {
+                extDouble <= zone1Start -> Pair("Strefa 1", zone1Speed)
+                extDouble <= zone2Start -> Pair("Strefa 2", zone2Speed)
+                extDouble <= zone3Start -> Pair("Strefa 3", zone3Speed)
+                else -> Pair("Dojazdowa (Baza)", speed)
+            }
+            currentSpeedText.text = String.format(Locale.getDefault(), "%sPrędkość: %.1f m/h (%s)", label, zoneSpeed, currentZone)
+        } else {
+            currentSpeedText.text = "${label}Prędkość: $speed m/h"
+        }
+
         signalText.text = "${label}Zasięg: $signal dBm"
 
-        // Jeśli maszyna nie jest w trybie pracy (2 lub 6), wyświetlamy dane statyczne
-        if (isWorking != 2 && isWorking != 6) {
+        if (isWorking != 2 && isWorking != 6 && isWorking != 9) {
             workTimeText.text = "${label}Czas pracy: $workTime"
             extensionText.text = "${label}Rozwinięcie: $extension m"
             timeFinishText.text = "${label}Czas do końca: $finishTime"
@@ -240,37 +319,33 @@ class RainDetailsActivity : AppCompatActivity() {
         if (currentRainId.isEmpty()) return
         val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
 
-        remoteRepo.getRainHistory(currentRainId, email) { history ->
-            if (history.isNotEmpty()) {
-                val latest = history[0]
+        pobierzUstawieniaStrefowe {
+            remoteRepo.getRainHistory(currentRainId, email) { history ->
+                if (history.isNotEmpty()) {
+                    val latest = history[0]
 
-                // KLUCZOWA ZMIANA: Przypisujemy czas z serwera/urządzenia do zmiennej używanej przez ticker
-                lastStmTimeStr = latest.updatedAt
+                    lastStmTimeStr = latest.updatedAt
+                    currentIsOffline = false
+                    isMachineWorking = (latest.isWorking == 2 || latest.isWorking == 6 || latest.isWorking == 9)
 
-                // Logujemy dla pewności, co przychodzi z serwera
-                Log.d("TICKER_DEBUG", "Pobrano nowy czas STM: $lastStmTimeStr")
+                    baseWorkTimeSec = parseTimeStrToSeconds(latest.workTime)
+                    baseExtension = latest.extension.toString().toDoubleOrNull() ?: 0.0
+                    baseSpeed = latest.currentSpeed
 
-                currentIsOffline = false
-                isMachineWorking = (latest.isWorking == 2 || latest.isWorking == 6)
+                    refreshStatusUI(
+                        latest.isWorking, latest.currentSpeed, latest.timeToFinish,
+                        latest.workTime, latest.extension.toString(), currentIsOffline, latest.signalStrength
+                    )
 
-                baseWorkTimeSec = parseTimeStrToSeconds(latest.workTime)
-                baseExtension = latest.extension.toString().toDoubleOrNull() ?: 0.0
-                baseSpeed = latest.currentSpeed
+                    CacheHelper.saveObject(this, "RAIN_LIVE_STATUS_$currentRainId", latest)
 
-                refreshStatusUI(
-                    latest.isWorking, latest.currentSpeed, latest.timeToFinish,
-                    latest.workTime, latest.extension.toString(), currentIsOffline, latest.signalStrength
-                )
-
-                CacheHelper.saveObject(this, "RAIN_LIVE_STATUS_$currentRainId", latest)
-
-                tickerHandler.removeCallbacks(liveTickerRunnable)
-                if (isMachineWorking) {
-                    tickerHandler.post(liveTickerRunnable)
+                    tickerHandler.removeCallbacks(liveTickerRunnable)
+                    if (isMachineWorking) {
+                        tickerHandler.post(liveTickerRunnable)
+                    }
+                } else {
+                    tickerHandler.removeCallbacks(liveTickerRunnable)
                 }
-            } else {
-                // Logika dla cache...
-                tickerHandler.removeCallbacks(liveTickerRunnable)
             }
         }
     }
@@ -291,9 +366,7 @@ class RainDetailsActivity : AppCompatActivity() {
 
         remoteRepo.getStmUpdateInfo(currentRainId, email) { czasStm, opoznienieAktualizacji ->
             if (czasStm != null && opoznienieAktualizacji != null) {
-                // Jeśli displayUpdateTimes oczekuje Int jako drugi parametr
                 val delay = opoznienieAktualizacji.toIntOrNull() ?: 0
-
                 runOnUiThread {
                     displayUpdateTimes(czasStm, delay)
                 }
@@ -312,7 +385,6 @@ class RainDetailsActivity : AppCompatActivity() {
             }
         }
         loadLiveStatus()
-       // testPobieraniaIWyświetlaniaLogow()
     }
 
     private fun saveMainData() {
@@ -339,7 +411,6 @@ class RainDetailsActivity : AppCompatActivity() {
     private fun displayUpdateTimes(lastUpdateStr: String?, delayMinutes: Int) {
         if (lastUpdateStr.isNullOrEmpty() || lastUpdateStr == "null") return
 
-        // Zabezpieczenie przed błędną wartością opóźnienia
         val safeDelayMinutes = if (delayMinutes > 0) delayMinutes else 1
 
         try {
@@ -347,46 +418,31 @@ class RainDetailsActivity : AppCompatActivity() {
             val displayFormat = SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault())
 
             val lastDate = dbFormat.parse(lastUpdateStr) ?: return
-
-            // Zapisujemy timestamp dla tickera
             lastDataTimestamp = lastDate.time
 
             val currentTime = Calendar.getInstance().time
-
-
             tvLastUpdate.text = "Ostatnia aktualizacja z urządzenia: ${displayFormat.format(lastDate)}"
 
-            // Wyliczamy przewidywaną następną aktualizację
             val calendar = Calendar.getInstance()
             calendar.time = lastDate
             calendar.add(Calendar.MINUTE, safeDelayMinutes)
             val nextDate = calendar.time
 
-            // Ile minut minęło od planowanej aktualizacji
             val diffMillis = currentTime.time - nextDate.time
             val diffMinutes = diffMillis / (1000 * 60)
 
             when {
-                // Brak łączności, jeśli minęło więcej niż 2x interwał aktualizacji
                 diffMinutes > safeDelayMinutes * 2L -> {
                     tvNextUpdate.setTextColor(Color.RED)
-                    tvNextUpdate.text =
-                        "Przewidywana następna: ${displayFormat.format(nextDate)}\n" +
-                                "Utracono łączność z urządzeniem."
+                    tvNextUpdate.text = "Przewidywana następna: ${displayFormat.format(nextDate)}\nUtracono łączność z urządzeniem."
                 }
-
-                // Termin aktualizacji już minął, ale jeszcze nie uznajemy utraty łączności
                 diffMinutes > 0 -> {
                     tvNextUpdate.setTextColor(Color.DKGRAY)
-                    tvNextUpdate.text =
-                        "Przewidywana następna: ${displayFormat.format(nextDate)}"
+                    tvNextUpdate.text = "Przewidywana następna: ${displayFormat.format(nextDate)}"
                 }
-
-                // Aktualizacja jest jeszcze w przyszłości
                 else -> {
                     tvNextUpdate.setTextColor(Color.GRAY)
-                    tvNextUpdate.text =
-                        "Przewidywana następna: ${displayFormat.format(nextDate)}"
+                    tvNextUpdate.text = "Przewidywana następna: ${displayFormat.format(nextDate)}"
                 }
             }
 
@@ -395,7 +451,6 @@ class RainDetailsActivity : AppCompatActivity() {
         }
     }
 
-    // --- FUNKCJE POMOCNICZE DLA TICKERA ---
     private fun parseTimeStrToSeconds(timeStr: String?): Long {
         if (timeStr.isNullOrEmpty()) return 0L
         val parts = timeStr.split(":")
@@ -429,6 +484,6 @@ class RainDetailsActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         refreshHandler.removeCallbacks(refreshRunnable)
-        tickerHandler.removeCallbacks(liveTickerRunnable) // Usypiamy ticker w tle oszczędzając baterię
+        tickerHandler.removeCallbacks(liveTickerRunnable)
     }
 }

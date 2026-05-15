@@ -53,47 +53,74 @@ class RainRemoteRepository {
 
     fun getRainAdvInt(id: String, email: String, callback: (RainAdvInt?) -> Unit) {
         val url = "${baseUrl}get_rain_adv_details.php?id=$id&email=$email"
+        Log.d("RainRepo", "Wysyłam zapytanie do URL: $url")
+
         val request = Request.Builder().url(url).get().build()
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                Log.e("RainRepo", "Błąd sieci: ${e.message}")
+                // Jeśli wejdzie tutaj, masz problem z uprawnieniami, internetem lub blokadą HTTP (Cleartext)
+                Log.e("RainRepo", "Błąd sieci (onFailure): ${e.message}", e)
                 postOnMain { callback(null) }
             }
 
             override fun onResponse(call: Call, response: Response) {
-                val responseBody = response.body?.string()
-                try {
-                    if (responseBody != null && !responseBody.contains("error")) {
-                        val obj = JSONObject(responseBody)
+                Log.d("RainRepo", "Otrzymano odpowiedź HTTP Kod: ${response.code}")
 
-                        // Mapowanie JSON -> RainAdvInt
-                        val data = RainAdvInt(
-                            id = obj.optInt("id_rekordu"),
-                            urzadzenieId = obj.optInt("urzadzenie_id"),
-                            userEmail = obj.optString("user_email"),
-                            daneStm = obj.optInt("dane_stm"),
-                            czyPracuje = obj.optInt("czy_pracuje"),
-                            opoznienieAktualizacji = obj.optInt("opoznienie_aktualizacji"),
-                            predkoscZadana = obj.optInt("predkosc_zadana"),
-                            opoznionyStartPracy = obj.optInt("opozniony_start_pracy") == 1,
-                            opoznionyStartZwijania = obj.optInt("opozniony_start_zwijania") == 1,
-                            opoznioneZakonczenie = obj.optInt("opoznione_zakonczenie") == 1,
-                            podlewanieStrefowe = obj.optInt("podlewanie_strefowe") == 1,
-                            rozpoczeciePracy = obj.optInt("rozpoczecie_pracy") == 1,
-                            zwijanie = obj.optInt("zwijanie") == 1,
-                            predkoscStrefa1 = obj.optInt("predkosc_strefa_1"),
-                            predkoscStrefa2 = obj.optInt("predkosc_strefa_2"),
-                            predkoscStrefa3 = obj.optInt("predkosc_strefa_3"),
-                            czasStm = obj.optString("czas_stm"),
-                            czasDodania = obj.optString("czas_dodania")
-                        )
-                        postOnMain { callback(data) }
-                    } else {
+                // 1. Sprawdzamy czy kod HTTP to 200-299
+                if (!response.isSuccessful) {
+                    Log.e("RainRepo", "Serwer zwrócił kod błędu HTTP: ${response.code}")
+                    postOnMain { callback(null) }
+                    return
+                }
+
+                val responseBody = response.body?.string()
+                Log.d("RainRepo", "Surowa odpowiedź z serwera (JSON): $responseBody")
+
+                if (responseBody.isNullOrEmpty()) {
+                    Log.e("RainRepo", "Odpowiedź serwera jest pusta (null lub empty)")
+                    postOnMain { callback(null) }
+                    return
+                }
+
+                try {
+                    val obj = JSONObject(responseBody)
+
+                    // 2. Bezpieczniejsze sprawdzanie błędu zamiast .contains("error")
+                    if (obj.has("error") || obj.optString("status") == "error") {
+                        Log.e("RainRepo", "Serwer zwrócił błąd wewnątrz JSON: $responseBody")
                         postOnMain { callback(null) }
+                        return
                     }
+
+                    // Mapowanie JSON -> RainAdvInt
+                    val data = RainAdvInt(
+                        id = obj.optInt("id_rekordu"),
+                        urzadzenieId = obj.optInt("urzadzenie_id"),
+                        userEmail = obj.optString("user_email"),
+                        daneStm = obj.optInt("dane_stm"),
+                        czyPracuje = obj.optInt("czy_pracuje"),
+                        opoznienieAktualizacji = obj.optInt("opoznienie_aktualizacji"),
+                        predkoscZadana = obj.optInt("predkosc_zadana"),
+                        opoznionyStartPracy = obj.optInt("opozniony_start_pracy") == 1,
+                        opoznionyStartZwijania = obj.optInt("opozniony_start_zwijania") == 1,
+                        opoznioneZakonczenie = obj.optInt("opoznione_zakonczenie") == 1,
+                        podlewanieStrefowe = obj.optInt("podlewanie_strefowe") == 1,
+                        rozpoczeciePracy = obj.optInt("rozpoczecie_pracy") == 1,
+                        zwijanie = obj.optInt("zwijanie") == 1,
+                        predkoscStrefa1 = obj.optInt("predkosc_strefa_1"),
+                        predkoscStrefa2 = obj.optInt("predkosc_strefa_2"),
+                        predkoscStrefa3 = obj.optInt("predkosc_strefa_3"),
+                        czasStm = obj.optString("czas_stm"),
+                        czasDodania = obj.optString("czas_dodania")
+                    )
+
+                    Log.d("TEST_DANYCH", "Sukces! Sparsowano obiekt: $data")
+                    postOnMain { callback(data) }
+
                 } catch (e: Exception) {
-                    Log.e("RainRepo", "Błąd parsowania: ${e.message}")
+                    // Jeśli wejdzie tutaj, struktura JSON z PHP nie odpowiada mapowaniu optInt/optString
+                    Log.e("TEST_DANYCH", "Błąd parsowania JSON: ${e.message}", e)
                     postOnMain { callback(null) }
                 }
             }
