@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "742752900171",
+    "project_id": "raintech-8549f",
+    "storage_bucket": "raintech-8549f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:742752900171:android:010990021e14833fb1a9ce",
+        "android_client_info": {
+          "package_name": "com.example.bazadanych"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD6j5D48x26DmPQLrskol6AUl2UxnY3RfM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

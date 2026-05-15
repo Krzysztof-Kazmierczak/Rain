@@ -15,6 +15,7 @@ import com.example.bazadanych.data.repository.RainRemoteRepository
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.navigation.NavigationView
 import android.util.Log
+import com.google.firebase.messaging.FirebaseMessaging
 
 class HomeActivity : AppCompatActivity() {
 
@@ -80,6 +81,22 @@ class HomeActivity : AppCompatActivity() {
                 }
             drawer.closeDrawers()
             true
+        }
+
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                Log.w("FCM", "Pobieranie tokenu nieudane", task.exception)
+                return@addOnCompleteListener
+            }
+
+            val token = task.result
+            val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+
+            if (email.isNotEmpty() && token != null) {
+                remoteRepo.updateFcmToken(email, token) { success ->
+                    if (success) Log.d("FCM", "Token zsynchronizowany z bazą")
+                }
+            }
         }
 
         refreshRunnable = object : Runnable {

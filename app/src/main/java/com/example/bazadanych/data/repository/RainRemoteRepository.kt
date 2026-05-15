@@ -128,6 +128,23 @@ class RainRemoteRepository {
         })
     }
 
+    fun updateFcmToken(email: String, token: String, callback: (Boolean) -> Unit) {
+        val url = "${baseUrl}update_token.php"
+        val formBody = FormBody.Builder()
+            .add("email", email)
+            .add("token", token)
+            .build()
+
+        val request = Request.Builder().url(url).post(formBody).build()
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) { postOnMain { callback(false) } }
+            override fun onResponse(call: Call, response: Response) {
+                val res = response.body?.string()?.trim()
+                postOnMain { callback(res == "OK") }
+            }
+        })
+    }
+
     fun getUserSettings(email: String, callback: (UserSettings?) -> Unit) {
         val url = "${baseUrl}get_settings.php?email=$email"
         Log.d("RainRepo", "Pobieram ustawienia z: $url")

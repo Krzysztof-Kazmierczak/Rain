@@ -13,6 +13,7 @@ kotlinVersion = "1.9.24"
 coreKtxVersion = "1.18.0"
 swiperefreshlayout = "1.2.0"
 ksp = "1.9.24-1.0.20"
+firebaseMessagingKtx = "25.0.2"
 
 [libraries]
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
@@ -28,6 +29,7 @@ androidx-activity = { group = "androidx.activity", name = "activity", version.re
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtxVersion" }
 androidx-swiperefreshlayout = { group = "androidx.swiperefreshlayout", name = "swiperefreshlayout", version.ref = "swiperefreshlayout" }
+firebase-messaging-ktx = { group = "com.google.firebase", name = "firebase-messaging-ktx", version.ref = "firebaseMessagingKtx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
