@@ -1,5 +1,6 @@
 package com.example.bazadanych.ui
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.*
@@ -48,6 +49,20 @@ class ProfileActivity : AppCompatActivity() {
 
         // Inicjalizacja ładowania użytkowników
         loadWorkers()
+    }
+
+    override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
+        menuInflater.inflate(R.menu.profile_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+        if (item.itemId == R.id.action_settings) {
+            val intent = Intent(this, SettingsActivity::class.java)
+            startActivity(intent)
+            return true
+        }
+        return super.onOptionsItemSelected(item)
     }
 
     private fun setupToolbar() {

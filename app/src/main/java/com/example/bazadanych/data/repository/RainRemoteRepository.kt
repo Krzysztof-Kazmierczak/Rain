@@ -9,6 +9,7 @@ import com.example.bazadanych.data.db.Rain
 import com.example.bazadanych.data.db.RainAdvInt
 import com.example.bazadanych.data.db.RainAdvUInt
 import com.example.bazadanych.data.db.RainStatus
+import com.example.bazadanych.data.db.UserSettings
 import okhttp3.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -123,6 +124,87 @@ class RainRemoteRepository {
                     Log.e("TEST_DANYCH", "Błąd parsowania JSON: ${e.message}", e)
                     postOnMain { callback(null) }
                 }
+            }
+        })
+    }
+
+    fun getUserSettings(email: String, callback: (UserSettings?) -> Unit) {
+        val url = "${baseUrl}get_settings.php?email=$email"
+        Log.d("RainRepo", "Pobieram ustawienia z: $url")
+
+        val request = Request.Builder().url(url).get().build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("RainRepo", "Błąd sieci: ${e.message}")
+                postOnMain { callback(null) }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (!response.isSuccessful) {
+                    postOnMain { callback(null) }
+                    return
+                }
+
+                val responseBody = response.body?.string()
+                if (responseBody.isNullOrEmpty()) {
+                    postOnMain { callback(null) }
+                    return
+                }
+
+                try {
+                    val obj = JSONObject(responseBody)
+
+                    if (obj.has("error")) {
+                        postOnMain { callback(null) }
+                        return
+                    }
+
+                    // Mapowanie ręczne tak jak lubisz
+                    val data = UserSettings(
+                        powiadomienia = obj.optInt("powiadomienia") == 1,
+                        powiadomienie_A = obj.optInt("powiadomienie_A") == 1,
+                        powiadomienie_B = obj.optInt("powiadomienie_B") == 1,
+                        powiadomienie_C = obj.optInt("powiadomienie_C") == 1,
+                        sms = obj.optInt("sms") == 1,
+                        dzwonienie = obj.optInt("dzwonienie") == 1
+                    )
+
+                    postOnMain { callback(data) }
+
+                } catch (e: Exception) {
+                    Log.e("RainRepo", "Błąd parsowania ustawień: ${e.message}")
+                    postOnMain { callback(null) }
+                }
+            }
+        })
+    }
+
+    fun saveUserSettings(email: String, settings: Map<String, Boolean>, callback: (Boolean) -> Unit) {
+        val url = "${baseUrl}save_settings.php"
+
+        val formBuilder = FormBody.Builder()
+            .add("email", email)
+
+        // Dodajemy pola z mapy
+        settings.forEach { (key, value) ->
+            formBuilder.add(key, if (value) "1" else "0")
+        }
+
+        val request = Request.Builder()
+            .url(url)
+            .post(formBuilder.build())
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                postOnMain { callback(false) }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val result = response.body?.string()?.trim()
+                // Logika identyczna jak w Twoim saveWorker - sprawdzamy surowe "OK"
+                postOnMain { callback(result == "OK") }
             }
         })
     }
