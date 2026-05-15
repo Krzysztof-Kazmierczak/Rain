@@ -6,6 +6,8 @@ import android.util.Log
 import com.example.bazadanych.data.db.FieldData
 import com.example.bazadanych.data.db.FieldItem
 import com.example.bazadanych.data.db.Rain
+import com.example.bazadanych.data.db.RainAdvInt
+import com.example.bazadanych.data.db.RainAdvUInt
 import com.example.bazadanych.data.db.RainStatus
 import okhttp3.*
 import org.json.JSONArray
@@ -45,6 +47,189 @@ class RainRemoteRepository {
                     }
                 } catch (e: Exception) { }
                 postOnMain { callback(list) }
+            }
+        })
+    }
+
+    fun getRainAdvInt(id: String, email: String, callback: (RainAdvInt?) -> Unit) {
+        val url = "${baseUrl}get_rain_adv_details.php?id=$id&email=$email"
+        val request = Request.Builder().url(url).get().build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("RainRepo", "Błąd sieci: ${e.message}")
+                postOnMain { callback(null) }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val responseBody = response.body?.string()
+                try {
+                    if (responseBody != null && !responseBody.contains("error")) {
+                        val obj = JSONObject(responseBody)
+
+                        // Mapowanie JSON -> RainAdvInt
+                        val data = RainAdvInt(
+                            id = obj.optInt("id_rekordu"),
+                            urzadzenieId = obj.optInt("urzadzenie_id"),
+                            userEmail = obj.optString("user_email"),
+                            daneStm = obj.optInt("dane_stm"),
+                            czyPracuje = obj.optInt("czy_pracuje"),
+                            opoznienieAktualizacji = obj.optInt("opoznienie_aktualizacji"),
+                            predkoscZadana = obj.optInt("predkosc_zadana"),
+                            opoznionyStartPracy = obj.optInt("opozniony_start_pracy") == 1,
+                            opoznionyStartZwijania = obj.optInt("opozniony_start_zwijania") == 1,
+                            opoznioneZakonczenie = obj.optInt("opoznione_zakonczenie") == 1,
+                            podlewanieStrefowe = obj.optInt("podlewanie_strefowe") == 1,
+                            rozpoczeciePracy = obj.optInt("rozpoczecie_pracy") == 1,
+                            zwijanie = obj.optInt("zwijanie") == 1,
+                            predkoscStrefa1 = obj.optInt("predkosc_strefa_1"),
+                            predkoscStrefa2 = obj.optInt("predkosc_strefa_2"),
+                            predkoscStrefa3 = obj.optInt("predkosc_strefa_3"),
+                            czasStm = obj.optString("czas_stm"),
+                            czasDodania = obj.optString("czas_dodania")
+                        )
+                        postOnMain { callback(data) }
+                    } else {
+                        postOnMain { callback(null) }
+                    }
+                } catch (e: Exception) {
+                    Log.e("RainRepo", "Błąd parsowania: ${e.message}")
+                    postOnMain { callback(null) }
+                }
+            }
+        })
+    }
+
+    fun getRainAdvUInt(id: String, email: String, callback: (RainAdvUInt?) -> Unit) {
+        val url = "${baseUrl}get_rain_adv_u_details.php?id=$id&email=$email"
+        val request = Request.Builder().url(url).get().build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                postOnMain { callback(null) }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val body = response.body?.string()
+                try {
+                    if (!body.isNullOrEmpty() && !body.contains("error")) {
+                        val obj = JSONObject(body)
+                        val data = RainAdvUInt(
+                            idLog = obj.optInt("id_log"),
+                            urzadzenieId = obj.optInt("urzadzenie_id"),
+                            userEmail = obj.optString("user_email"),
+                            zrodloDanych = obj.optInt("zrodlo_danych"),
+                            rozwiniecieAktualne = obj.optInt("rozwiniecie_aktualne"),
+                            predkoscAktualna = obj.optInt("predkosc_aktualna"),
+                            odlegloscDoKonca = obj.optInt("odleglosc_do_konca"),
+                            pracaH = obj.optInt("praca_h"),
+                            pracaMin = obj.optInt("praca_min"),
+                            pracaS = obj.optInt("praca_s"),
+                            doZwinieciaH = obj.optInt("do_zwiniecia_h"),
+                            doZwinieciaMin = obj.optInt("do_zwiniecia_min"),
+                            doZwinieciaS = obj.optInt("do_zwiniecia_s"),
+                            strefa1Start = obj.optInt("strefa_1_start"),
+                            strefa2Start = obj.optInt("strefa_2_start"),
+                            strefa3Start = obj.optInt("strefa_3_start"),
+                            opoznionyStartPracyH = obj.optInt("opozniony_start_pracy_h"),
+                            opoznionyStartPracyMin = obj.optInt("opozniony_start_pracy_min"),
+                            opoznionyStartPracyS = obj.optInt("opozniony_start_pracy_s"),
+                            opoznionyStartZwijaniaH = obj.optInt("opozniony_start_zwijania_h"),
+                            opoznionyStartZwijaniaMin = obj.optInt("opozniony_start_zwijania_min"),
+                            opoznionyStartZwijaniaS = obj.optInt("opozniony_start_zwijania_s"),
+                            opoznioneZakonczeniePracyH = obj.optInt("opoznione_zakonczenie_pracy_h"),
+                            opoznioneZakonczeniePracyMin = obj.optInt("opoznione_zakonczenie_pracy_min"),
+                            opoznioneZakonczeniePracyS = obj.optInt("opoznione_zakonczenie_pracy_s"),
+                            czasStm = obj.optString("czas_stm"),
+                            dataZapisu = obj.optString("data_zapis")
+                        )
+                        postOnMain { callback(data) }
+                    } else { postOnMain { callback(null) } }
+                } catch (e: Exception) { postOnMain { callback(null) } }
+            }
+        })
+    }
+
+    fun saveRainAdvInt(email: String, data: RainAdvInt, callback: (Boolean) -> Unit) {
+        val formBody = FormBody.Builder()
+            .add("email", email)
+            .add("id_rekordu", data.id.toString())
+            .add("urzadzenie_id", data.urzadzenieId.toString())
+            .add("dane_stm", data.daneStm.toString())
+            .add("czy_pracuje", data.czyPracuje.toString())
+            .add("opoznienie_aktualizacji", data.opoznienieAktualizacji.toString())
+            .add("predkosc_zadana", data.predkoscZadana.toString())
+            .add("opozniony_start_pracy", if (data.opoznionyStartPracy) "1" else "0")
+            .add("opozniony_start_zwijania", if (data.opoznionyStartZwijania) "1" else "0")
+            .add("opoznione_zakonczenie", if (data.opoznioneZakonczenie) "1" else "0")
+            .add("podlewanie_strefowe", if (data.podlewanieStrefowe) "1" else "0")
+            .add("rozpoczecie_pracy", if (data.rozpoczeciePracy) "1" else "0")
+            .add("zwijanie", if (data.zwijanie) "1" else "0")
+            .add("predkosc_strefa_1", data.predkoscStrefa1.toString())
+            .add("predkosc_strefa_2", data.predkoscStrefa2.toString())
+            .add("predkosc_strefa_3", data.predkoscStrefa3.toString())
+            .add("czas_stm", data.czasStm ?: "")
+            .build()
+
+        val request = Request.Builder()
+            .url(baseUrl + "save_rain_adv_details.php")
+            .post(formBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                postOnMain { callback(false) }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val result = response.body?.string()?.trim()
+                postOnMain { callback(result == "OK") }
+            }
+        })
+    }
+
+    fun saveRainAdvUInt(email: String, data: RainAdvUInt, callback: (Boolean) -> Unit) {
+        val formBody = FormBody.Builder()
+            .add("email", email)
+            .add("id_log", data.idLog.toString())
+            .add("urzadzenie_id", data.urzadzenieId.toString())
+            .add("zrodlo_danych", data.zrodloDanych.toString())
+            .add("rozwiniecie_aktualne", data.rozwiniecieAktualne.toString())
+            .add("predkosc_aktualna", data.predkoscAktualna.toString())
+            .add("odleglosc_do_konca", data.odlegloscDoKonca.toString())
+            .add("praca_h", data.pracaH.toString())
+            .add("praca_min", data.pracaMin.toString())
+            .add("praca_s", data.pracaS.toString())
+            .add("do_zwiniecia_h", data.doZwinieciaH.toString())
+            .add("do_zwiniecia_min", data.doZwinieciaMin.toString())
+            .add("do_zwiniecia_s", data.doZwinieciaS.toString())
+            .add("strefa_1_start", data.strefa1Start.toString())
+            .add("strefa_2_start", data.strefa2Start.toString())
+            .add("strefa_3_start", data.strefa3Start.toString())
+            .add("opozniony_start_pracy_h", data.opoznionyStartPracyH.toString())
+            .add("opozniony_start_pracy_min", data.opoznionyStartPracyMin.toString())
+            .add("opozniony_start_pracy_s", data.opoznionyStartPracyS.toString())
+            .add("opozniony_start_zwijania_h", data.opoznionyStartZwijaniaH.toString())
+            .add("opozniony_start_zwijania_min", data.opoznionyStartZwijaniaMin.toString())
+            .add("opozniony_start_zwijania_s", data.opoznionyStartZwijaniaS.toString())
+            .add("opoznione_zakonczenie_pracy_h", data.opoznioneZakonczeniePracyH.toString())
+            .add("opoznione_zakonczenie_pracy_min", data.opoznioneZakonczeniePracyMin.toString())
+            .add("opoznione_zakonczenie_pracy_s", data.opoznioneZakonczeniePracyS.toString())
+            .add("czas_stm", data.czasStm ?: "")
+            .build()
+
+        val request = Request.Builder()
+            .url(baseUrl + "save_rain_adv_u_details.php")
+            .post(formBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                postOnMain { callback(false) }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                val result = response.body?.string()?.trim()
+                postOnMain { callback(result == "OK") }
             }
         })
     }

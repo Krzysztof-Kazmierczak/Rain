@@ -115,14 +115,32 @@ class AdvancedSettingsActivity : AppCompatActivity() {
     private fun updateWorkStatusUI(isWorking: Int) {
         isMachineWorking = isWorking
 
-        if (isWorking == 1) {
+        if (isWorking == 2) {
             btnToggleWork.text = "ZATRZYMAJ PRACĘ"
-            btnToggleWork.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#F44336")) // Czerwony
-            btnToggleWork.setIconResource(android.R.drawable.ic_media_pause) // Przykładowa ikona pauzy
-        } else {
+            btnToggleWork.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(
+                    android.graphics.Color.parseColor("#F44336")
+                ) // Czerwony
+            btnToggleWork.setIconResource(android.R.drawable.ic_media_pause)
+            btnToggleWork.isEnabled = true
+
+        } else if (isWorking == 1) {
             btnToggleWork.text = "URUCHOM PRACĘ"
-            btnToggleWork.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#4CAF50")) // Zielony
-            btnToggleWork.setIconResource(android.R.drawable.ic_media_play) // Przykładowa ikona startu
+            btnToggleWork.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(
+                    android.graphics.Color.parseColor("#4CAF50")
+                ) // Zielony
+            btnToggleWork.setIconResource(android.R.drawable.ic_media_play)
+            btnToggleWork.isEnabled = true
+
+        } else {
+            btnToggleWork.text = "BRAK ŁĄCZNOŚCI Z URZĄDZENIEM"
+            btnToggleWork.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(
+                    android.graphics.Color.parseColor("#9E9E9E")
+                ) // Szary
+            btnToggleWork.setIconResource(android.R.drawable.ic_dialog_alert)
+            btnToggleWork.isEnabled = false
         }
     }
 

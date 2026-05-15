@@ -103,6 +103,68 @@ class RainDetailsActivity : AppCompatActivity() {
         loadInitialData()
     }
 
+    private fun testPobieraniaIWyświetlaniaLogow() {
+        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+
+        // Pobieramy dane z tabeli INT
+        remoteRepo.getRainAdvInt(currentRainId, email) { advInt ->
+            if (advInt != null) {
+                Log.d("TEST_DANYCH", "=== DANE INT POBRANE ===")
+                Log.d("TEST_DANYCH", advInt.toString()) // Wypisze wszystkie zmienne w konsoli
+            } else {
+                Log.e("TEST_DANYCH", "Brak danych INT")
+            }
+        }
+
+        // Pobieramy dane z tabeli UINT
+        remoteRepo.getRainAdvUInt(currentRainId, email) { advUInt ->
+            if (advUInt != null) {
+                Log.d("TEST_DANYCH", "=== DANE UINT POBRANE ===")
+                Log.d("TEST_DANYCH", advUInt.toString()) // Wypisze wszystkie zmienne w konsoli
+            } else {
+                Log.e("TEST_DANYCH", "Brak danych UINT")
+            }
+        }
+    }
+
+    private fun wyslijWartosciDziewiec() {
+        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+
+        // 1. Aktualizacja INT (dane_stm = 9)
+        remoteRepo.getRainAdvInt(currentRainId, email) { stareDaneInt ->
+            if (stareDaneInt != null) {
+                // Kopiujemy cały stary obiekt, zmieniając TYLKO daneStm
+                val noweDaneInt = stareDaneInt.copy(daneStm = 10)
+
+                remoteRepo.saveRainAdvInt(email, noweDaneInt) { success ->
+                    runOnUiThread {
+                        if (success) Log.d("TEST_ZAPISU", "Zapisano INT z dane_stm=9")
+                        else Log.e("TEST_ZAPISU", "Błąd zapisu INT")
+                    }
+                }
+            }
+        }
+
+        // 2. Aktualizacja UINT (zrodlo_danych = 9)
+        remoteRepo.getRainAdvUInt(currentRainId, email) { stareDaneUInt ->
+            if (stareDaneUInt != null) {
+                // Kopiujemy cały stary obiekt, zmieniając TYLKO zrodloDanych
+                val noweDaneUInt = stareDaneUInt.copy(zrodloDanych = 9)
+
+                remoteRepo.saveRainAdvUInt(email, noweDaneUInt) { success ->
+                    runOnUiThread {
+                        if (success) {
+                            Log.d("TEST_ZAPISU", "Zapisano UINT z zrodlo_danych=9")
+                            Toast.makeText(this@RainDetailsActivity, "Wysłano sygnał (9)", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Log.e("TEST_ZAPISU", "Błąd zapisu UINT")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private fun initUI() {
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
@@ -124,6 +186,8 @@ class RainDetailsActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.saveButton).setOnClickListener {
             saveMainData()
+            //wyslijWartosciDziewiec()
+
         }
 
         findViewById<Button>(R.id.btnAdvancedSettings).setOnClickListener {
@@ -248,6 +312,7 @@ class RainDetailsActivity : AppCompatActivity() {
             }
         }
         loadLiveStatus()
+       // testPobieraniaIWyświetlaniaLogow()
     }
 
     private fun saveMainData() {

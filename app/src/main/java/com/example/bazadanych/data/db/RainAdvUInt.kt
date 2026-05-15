@@ -1,0 +1,31 @@
+package com.example.bazadanych.data.db
+
+data class RainAdvUInt(
+    val idLog: Int,
+    val urzadzenieId: Int?,
+    val userEmail: String?,
+    val zrodloDanych: Int?,
+    val rozwiniecieAktualne: Int?,
+    val predkoscAktualna: Int?,
+    val odlegloscDoKonca: Int?,
+    val pracaH: Int?,
+    val pracaMin: Int?,
+    val pracaS: Int?,
+    val doZwinieciaH: Int?,
+    val doZwinieciaMin: Int?,
+    val doZwinieciaS: Int?,
+    val strefa1Start: Int?,
+    val strefa2Start: Int?,
+    val strefa3Start: Int?,
+    val opoznionyStartPracyH: Int,
+    val opoznionyStartPracyMin: Int,
+    val opoznionyStartPracyS: Int,
+    val opoznionyStartZwijaniaH: Int,
+    val opoznionyStartZwijaniaMin: Int,
+    val opoznionyStartZwijaniaS: Int,
+    val opoznioneZakonczeniePracyH: Int,
+    val opoznioneZakonczeniePracyMin: Int,
+    val opoznioneZakonczeniePracyS: Int,
+    val czasStm: String?,
+    val dataZapisu: String?
+)
