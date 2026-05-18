@@ -3,6 +3,7 @@ package com.example.bazadanych.data.repository
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import com.example.bazadanych.data.db.AlarmItem
 import com.example.bazadanych.data.db.FieldData
 import com.example.bazadanych.data.db.FieldItem
 import com.example.bazadanych.data.db.Rain
@@ -702,4 +703,121 @@ class RainRemoteRepository {
             }
         })
     }
+
+    fun getUserLevel(email: String, callback: (Int) -> Unit) {
+
+        val url = "${baseUrl}get_user_level.php?email=$email"
+
+        client.newCall(
+            Request.Builder()
+                .url(url)
+                .get()
+                .build()
+        ).enqueue(object : Callback {
+
+            override fun onFailure(call: Call, e: IOException) {
+
+                postOnMain {
+                    callback(99)
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+
+                val result = response.body?.string()?.trim()
+
+                val level = try {
+                    result?.toInt() ?: 99
+                } catch (e: Exception) {
+                    99
+                }
+
+                postOnMain {
+                    callback(level)
+                }
+            }
+        })
+    }
+
+    fun getAlarms(email: String, callback: (List<AlarmItem>) -> Unit) {
+        val url = "${baseUrl}get_alarms.php?email=$email"
+        client.newCall(Request.Builder().url(url).get().build()).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                postOnMain { callback(emptyList()) }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val body = response.body?.string()
+                val list = mutableListOf<AlarmItem>()
+                if (response.isSuccessful && !body.isNullOrEmpty()) {
+                    try {
+                        val jsonArray = JSONArray(body)
+                        for (i in 0 until jsonArray.length()) {
+                            val obj = jsonArray.getJSONObject(i)
+                            list.add(
+                                AlarmItem(
+                                    id = obj.optInt("id", 0),
+                                    kodAlarmu = obj.optString("kod_alarmu", "Brak kodu"),
+                                    nazwaAlarmu = obj.optString("nazwa_alarmu", "Nieznany alarm"),
+                                    nazwaMaszyny = obj.optString("nazwa_maszyny", "Nieznana maszyna"),
+                                    dataWystapienia = obj.optString("data_wystapienia", ""),
+                                    userEmail = obj.optString("user_email", ""),
+                                    canDelete = obj.optBoolean("can_delete", false) // <--- Parsowanie booleana
+                                )
+                            )
+                        }
+                    } catch (e: Exception) {
+                        Log.e("Repository", "Błąd parsowania alarmów", e)
+                    }
+                }
+                postOnMain { callback(list) }
+            }
+        })
+    }
+
+    fun deleteAlarm(id: Int, email: String, callback: (Boolean) -> Unit) {
+        val formBody = FormBody.Builder()
+            .add("id", id.toString())
+            .add("email", email)
+            .build()
+
+        val request = Request.Builder()
+            .url("${baseUrl}delete_alarm.php")
+            .post(formBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                postOnMain { callback(false) }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val result = response.body?.string()?.trim()
+                postOnMain { callback(result == "OK") }
+            }
+        })
+    }
+
+    fun deleteAllAlarms(email: String, callback: (Boolean) -> Unit) {
+        val formBody = FormBody.Builder()
+            .add("email", email)
+            .build()
+
+        val request = Request.Builder()
+            .url("${baseUrl}delete_all_alarms.php")
+            .post(formBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                postOnMain { callback(false) }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val result = response.body?.string()?.trim()
+                postOnMain { callback(result == "OK") }
+            }
+        })
+    }
+
 }

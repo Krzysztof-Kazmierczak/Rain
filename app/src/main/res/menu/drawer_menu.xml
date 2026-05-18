@@ -22,6 +22,11 @@
         android:title="Pogoda" />
 
     <item
+        android:id="@+id/nav_alarm"
+        android:icon="@drawable/round_report_gmailerrorred_24"
+        android:title="Alarmy" />
+
+    <item
         android:id="@+id/nav_logout"
         android:title="Wyloguj"
         android:icon="@android:drawable/ic_lock_power_off"/>

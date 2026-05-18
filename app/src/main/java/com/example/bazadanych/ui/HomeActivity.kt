@@ -83,6 +83,7 @@ class HomeActivity : AppCompatActivity() {
                 R.id.nav_home -> Toast.makeText(this, "Home", Toast.LENGTH_SHORT).show()
                 R.id.nav_profile -> goProfile()
                 R.id.nav_logout -> logout()
+                R.id.nav_alarm -> goAlarm()
                 R.id.nav_map -> goFullMap()
                 R.id.nav_weather -> goWeather()
                 }
@@ -212,6 +213,12 @@ class HomeActivity : AppCompatActivity() {
         val intent = Intent(this, ProfileActivity::class.java)
         startActivity(intent)
     }
+
+    private fun goAlarm() {
+        val intent = Intent(this, AlarmActivity::class.java)
+        startActivity(intent)
+    }
+
     private fun goFullMap() {
         val intent = Intent(this, FullMapActivity::class.java)
         startActivity(intent)
