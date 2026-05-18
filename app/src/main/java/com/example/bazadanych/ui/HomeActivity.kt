@@ -1,6 +1,7 @@
 package com.example.bazadanych.ui
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.ActionBarDrawerToggle
@@ -52,6 +53,12 @@ class HomeActivity : AppCompatActivity() {
                 val intent = Intent(this, RainDetailsActivity::class.java)
                 intent.putExtra("id", tile.id)
                 startActivity(intent)
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
             }
         }
 
