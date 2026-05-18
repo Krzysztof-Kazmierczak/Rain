@@ -174,6 +174,31 @@ class HomeActivity : AppCompatActivity() {
 
     private fun logout() {
         val prefs = getSharedPreferences("user_session", MODE_PRIVATE)
+        val userEmail = prefs.getString("user_email", "") ?: ""
+
+        // Inicjalizacja repozytorium (lub pobranie istniejącej instancji)
+        val repository = RainRemoteRepository()
+
+        if (userEmail.isNotEmpty()) {
+            // Wywołujemy bezpieczne czyszczenie bazy przez OkHttp wbudowane w repozytorium
+            repository.removeFcmToken(userEmail) { isSuccess ->
+                if (isSuccess) {
+                    Log.d("Logout", "Token FCM usunięty pomyślnie z serwera.")
+                } else {
+                    Log.w("Logout", "Nie udało się usunąć tokenu z serwera (ale wylogowujemy lokalnie).")
+                }
+
+                // Kod czyszczenia sesji wykonujemy dopiero gdy zapytanie do serwera dobiegnie końca
+                proceduraLokalnegoWylogowania(prefs)
+            }
+        } else {
+            // Jeśli maila nie było w pamięci, od razu wyrzucamy z aplikacji
+            proceduraLokalnegoWylogowania(prefs)
+        }
+    }
+
+    // Przeniesiona lokalna logika wylogowania do osobnej funkcji pomocniczej
+    private fun proceduraLokalnegoWylogowania(prefs: android.content.SharedPreferences) {
         prefs.edit().putBoolean("logged_in", false).apply()
 
         val intent = Intent(this, LoginActivity::class.java)

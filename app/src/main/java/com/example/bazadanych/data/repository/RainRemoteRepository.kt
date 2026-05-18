@@ -679,4 +679,27 @@ class RainRemoteRepository {
             }
         })
     }
+
+    fun removeFcmToken(email: String, callback: (Boolean) -> Unit) {
+        val encodedEmail = URLEncoder.encode(email, "UTF-8")
+        val url = "${baseUrl}usun_token.php?mail=$encodedEmail"
+        Log.d(TAG, "Usuwanie tokenu FCM dla maila: $url")
+
+        val request = Request.Builder().url(url).get().build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e(TAG, "Błąd sieci podczas usuwania tokenu: ${e.message}")
+                postOnMain { callback(false) }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val result = response.body?.string()?.trim() ?: ""
+                Log.d(TAG, "Odpowiedź serwera (usuwanie tokenu): $result")
+
+                // Sprawdzamy czy skrypt PHP zwrócił słowo "SUKCES"
+                postOnMain { callback(result == "SUKCES") }
+            }
+        })
+    }
 }
