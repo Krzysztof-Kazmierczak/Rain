@@ -35,15 +35,15 @@
 
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="POGODA:" android:textStyle="bold" android:layout_marginEnd="8dp"/>
                 <CheckBox android:id="@+id/cbTemp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Temp (°C)" android:checked="true" />
-                <CheckBox android:id="@+id/cbRain" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Opady" android:layout_marginStart="8dp" android:checked="true"/>
+                <CheckBox android:id="@+id/cbRain" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Opady (mm)" android:layout_marginStart="8dp" android:checked="true"/>
                 <CheckBox android:id="@+id/cbClouds" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Chmury (%)" android:layout_marginStart="8dp" />
 
                 <View android:layout_width="1dp" android:layout_height="match_parent" android:background="#CCC" android:layout_marginStart="16dp" android:layout_marginEnd="16dp"/>
 
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="DANE Z POLA:" android:textStyle="bold" android:layout_marginEnd="8dp"/>
-                <CheckBox android:id="@+id/cbSpeed" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Prędkość" android:checked="true"/>
-                <CheckBox android:id="@+id/cbWind" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Wiatr (m/s)" android:layout_marginStart="8dp"/>
-                <CheckBox android:id="@+id/cbHumidity" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Wilgotność" android:layout_marginStart="8dp"/>
+
+                <CheckBox android:id="@+id/cbWind" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Wiatr (m/s)" android:layout_marginStart="8dp" android:checked="true"/>
+                <CheckBox android:id="@+id/cbHumidity" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Wilgotność (%)" android:layout_marginStart="8dp" android:checked="true"/>
 
             </LinearLayout>
         </HorizontalScrollView>

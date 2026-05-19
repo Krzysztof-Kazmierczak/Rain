@@ -84,6 +84,7 @@ class HomeActivity : AppCompatActivity() {
                 R.id.nav_profile -> goProfile()
                 R.id.nav_logout -> logout()
                 R.id.nav_alarm -> goAlarm()
+                R.id.nav_chart -> goChart()
                 R.id.nav_map -> goFullMap()
                 R.id.nav_weather -> goWeather()
                 }
@@ -216,6 +217,11 @@ class HomeActivity : AppCompatActivity() {
 
     private fun goAlarm() {
         val intent = Intent(this, AlarmActivity::class.java)
+        startActivity(intent)
+    }
+
+    private fun goChart() {
+        val intent = Intent(this, ChartActivity::class.java)
         startActivity(intent)
     }
 

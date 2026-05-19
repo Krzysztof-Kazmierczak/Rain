@@ -22,6 +22,11 @@
         android:title="Pogoda" />
 
     <item
+        android:id="@+id/nav_chart"
+        android:icon="@drawable/outline_show_chart_24"
+        android:title="Wykresy" />
+
+    <item
         android:id="@+id/nav_alarm"
         android:icon="@drawable/round_report_gmailerrorred_24"
         android:title="Alarmy" />

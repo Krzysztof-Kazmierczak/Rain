@@ -13,7 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.bazadanych.R
 import com.example.bazadanych.data.api.ApiClient
 import com.example.bazadanych.data.db.DataBase
-import com.example.bazadanych.data.db.FieldDao // ZMIENIONE Z RainDao na FieldDao!
+import com.example.bazadanych.data.db.FieldDao
 import com.example.bazadanych.data.db.FieldHistory
 import com.example.bazadanych.data.db.toDomainModel
 import com.example.bazadanych.data.db.toEntity
@@ -45,40 +45,38 @@ class AnalyticsActivity : AppCompatActivity() {
 
     // Aktywne checkboxy (max 2 per wykres)
     private val activeWeatherParams = mutableListOf(R.id.cbTemp, R.id.cbRain)
-    private val activeMachineParams = mutableListOf(R.id.cbSpeed)
-    private var currentInterval: Int = 3 // Domyślnie surowe dane z API to co 3h
-    private var isForecastVisible: Boolean = true // Domyślnie prognoza jest włączona
+
+    // 🔥 ZMIANA: Domyślnie aktywne na dolnym wykresie to Wiatr i Wilgotność (cbSpeed usunięty)
+    private val activeMachineParams = mutableListOf(R.id.cbWind, R.id.cbHumidity)
+
+    private var currentInterval: Int = 3
+    private var isForecastVisible: Boolean = true
     private lateinit var btnToggleForecast: com.google.android.material.button.MaterialButton
     private lateinit var btnClearDate: ImageButton
 
-    // Inicjalizacja bazy
     private lateinit var database: DataBase
-    private lateinit var fieldDao: FieldDao // TUTAJ BYŁ BŁĄD (było RainDao)
+    private lateinit var fieldDao: FieldDao
 
     private var displayData: List<FieldHistory> = emptyList()
-    // NOWE ZMIENNE DO FILTROWANIA
     private var cachedRawData: List<FieldHistory> = emptyList()
     private var startDateFilter: Long? = null
     private var endDateFilter: Long? = null
-    val visibleRange = 40f // Twój limit punktów
+    val visibleRange = 40f
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_analytics)
 
-        // 1. Inicjalizacja bazy i danych podstawowych
         database = DataBase.getDatabase(this)
         fieldDao = database.fieldDao()
         fieldId = intent.getIntExtra("FIELD_ID", 1)
         fieldName = intent.getStringExtra("FIELD_NAME") ?: "Pole"
 
-        // Toolbar
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbarAnalytics)
         setSupportActionBar(toolbar)
         supportActionBar?.title = "Historia i Prognoza: $fieldName"
         toolbar.setNavigationOnClickListener { finish() }
 
-        // Wykresy
         chartWeather = findViewById(R.id.chartWeather)
         chartMachine = findViewById(R.id.chartMachine)
         chartWeather.setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
@@ -90,19 +88,16 @@ class AnalyticsActivity : AppCompatActivity() {
 
         setupCheckboxes()
 
-        // --- INICJALIZACJA PRZYCISKÓW ---
         btnToggleForecast = findViewById<com.google.android.material.button.MaterialButton>(R.id.btnToggleForecast)
         btnClearDate = findViewById<ImageButton>(R.id.btnClearDate)
         val btnDateRange = findViewById<ImageButton>(R.id.btnDateRange)
 
-        // Obsługa przycisku prognozy (NOWA LOGIKA TEKSTOWA)
         btnToggleForecast.setOnClickListener {
             isForecastVisible = !isForecastVisible
-            updateForecastButtonState() // Ta funkcja zmieni tekst na przycisku
+            updateForecastButtonState()
             updateChartsData()
         }
 
-        // Wybór zakresu dat
         btnDateRange.setOnClickListener {
             val datePicker = com.google.android.material.datepicker.MaterialDatePicker.Builder.dateRangePicker()
                 .setTitleText("Wybierz zakres dat")
@@ -119,7 +114,6 @@ class AnalyticsActivity : AppCompatActivity() {
             datePicker.show(supportFragmentManager, "DATE_PICKER")
         }
 
-        // Przycisk "X" do kasowania daty
         btnClearDate.setOnClickListener {
             startDateFilter = null
             endDateFilter = null
@@ -128,7 +122,6 @@ class AnalyticsActivity : AppCompatActivity() {
             processAndDisplay(cachedRawData)
         }
 
-        // Obsługa Chipów (interwały)
         findViewById<ChipGroup>(R.id.chipGroupInterval).setOnCheckedStateChangeListener { group, checkedIds ->
             val checkedId = checkedIds.firstOrNull() ?: return@setOnCheckedStateChangeListener
             val interval = when(checkedId) {
@@ -139,10 +132,9 @@ class AnalyticsActivity : AppCompatActivity() {
             }
             currentInterval = interval
             updateForecastButtonState()
-            applyAggregation(interval) // To wywoła updateChartsData -> centerChartOnNow
+            applyAggregation(interval)
         }
 
-        // 2. Ładowanie danych
         loadDataFromRoom(fieldId)
         refreshDataFromServer(fieldId)
         updateForecastButtonState()
@@ -150,7 +142,9 @@ class AnalyticsActivity : AppCompatActivity() {
 
     private fun setupCheckboxes() {
         val weatherCbs = listOf(R.id.cbTemp, R.id.cbRain, R.id.cbClouds)
-        val machineCbs = listOf(R.id.cbSpeed, R.id.cbWind, R.id.cbHumidity)
+
+        // 🔥 ZMIANA: Lista checkboxów dla dolnego panelu bez cbSpeed
+        val machineCbs = listOf(R.id.cbWind, R.id.cbHumidity)
 
         weatherCbs.forEach { id ->
             findViewById<CheckBox>(id).setOnCheckedChangeListener { cb, isChecked ->
@@ -177,8 +171,6 @@ class AnalyticsActivity : AppCompatActivity() {
         updateChartsData()
     }
 
-    // --- NOWE ZARZĄDZANIE DANYMI (ROOM) ---
-
     private fun loadDataFromRoom(fieldId: Int) {
         lifecycleScope.launch {
             val cachedEntities = withContext(Dispatchers.IO) {
@@ -192,13 +184,9 @@ class AnalyticsActivity : AppCompatActivity() {
     }
 
     private fun refreshDataFromServer(fieldId: Int) {
-        // POPRAWNY KOD:
-// 1. Najpierw pobierz email (jeśli jeszcze go nie masz w tej metodzie)
         val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
 
-// 2. Przekaż go do funkcji
         ApiClient.rainTech.getFieldHistory(fieldId, email).enqueue(object : Callback<List<FieldHistory>> {
-            // ... reszta kodu (onResponse, onFailure) bez zmian
             override fun onResponse(call: Call<List<FieldHistory>>, response: Response<List<FieldHistory>>) {
                 if (response.isSuccessful && response.body() != null) {
                     val rawData = response.body()!!
@@ -219,21 +207,15 @@ class AnalyticsActivity : AppCompatActivity() {
         })
     }
 
-    // --- LOGIKA WIDOKÓW I WYKRESÓW ---
-
     private fun processAndDisplay(rawData: List<FieldHistory>) {
         cachedRawData = rawData
 
-        // 1. ZNAJDUJEMY OSTATNI HISTORYCZNY PUNKT W CAŁEJ BAZIE (Przed nałożeniem kalendarza)
         val absoluteLastHistoryPoint = cachedRawData.lastOrNull { it.is_forecast == 0 }
 
-        // 2. USUŃ STARE PROGNOZY Z PRZESZŁOŚCI
-        // Zostawiamy tylko historię (0) ORAZ prognozę (1), ale tylko tę nowszą od ostatniego znanego pomiaru
         var cleanData = cachedRawData.filter {
             it.is_forecast == 0 || (it.is_forecast == 1 && absoluteLastHistoryPoint != null && it.recorded_at!! > absoluteLastHistoryPoint.recorded_at!!)
         }
 
-        // 3. FILTRUJEMY PO DACIE Z KALENDARZA
         if (startDateFilter != null && endDateFilter != null) {
             val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
             cleanData = cleanData.filter {
@@ -251,27 +233,22 @@ class AnalyticsActivity : AppCompatActivity() {
 
     private fun applyAggregation(hours: Int) {
         if (hours == 1) {
-            // Dla 1h po prostu ukrywamy prognozę, bo ona fizycznie istnieje tylko co 3h
             displayData = fullHistoryData.filter { it.is_forecast != 1 }
         } else if (hours > 1) {
             val history = fullHistoryData.filter { it.is_forecast == 0 }
             val forecast = fullHistoryData.filter { it.is_forecast == 1 }
 
-            // 1. AGREGACJA HISTORII (Baza to 1h)
             val historyStep = hours
             val aggregatedHistory = if (history.isNotEmpty()) {
                 history.windowed(size = historyStep, step = historyStep, partialWindows = true).map { window ->
-
-                    // --- LOGI DLA HISTORII ---
                     val rainValues = window.mapNotNull { it.rain_mm }
-                    val summedRain = rainValues.sum()
-                    android.util.Log.d("RainDebug", "HISTORIA [Krok ${hours}h] Czas: ${window.last().recorded_at} | Składowe opady: $rainValues -> WYNIK: $summedRain")
+                    val sampledRain = rainValues.sum()
 
                     FieldHistory(
                         id = window[0].id,
                         field_id = window[0].field_id,
                         temperature = window.mapNotNull { it.temperature }.average(),
-                        rain_mm = summedRain, // Używamy naszej obliczonej i wylogowanej sumy
+                        rain_mm = sampledRain,
                         humidity = window.mapNotNull { it.humidity }.average().toInt(),
                         wind_speed = window.mapNotNull { it.wind_speed }.average(),
                         is_forecast = window.last().is_forecast,
@@ -285,7 +262,6 @@ class AnalyticsActivity : AppCompatActivity() {
                 }
             } else emptyList()
 
-            // 2. AGREGACJA PROGNOZY (Baza to 3h)
             val forecastStep = (hours / 3).coerceAtLeast(1)
 
             val aggregatedForecast = if (forecast.isNotEmpty()) {
@@ -293,17 +269,14 @@ class AnalyticsActivity : AppCompatActivity() {
                     forecast
                 } else {
                     forecast.windowed(size = forecastStep, step = forecastStep, partialWindows = true).map { window ->
-
-                        // --- LOGI DLA PROGNOZY ---
                         val rainValues = window.mapNotNull { it.rain_mm }
-                        val summedRain = rainValues.sum()
-                        android.util.Log.d("RainDebug", "PROGNOZA [Krok ${hours}h] Czas: ${window.last().recorded_at} | Składowe opady: $rainValues -> WYNIK: $summedRain")
+                        val sampledRain = rainValues.sum()
 
                         FieldHistory(
                             id = window[0].id,
                             field_id = window[0].field_id,
                             temperature = window.mapNotNull { it.temperature }.average(),
-                            rain_mm = summedRain, // Używamy naszej obliczonej i wylogowanej sumy
+                            rain_mm = sampledRain,
                             humidity = window.mapNotNull { it.humidity }.average().toInt(),
                             wind_speed = window.mapNotNull { it.wind_speed }.average(),
                             is_forecast = window.last().is_forecast,
@@ -336,8 +309,7 @@ class AnalyticsActivity : AppCompatActivity() {
             setPinchZoom(true)
             axisRight.isEnabled = true
 
-            // 1. USTAW NOWY RENDERER DLA WYKRESU (dodaj te dwie linijki przed blokiem xAxis):
-            chart.extraBottomOffset = 15f // Robimy miejsce pod wykresem, żeby druga linia tekstu nie została ucięta
+            chart.extraBottomOffset = 15f
             chart.setXAxisRenderer(
                 MultilineXAxisRenderer(
                     chart.viewPortHandler,
@@ -350,15 +322,11 @@ class AnalyticsActivity : AppCompatActivity() {
                 position = XAxis.XAxisPosition.BOTTOM
                 setDrawGridLines(true)
                 granularity = 1f
-
-                // 2. USTAW KĄT NA ZERO (żeby tekst był w poziomie)
-                labelRotationAngle = 0f // Zamiast -45f
+                labelRotationAngle = 0f
 
                 xAxis.valueFormatter = object : ValueFormatter() {
                     override fun getFormattedValue(value: Float): String {
                         val index = value.toInt()
-
-                        // Zabezpieczenie przed wyjściem poza zakres listy
                         if (index < 0 || index >= displayData.size) return ""
 
                         val dataItem = displayData[index]
@@ -367,7 +335,6 @@ class AnalyticsActivity : AppCompatActivity() {
                         val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
                         val date = sdf.parse(dateStr) ?: return ""
 
-                        // Wyświetlamy dokładnie to, co jest w danych
                         val outSdf = if (currentInterval >= 24) {
                             java.text.SimpleDateFormat("dd.MM\nyyyy", java.util.Locale.getDefault())
                         } else {
@@ -378,16 +345,13 @@ class AnalyticsActivity : AppCompatActivity() {
                 }
             }
             setVisibleXRangeMaximum(10f)
-            //moveViewToX(displayData.size.toFloat())
         }
     }
 
     private fun updateChartsData() {
-        // 1. Resetujemy podświetlenia (markery), aby nie wisiały przy zmianie danych
         chartWeather.highlightValues(null)
         chartMachine.highlightValues(null)
 
-        // 2. Jeśli nie ma danych, czyścimy wykresy i wychodzimy
         if (fullHistoryData.isEmpty()) {
             chartWeather.clear()
             chartMachine.clear()
@@ -408,7 +372,6 @@ class AnalyticsActivity : AppCompatActivity() {
             val (label, color, extractor) = getParamInfo(id)
             val axis = if (index == 0) YAxis.AxisDependency.LEFT else YAxis.AxisDependency.RIGHT
 
-            // Funkcja addLineWithForecast dodaje punkty używając indeksów (0f, 1f, 2f...)
             addLineWithForecast(weatherData, label, color, axis, extractor)
 
             if (index == 0) {
@@ -449,21 +412,16 @@ class AnalyticsActivity : AppCompatActivity() {
             }
         }
 
-        // 3. Przypisanie danych do obiektów wykresów
         if (weatherData.dataSetCount > 0) chartWeather.data = weatherData else chartWeather.clear()
         if (machineData.dataSetCount > 0) chartMachine.data = machineData else chartMachine.clear()
 
-        // 4. Konfiguracja markerów (dymków po kliknięciu)
         val markerView = CustomMarkerView(this, R.layout.view_marker)
         chartWeather.marker = markerView
         chartMachine.marker = markerView
 
-        // 5. Odświeżenie widoku (narysowanie linii)
         chartWeather.invalidate()
         chartMachine.invalidate()
 
-        // 6. CENTROWANIE - To wywołanie musi być na samym końcu.
-        // Dzięki temu, że usunęliśmy stąd moveViewToX, nie ma już konfliktu dwóch komend przesunięcia.
         centerChartOnNow()
     }
 
@@ -477,11 +435,10 @@ class AnalyticsActivity : AppCompatActivity() {
         val pastEntries = mutableListOf<Entry>()
         val futureEntries = mutableListOf<Entry>()
 
-        // Używamy indeksu (index.toFloat()), a nie obliczeń na datach
         displayData.forEachIndexed { index, d ->
             val value = valueExtractor(d)
             if (value != null) {
-                val xPos = index.toFloat() // Każdy kolejny punkt to +1 na osi X
+                val xPos = index.toFloat()
 
                 if (d.is_forecast != 1) {
                     pastEntries.add(Entry(xPos, value, d))
@@ -495,28 +452,19 @@ class AnalyticsActivity : AppCompatActivity() {
             futureEntries.add(0, pastEntries.last())
         }
         if (pastEntries.isNotEmpty()) {
-            // HISTORY: Not dashed
             lineData.addDataSet(createDataSet(pastEntries, label, colorCode, axis, isDashed = false))
 
             if (isForecastVisible && futureEntries.size > 1) {
-                // FORECAST: Dashed. Pass the label so it functions correctly, but we'll hide it from the legend inside createDataSet
                 lineData.addDataSet(createDataSet(futureEntries, "", colorCode, axis, isDashed = true))
             }
-        }else
-        {
+        } else {
             if (isForecastVisible && futureEntries.size > 1) {
-                // FORECAST: Dashed. Pass the label so it functions correctly, but we'll hide it from the legend inside createDataSet
                 lineData.addDataSet(createDataSet(futureEntries, label, colorCode, axis, isDashed = false))
             }
         }
     }
 
     private fun createDataSet(entries: List<Entry>, label: String, colorCode: Int, axis: YAxis.AxisDependency, isDashed: Boolean): LineDataSet {
-        // DODAJ LOGA, żeby sprawdzić w Logcat czy w ogóle tworzy się zestaw przerywany
-        if (isDashed) {
-            android.util.Log.d("ChartDebug", "Tworzę przerywaną linię dla: $label, ilość punktów: ${entries.size}")
-        }
-
         return LineDataSet(entries, label).apply {
             axisDependency = axis
             color = colorCode
@@ -525,17 +473,12 @@ class AnalyticsActivity : AppCompatActivity() {
             circleRadius = 4f
             setDrawValues(false)
 
-            // Zmień CUBIC_BEZIER na LINEAR lub HORIZONTAL_BEZIER dla testu
             mode = if (isDashed) LineDataSet.Mode.LINEAR else LineDataSet.Mode.HORIZONTAL_BEZIER
-
             setDrawHighlightIndicators(true)
 
             if (isDashed) {
-                // Spróbuj zwiększyć odstępy (np. 15f, 15f)
                 enableDashedLine(15f, 15f, 0f)
                 setDrawCircles(false)
-
-                // To ukrywa element z legendy
                 form = com.github.mikephil.charting.components.Legend.LegendForm.NONE
             }
         }
@@ -563,7 +506,8 @@ class AnalyticsActivity : AppCompatActivity() {
             R.id.cbTemp -> Triple("Temperatura (°C)", Color.RED) { it.temperature?.toFloat() }
             R.id.cbRain -> Triple("Opady (mm)", Color.BLUE) { it.rain_mm?.toFloat() }
             R.id.cbClouds -> Triple("Chmury (%)", Color.DKGRAY) { it.clouds?.toFloat() }
-            R.id.cbSpeed -> Triple("Prędkość (km/h)", Color.parseColor("#4CAF50")) { if (it.is_forecast == 1) null else it.machine_speed?.toFloat() }
+
+            // 🔥 ZMIANA: cbSpeed został całkowicie usunięty z mapowania
             R.id.cbWind -> Triple("Wiatr (m/s)", Color.parseColor("#FF9800")) { it.wind_speed?.toFloat() }
             R.id.cbHumidity -> Triple("Wilgotność (%)", Color.parseColor("#00BCD4")) { it.humidity?.toFloat() }
             else -> Triple("Błąd", Color.BLACK) { 0f }
@@ -574,11 +518,10 @@ class AnalyticsActivity : AppCompatActivity() {
         if (displayData.isEmpty()) return
 
         val lastHistoryIndex = displayData.indexOfLast { it.is_forecast == 0 }
-        val targetX = 1000f//if (lastHistoryIndex != -1) lastHistoryIndex.toFloat() else 0f
+        val targetX = 1000f
         val charts = listOf(chartWeather, chartMachine)
 
         charts.forEach { chart ->
-            // KLUCZOWE: Powiedz wykresowi, że dane i osie się zmieniły
             chart.data?.notifyDataChanged()
             chart.notifyDataSetChanged()
 
@@ -589,19 +532,16 @@ class AnalyticsActivity : AppCompatActivity() {
                     else -> 100f to 50f
                 }
 
-                // Ustawiamy widoczny zakres
                 chart.setVisibleXRangeMaximum(dynamicRange)
 
-                // OBLICZANIE STARTX (Poprawione, żeby nie było dziur)
                 val startX = if (!isForecastVisible || currentInterval == 1) {
-                    targetX //- dynamicRange + 1f
+                    targetX
                 } else {
-                    targetX// + forecastOffset) - dynamicRange
+                    targetX
                 }
 
                 val finalX = if (startX < 0f) 0f else startX
 
-                // WYMUSZENIE: Najpierw przelicz macierz, potem przesuń
                 chart.post {
                     chart.moveViewToX(finalX)
                 }
@@ -616,22 +556,17 @@ class AnalyticsActivity : AppCompatActivity() {
     private fun updateForecastButtonState() {
         val now = System.currentTimeMillis()
 
-        // Priorytet 1: Jeśli wybrano 1h, prognoza zawsze nie istnieje
         if (currentInterval == 1) {
             setButtonState(enabled = false)
             return
         }
 
-        // Priorytet 2: Ograniczenia wynikające z kalendarza
         if (startDateFilter != null && endDateFilter != null) {
-
-            // Zakres całkowicie w przeszłości
             if (endDateFilter!! < now) {
-                setButtonState(enabled = false, isError = true) // czerwony
+                setButtonState(enabled = false, isError = true)
                 return
             }
 
-            // Zakres całkowicie w przyszłości
             if (startDateFilter!! > now) {
                 setButtonState(enabled = false)
                 isForecastVisible = true
@@ -639,23 +574,19 @@ class AnalyticsActivity : AppCompatActivity() {
             }
         }
 
-        // Standardowy widok (aktywny)
         setButtonState(enabled = true)
     }
+
     private fun setButtonState(enabled: Boolean, isError: Boolean = false) {
         btnToggleForecast.isEnabled = enabled
-
-        // efekt "wyszarzenia"
         btnToggleForecast.alpha = if (enabled) 1.0f else 0.4f
 
-        // zmiana koloru ikony
         val color = when {
             isError -> android.graphics.Color.GRAY
             enabled -> android.graphics.Color.BLACK
             else -> android.graphics.Color.GRAY
         }
 
-        btnToggleForecast.iconTint =
-            ColorStateList.valueOf(color)
+        btnToggleForecast.iconTint = ColorStateList.valueOf(color)
     }
 }

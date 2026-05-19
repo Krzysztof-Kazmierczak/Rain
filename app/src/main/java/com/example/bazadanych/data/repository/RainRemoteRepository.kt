@@ -3,8 +3,10 @@ package com.example.bazadanych.data.repository
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import com.example.bazadanych.data.api.ApiClient
 import com.example.bazadanych.data.db.AlarmItem
-import com.example.bazadanych.data.db.FieldData
+import com.example.bazadanych.data.db.DeviceItem
+import com.example.bazadanych.data.db.DeviceTelemetry
 import com.example.bazadanych.data.db.FieldItem
 import com.example.bazadanych.data.db.Rain
 import com.example.bazadanych.data.db.RainAdvInt
@@ -16,6 +18,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 import java.net.URLEncoder
+
 
 class RainRemoteRepository {
 
@@ -277,90 +280,6 @@ class RainRemoteRepository {
         })
     }
 
-    fun saveRainAdvInt(email: String, data: RainAdvInt, callback: (Boolean) -> Unit) {
-        val formBody = FormBody.Builder()
-            .add("email", email)
-            .add("id_rekordu", data.id.toString())
-            .add("urzadzenie_id", data.urzadzenieId.toString())
-            .add("dane_stm", data.daneStm.toString())
-            .add("czy_pracuje", data.czyPracuje.toString())
-            .add("opoznienie_aktualizacji", data.opoznienieAktualizacji.toString())
-            .add("predkosc_zadana", data.predkoscZadana.toString())
-            .add("opozniony_start_pracy", if (data.opoznionyStartPracy) "1" else "0")
-            .add("opozniony_start_zwijania", if (data.opoznionyStartZwijania) "1" else "0")
-            .add("opoznione_zakonczenie", if (data.opoznioneZakonczenie) "1" else "0")
-            .add("podlewanie_strefowe", if (data.podlewanieStrefowe) "1" else "0")
-            .add("rozpoczecie_pracy", if (data.rozpoczeciePracy) "1" else "0")
-            .add("zwijanie", if (data.zwijanie) "1" else "0")
-            .add("predkosc_strefa_1", data.predkoscStrefa1.toString())
-            .add("predkosc_strefa_2", data.predkoscStrefa2.toString())
-            .add("predkosc_strefa_3", data.predkoscStrefa3.toString())
-            .add("czas_stm", data.czasStm ?: "")
-            .build()
-
-        val request = Request.Builder()
-            .url(baseUrl + "save_rain_adv_details.php")
-            .post(formBody)
-            .build()
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                postOnMain { callback(false) }
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                val result = response.body?.string()?.trim()
-                postOnMain { callback(result == "OK") }
-            }
-        })
-    }
-
-    fun saveRainAdvUInt(email: String, data: RainAdvUInt, callback: (Boolean) -> Unit) {
-        val formBody = FormBody.Builder()
-            .add("email", email)
-            .add("id_log", data.idLog.toString())
-            .add("urzadzenie_id", data.urzadzenieId.toString())
-            .add("zrodlo_danych", data.zrodloDanych.toString())
-            .add("rozwiniecie_aktualne", data.rozwiniecieAktualne.toString())
-            .add("predkosc_aktualna", data.predkoscAktualna.toString())
-            .add("odleglosc_do_konca", data.odlegloscDoKonca.toString())
-            .add("praca_h", data.pracaH.toString())
-            .add("praca_min", data.pracaMin.toString())
-            .add("praca_s", data.pracaS.toString())
-            .add("do_zwiniecia_h", data.doZwinieciaH.toString())
-            .add("do_zwiniecia_min", data.doZwinieciaMin.toString())
-            .add("do_zwiniecia_s", data.doZwinieciaS.toString())
-            .add("strefa_1_start", data.strefa1Start.toString())
-            .add("strefa_2_start", data.strefa2Start.toString())
-            .add("strefa_3_start", data.strefa3Start.toString())
-            .add("opozniony_start_pracy_h", data.opoznionyStartPracyH.toString())
-            .add("opozniony_start_pracy_min", data.opoznionyStartPracyMin.toString())
-            .add("opozniony_start_pracy_s", data.opoznionyStartPracyS.toString())
-            .add("opozniony_start_zwijania_h", data.opoznionyStartZwijaniaH.toString())
-            .add("opozniony_start_zwijania_min", data.opoznionyStartZwijaniaMin.toString())
-            .add("opozniony_start_zwijania_s", data.opoznionyStartZwijaniaS.toString())
-            .add("opoznione_zakonczenie_pracy_h", data.opoznioneZakonczeniePracyH.toString())
-            .add("opoznione_zakonczenie_pracy_min", data.opoznioneZakonczeniePracyMin.toString())
-            .add("opoznione_zakonczenie_pracy_s", data.opoznioneZakonczeniePracyS.toString())
-            .add("czas_stm", data.czasStm ?: "")
-            .build()
-
-        val request = Request.Builder()
-            .url(baseUrl + "save_rain_adv_u_details.php")
-            .post(formBody)
-            .build()
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                postOnMain { callback(false) }
-            }
-            override fun onResponse(call: Call, response: Response) {
-                val result = response.body?.string()?.trim()
-                postOnMain { callback(result == "OK") }
-            }
-        })
-    }
-
     fun getStmUpdateInfo(id: String, email: String, callback: (czasStm: String?, opoznienieAktualizacji: String?) -> Unit)
     {
         val encodedEmail = URLEncoder.encode(email, "UTF-8")
@@ -608,21 +527,6 @@ class RainRemoteRepository {
         })
     }
 
-
-
-    fun deleteRain(id: String, callback: (Boolean) -> Unit) {
-        val formBody = FormBody.Builder().add("id", id).build()
-        val request = Request.Builder().url(baseUrl + "delete_rain.php").post(formBody).build()
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) { callback(false) }
-            override fun onResponse(call: Call, response: Response) {
-                val result = response.body?.string()?.trim()
-                callback(result == "OK")
-            }
-        })
-    }
-
     fun updateRainManualLocation(id: String, email: String, lat: Double, lng: Double, callback: (Boolean) -> Unit) {
         val url = baseUrl + "update_rain_location.php"
 
@@ -667,7 +571,6 @@ class RainRemoteRepository {
         })
     }
 
-
     fun deleteAgriculturalField(email: String, id: String, callback: (Boolean) -> Unit) {
         val formBody = FormBody.Builder().add("email", email).add("id", id).build()
         val request = Request.Builder().url(baseUrl + "delete_agricultural_field.php").post(formBody).build()
@@ -700,41 +603,6 @@ class RainRemoteRepository {
 
                 // Sprawdzamy czy skrypt PHP zwrócił słowo "SUKCES"
                 postOnMain { callback(result == "SUKCES") }
-            }
-        })
-    }
-
-    fun getUserLevel(email: String, callback: (Int) -> Unit) {
-
-        val url = "${baseUrl}get_user_level.php?email=$email"
-
-        client.newCall(
-            Request.Builder()
-                .url(url)
-                .get()
-                .build()
-        ).enqueue(object : Callback {
-
-            override fun onFailure(call: Call, e: IOException) {
-
-                postOnMain {
-                    callback(99)
-                }
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-
-                val result = response.body?.string()?.trim()
-
-                val level = try {
-                    result?.toInt() ?: 99
-                } catch (e: Exception) {
-                    99
-                }
-
-                postOnMain {
-                    callback(level)
-                }
             }
         })
     }
@@ -798,24 +666,42 @@ class RainRemoteRepository {
         })
     }
 
-    fun deleteAllAlarms(email: String, callback: (Boolean) -> Unit) {
-        val formBody = FormBody.Builder()
-            .add("email", email)
-            .build()
+    fun getUserDevices(email: String, onResult: (List<DeviceItem>) -> Unit) {
+        ApiClient.rainTech.getDevices(email).enqueue(object : retrofit2.Callback<List<DeviceItem>> {
 
-        val request = Request.Builder()
-            .url("${baseUrl}delete_all_alarms.php")
-            .post(formBody)
-            .build()
+            override fun onResponse(call: retrofit2.Call<List<DeviceItem>>, response: retrofit2.Response<List<DeviceItem>>) {
+                if (response.isSuccessful) {
+                    val devices = response.body() ?: emptyList()
+                    Log.d("API_DEBUG", "Pobrano urządzeń: ${devices.size}")
+                    devices.forEach { Log.d("API_DEBUG", "Urządzenie: ${it.name}, ID: ${it.id}") }
 
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                postOnMain { callback(false) }
+                    postOnMain { onResult(devices) }
+                } else {
+                    Log.e("API_DEBUG", "Błąd serwera: ${response.code()} - ${response.errorBody()?.string()}")
+                    postOnMain { onResult(emptyList()) }
+                }
             }
 
-            override fun onResponse(call: Call, response: Response) {
-                val result = response.body?.string()?.trim()
-                postOnMain { callback(result == "OK") }
+            override fun onFailure(call: retrofit2.Call<List<DeviceItem>>, t: Throwable) {
+                Log.e("API_DEBUG", "Błąd połączenia: ${t.message}")
+                postOnMain { onResult(emptyList()) }
+            }
+        })
+    }
+
+    fun getTelemetryForDevice(deviceId: Int, email: String, onResult: (List<DeviceTelemetry>) -> Unit) {
+        ApiClient.rainTech.getDeviceTelemetry(deviceId, email).enqueue(object : retrofit2.Callback<List<DeviceTelemetry>> {
+
+            override fun onResponse(call: retrofit2.Call<List<DeviceTelemetry>>, response: retrofit2.Response<List<DeviceTelemetry>>) {
+                if (response.isSuccessful) {
+                    postOnMain { onResult(response.body() ?: emptyList()) }
+                } else {
+                    postOnMain { onResult(emptyList()) }
+                }
+            }
+
+            override fun onFailure(call: retrofit2.Call<List<DeviceTelemetry>>, t: Throwable) {
+                postOnMain { onResult(emptyList()) }
             }
         })
     }
