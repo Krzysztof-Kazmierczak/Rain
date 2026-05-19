@@ -25,6 +25,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.datepicker.MaterialDatePicker
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 
 class ChartActivity : AppCompatActivity() {
@@ -127,12 +128,13 @@ class ChartActivity : AppCompatActivity() {
             val checkedId = checkedIds.firstOrNull() ?: return@setOnCheckedStateChangeListener
             currentInterval = when(checkedId) {
                 R.id.chip1h -> 1
+                R.id.chip3h -> 3
                 R.id.chip12h -> 12
                 R.id.chipDay -> 24
                 else -> 3
             }
-            // Zmiana interwału wpływa głównie na przybliżenie na osi X
-            centerChartOnEnd()
+            // ZMIANA: Przeliczamy i rysujemy wykres na nowo po zmianie rozdzielczości
+            filterAndProcessData()
         }
     }
 
@@ -186,6 +188,8 @@ class ChartActivity : AppCompatActivity() {
         }
     }
 
+
+
     private fun filterAndProcessData() {
         if (fullTelemetryData.isEmpty()) {
             displayData = emptyList()
@@ -194,7 +198,9 @@ class ChartActivity : AppCompatActivity() {
         }
 
         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        displayData = if (startDateFilter != null && endDateFilter != null) {
+
+        // 1. Filtrowanie po kalendarzu (zakres dat)
+        val filteredByDate = if (startDateFilter != null && endDateFilter != null) {
             fullTelemetryData.filter {
                 val time = try { sdf.parse(it.recordedAt)?.time ?: 0L } catch (e: Exception) { 0L }
                 time in startDateFilter!!..endDateFilter!!
@@ -202,6 +208,51 @@ class ChartActivity : AppCompatActivity() {
         } else {
             fullTelemetryData
         }
+
+        // 2. Próbkowanie według interwałów (1h, 3h, 12h, 1 dzień)
+        val sampledData = mutableListOf<DeviceTelemetry>()
+        var currentSlotKey = ""
+        val cal = Calendar.getInstance()
+
+        filteredByDate.forEach { tel ->
+            val date = try { sdf.parse(tel.recordedAt) } catch (e: Exception) { null }
+            if (date != null) {
+                cal.time = date
+                val hour = cal.get(Calendar.HOUR_OF_DAY)
+                val dayOfYear = cal.get(Calendar.DAY_OF_YEAR)
+                val year = cal.get(Calendar.YEAR)
+
+                // Sprawdzamy, czy dana godzina pasuje do naszego filtra
+                val isHourMatch = when (currentInterval) {
+                    1 -> true // Akceptujemy każdą pełną godzinę (00, 01, 02...)
+                    3 -> hour % 3 == 0 // Akceptujemy 00, 03, 06, 09, 12...
+                    12 -> hour == 6 || hour == 18 // Akceptujemy TYLKO 06:00 i 18:00
+                    24 -> hour == 12 // Akceptujemy TYLKO 12:00
+                    else -> true
+                }
+
+                if (isHourMatch) {
+                    // Tworzymy klucz, żeby wziąć tylko JEDEN pomiar na ten konkretny "slot" czasowy
+                    // (zabezpieczenie na wypadek, gdyby maszyna wysyłała po 5 pomiarów na godzinę)
+                    val slotKey = when (currentInterval) {
+                        1 -> "$year-$dayOfYear-$hour"
+                        3 -> "$year-$dayOfYear-${hour / 3}"
+                        12 -> "$year-$dayOfYear-${if (hour == 6) 1 else 2}"
+                        24 -> "$year-$dayOfYear-12"
+                        else -> "$year-$dayOfYear-$hour"
+                    }
+
+                    // Jeśli jeszcze nie dodaliśmy pomiaru z tego slota, to go dodajemy
+                    if (slotKey != currentSlotKey) {
+                        sampledData.add(tel)
+                        currentSlotKey = slotKey
+                    }
+                }
+            }
+        }
+
+        // 3. Przypisujemy przefiltrowane dane do wyświetlenia na wykresie
+        displayData = sampledData
 
         updateChart()
     }
