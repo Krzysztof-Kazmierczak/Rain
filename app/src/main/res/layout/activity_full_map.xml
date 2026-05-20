@@ -119,7 +119,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:text="🚜 MOJE MASZYNY"
+            android:text="💧 MOJE MASZYNY"
             android:gravity="start|center_vertical"
             android:padding="16dp"
             android:textSize="16sp"

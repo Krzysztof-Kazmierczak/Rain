@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.example.bazadanych.R
 
@@ -34,19 +35,32 @@ class RainTileAdapter(
         holder.itemView.alpha = 1.0f
 
         if (tile.isAddButton) {
+
+            holder.icon.setImageResource(android.R.drawable.ic_input_add)
+
+            // fioletowy kolor dla plusa
+            holder.icon.setColorFilter(
+                ContextCompat.getColor(holder.itemView.context, R.color.purple_500)
+            )
+
             holder.lengthText.visibility = View.GONE
             holder.commentText.visibility = View.GONE
             holder.statusDot.visibility = View.GONE
             holder.titleText.text = "Dodaj"
             holder.icon.setImageResource(android.R.drawable.ic_input_add)
         } else {
+            holder.icon.setImageResource(R.drawable.vector_deszczowniav4)
+
+            // usuń kolorowanie dla normalnego obrazka
+            holder.icon.clearColorFilter()
+
             holder.lengthText.visibility = View.VISIBLE
             holder.commentText.visibility = View.VISIBLE
             holder.statusDot.visibility = View.VISIBLE
             holder.titleText.text = tile.title
             holder.lengthText.text = "Wąż: ${tile.hoseLength}m"
             holder.commentText.text = tile.comment
-            holder.icon.setImageResource(R.drawable.ic_rain_reel)
+            holder.icon.setImageResource(R.drawable.color_deszczowniav2)
 
             // 2. LOGIKA STATUSÓW (KOLORY I ZASZARZENIE)
             when (tile.isWorking) {
@@ -70,6 +84,7 @@ class RainTileAdapter(
 
         holder.itemView.setOnClickListener { onTileClick(tile) }
     }
+
 
     override fun getItemCount(): Int = tiles.size
 }

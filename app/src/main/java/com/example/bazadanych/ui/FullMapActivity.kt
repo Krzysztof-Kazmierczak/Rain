@@ -26,8 +26,6 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.cachemanager.CacheManager
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.tileprovider.tilesource.TileSourcePolicy
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -36,6 +34,13 @@ import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.infowindow.BasicInfoWindow
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
+import org.osmdroid.events.MapListener
+import org.osmdroid.events.ScrollEvent
+import org.osmdroid.events.ZoomEvent
 
 class FullMapActivity : AppCompatActivity() {
 
@@ -49,6 +54,12 @@ class FullMapActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var btnStartDrawing: Button
     private lateinit var btnUndo: Button
+
+    private val originalRainBitmap by lazy {
+        BitmapFactory.decodeResource(resources, R.drawable.color_deszczowniav2)
+    }
+
+    private val scaledRainDrawablesCache = mutableMapOf<Int, Drawable>()
 
     private val MAP_CONFIG_KEY = "LAST_MAP_CONFIG"
 
@@ -101,7 +112,64 @@ class FullMapActivity : AppCompatActivity() {
             map.controller.setCenter(GeoPoint(52.0, 19.0))
         }
 
+        map.addMapListener(object : MapListener {
+            override fun onScroll(event: ScrollEvent?): Boolean = false // Ignorujemy zwykłe przesuwanie mapy
+
+            override fun onZoom(event: ZoomEvent?): Boolean {
+                // Pobieramy aktualny poziom przybliżenia
+                val currentZoom = map.zoomLevelDouble
+                val newIcon = getOrCreateScaledDrawable(currentZoom)
+
+                // Przeszukujemy wszystkie nakładki na mapie i aktualizujemy tylko nasze deszczownie
+                map.overlays.forEach { overlay ->
+                    if (overlay is Marker && overlay.id?.startsWith("rain_") == true) {
+                        overlay.icon = newIcon
+                    }
+                }
+                map.invalidate() // Odświeżamy widok mapy
+                return true
+            }
+        })
+
+
         loadData()
+    }
+
+    private fun getOrCreateScaledDrawable(zoom: Double): Drawable {
+        val intZoom = zoom.toInt()
+
+        return scaledRainDrawablesCache.getOrPut(intZoom) {
+            // 1. Ustalmy poziom przybliżenia "odniesienia"
+            val baseZoom = 15
+
+            // 2. Skala mapy to potęgi dwójki. Różnica zoomu określa mnożnik.
+            // Jeśli zoom wzrośnie z 15 na 16, mnożnik wyniesie 2.0 (ikona będzie 2x większa).
+            // Jeśli spadnie z 15 na 14, mnożnik wyniesie 0.5 (ikona będzie 2x mniejsza).
+            val zoomDiff = intZoom - baseZoom
+            var scaleFactor = Math.pow(2.0, zoomDiff.toDouble())
+
+            // 3. Zabezpieczenie przed ekstremami, by grafika nie była mikroskopijna ani nie zajęła ekranu
+            // Minimalnie może zmaleć do 20% (0.2), a maksymalnie urosnąć trzykrotnie (3.0)
+            scaleFactor = scaleFactor.coerceIn(0.8, 3.0)
+
+            // 4. BAZOWY ROZMIAR IKONY W PIKSELACH dla zoomu 15
+            // (Zmień tę wartość z 120, np. na 80 albo 160, żeby zmienić globalną wielkość ikonek!)
+            val baseWidthPx = 120
+
+            // 5. Pobieramy proporcje oryginalnego pliku, żeby obrazek nie był ściśnięty
+            val aspectRatio = originalRainBitmap.height.toFloat() / originalRainBitmap.width.toFloat()
+
+            // 6. Wyliczamy ostateczny rozmiar
+            var targetWidth = (baseWidthPx * scaleFactor).toInt()
+            var targetHeight = (targetWidth * aspectRatio).toInt()
+
+            // 7. Zabezpieczenie przez próbą stworzenia bitmapy o rozmiarze 0x0
+            if (targetWidth <= 0) targetWidth = 1
+            if (targetHeight <= 0) targetHeight = 1
+
+            val scaledBitmap = Bitmap.createScaledBitmap(originalRainBitmap, targetWidth, targetHeight, true)
+            BitmapDrawable(resources, scaledBitmap)
+        }
     }
 
     private fun setupToolbar() {
@@ -280,10 +348,10 @@ class FullMapActivity : AppCompatActivity() {
 
     // Pomocnicza funkcja, żeby nie powtarzać kodu rysowania markera
     private fun drawRainMarkerOnMap(rain: Rain, lat: Double, lng: Double) {
-        // 1. Zawsze usuwamy stary marker tej maszyny (jeśli był)
-        map.overlays.removeAll { it is Marker && it.title == rain.name }
+        // 1. Zawsze usuwamy stary marker tej maszyny po unikalnym ID
+        map.overlays.removeAll { it is Marker && it.id == "rain_${rain.id}" }
 
-        // 2. Jeśli nowe koordynaty to 0,0 - kończymy (marker już jest usunięty linią wyżej)
+        // 2. Jeśli nowe koordynaty to 0,0 - kończymy
         if (lat == 0.0 && lng == 0.0) {
             map.invalidate()
             return
@@ -291,9 +359,16 @@ class FullMapActivity : AppCompatActivity() {
 
         // 3. Jeśli są poprawne dane, rysujemy nowy marker
         val marker = Marker(map).apply {
+            id = "rain_${rain.id}" // Przypisujemy ID zamiast porównywać po nazwie
             position = GeoPoint(lat, lng)
             title = rain.name
+
+            // Ustawiamy naszą przeskalowaną grafikę dopasowaną do obecnego zoomu mapy
+            icon = getOrCreateScaledDrawable(map.zoomLevelDouble)
+
+            // Kotwica na środku na dole (jeśli grafika to szpilka/baza urządzenia)
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+
             setOnMarkerClickListener { m, _ ->
                 if (m.isInfoWindowOpen) {
                     startActivity(Intent(this@FullMapActivity, RainDetailsActivity::class.java).putExtra("id", rain.id))
