@@ -73,6 +73,10 @@ class RainTileAdapter(
                     holder.itemView.alpha = 0.4f // To sprawi, że kafelek będzie wyblakły
                     holder.statusDot.setBackgroundResource(R.drawable.circle_dark_green)
                 }
+                10 -> {
+                    holder.itemView.alpha = 0.4f // To sprawi, że kafelek będzie wyblakły
+                    holder.statusDot.setBackgroundResource(R.drawable.circle_dark_red)
+                }
                 1 -> holder.statusDot.setBackgroundResource(R.drawable.circle_red)
                 2 -> holder.statusDot.setBackgroundResource(R.drawable.circle_green)
                 5 -> holder.statusDot.setBackgroundResource(R.drawable.circle_dark_red)

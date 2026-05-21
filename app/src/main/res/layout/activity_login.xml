@@ -23,7 +23,7 @@
             android:layout_height="wrap_content"/>
 
         <TextView
-            android:text="@string/zalogujSieDoKonta"
+            android:text="@string/login_title"
             android:textSize="16sp"
             android:textColor="#777777"
             android:layout_marginBottom="40dp"
@@ -33,7 +33,7 @@
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/email">
+            android:hint="@string/login_email">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editEmail"
@@ -47,7 +47,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:hint="@string/haslo"
+            android:hint="@string/login_password"
             app:endIconMode="password_toggle">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -60,7 +60,7 @@
 
         <Button
             android:id="@+id/buttonLogin"
-            android:text="@string/zalogujSie"
+            android:text="@string/login_button"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             android:backgroundTint="#4A6CF7"
@@ -70,7 +70,7 @@
 
         <TextView
             android:id="@+id/buttonRegister"
-            android:text="@string/rejestracja"
+            android:text="@string/login_register"
             android:textColor="#4A6CF7"
             android:textSize="14sp"
             android:layout_marginTop="24dp"

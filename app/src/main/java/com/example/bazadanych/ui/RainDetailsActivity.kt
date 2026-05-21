@@ -36,6 +36,7 @@ class RainDetailsActivity : AppCompatActivity() {
     private lateinit var workTimeText: TextView
     private lateinit var extensionText: TextView
     private lateinit var signalText: TextView
+    private lateinit var batteryText: TextView
     private lateinit var tvLastUpdate: TextView
     private lateinit var tvNextUpdate: TextView
 
@@ -105,22 +106,23 @@ class RainDetailsActivity : AppCompatActivity() {
                 val timeToFinishSec = calculateTimeToFinishAnallytically(currentExtension)
 
                 // Aktualizacja UI
-                val label = if (currentIsOffline) "[Offline] " else ""
-                workTimeText.text = "${label}Czas pracy: ${formatSecondsToTimeStr(currentWorkTimeSec)}"
-                extensionText.text = String.format(Locale.getDefault(), "%sRozwinięcie: %.1f m", label, currentExtension)
-                timeFinishText.text = "${label}Czas do końca: ${formatSecondsToTimeStr(timeToFinishSec)}"
+                val prefix = if (currentIsOffline) getString(R.string.offline_label) + " " else ""
+
+                workTimeText.text = prefix + getString(R.string.work_time, formatSecondsToTimeStr(currentWorkTimeSec))
+                extensionText.text = prefix + getString(R.string.extension, currentExtension)
+                timeFinishText.text = prefix + getString(R.string.time_to_finish, formatSecondsToTimeStr(timeToFinishSec))
 
                 // POPRAWIONE: Odwrócone warunki sprawdzania strefy dla tickera
                 if (isZonedWatering) {
                     val (currentZone, zoneSpeed) = when {
-                        currentExtension <= zone1Start -> Pair("Strefa 1", zone1Speed)
-                        currentExtension <= zone2Start -> Pair("Strefa 2", zone2Speed)
-                        currentExtension <= zone3Start -> Pair("Strefa 3", zone3Speed)
-                        else -> Pair("Dojazdowa (Baza)", baseSpeed)
+                        currentExtension <= zone1Start -> Pair(getString(R.string.zone_1), zone1Speed)
+                        currentExtension <= zone2Start -> Pair(getString(R.string.zone_2), zone2Speed)
+                        currentExtension <= zone3Start -> Pair(getString(R.string.zone_3), zone3Speed)
+                        else -> Pair(getString(R.string.zone_base), baseSpeed)
                     }
-                    currentSpeedText.text = String.format(Locale.getDefault(), "%sPrędkość: %.1f m/h (%s)", label, zoneSpeed, currentZone)
+                    currentSpeedText.text = prefix + getString(R.string.speed_zone, zoneSpeed, currentZone)
                 } else {
-                    currentSpeedText.text = "${label}Prędkość: $baseSpeed m/h"
+                    currentSpeedText.text = prefix + getString(R.string.speed, baseSpeed)
                 }
 
                 if (currentExtension <= 0.0) {
@@ -245,6 +247,7 @@ class RainDetailsActivity : AppCompatActivity() {
         workTimeText = findViewById(R.id.workTimeText)
         extensionText = findViewById(R.id.extensionText)
         signalText = findViewById(R.id.signalText)
+        batteryText = findViewById(R.id.batteryText)
 
         tvLastUpdate = findViewById(R.id.tvLastUpdate)
         tvNextUpdate = findViewById(R.id.tvNextUpdate)
@@ -262,32 +265,36 @@ class RainDetailsActivity : AppCompatActivity() {
     }
 
     // POPRAWIONE: Odwrócone warunki sprawdzania strefy dla głównej metody UI
-    private fun refreshStatusUI(isWorking: Int, speed: Double, finishTime: String, workTime: String, extension: String, isOffline: Boolean, signal: Int) {
-        val label = if (isOffline) "[Offline] " else ""
+    private fun refreshStatusUI(isWorking: Int, speed: Double, finishTime: String, workTime: String, extension: String, isOffline: Boolean, signal: Int, battery: Int) {
+        val prefix = if (isOffline) getString(R.string.offline_label) + " " else ""
 
         when (isWorking) {
             0 -> {
-                statusText.text = "${label}Status: WYŁĄCZONE ⚪"
+                statusText.text = prefix + getString(R.string.status_off)
                 statusText.setTextColor(Color.GRAY)
             }
             1 -> {
-                statusText.text = "${label}Status: GOTOWOŚĆ 🟡"
+                statusText.text = prefix + getString(R.string.status_ready)
                 statusText.setTextColor(Color.BLUE)
             }
             2 -> {
-                statusText.text = "${label}Status: PRACUJE ✅"
+                statusText.text = prefix + getString(R.string.status_working)
                 statusText.setTextColor(Color.GREEN)
             }
             5 -> {
-                statusText.text = "${label}Status: Utracono łączność. Poprzedni stan: Praca ⚠️"
+                statusText.text = prefix + getString(R.string.status_connection_lost_working)
                 statusText.setTextColor(Color.parseColor("#FFA500"))
             }
             6 -> {
-                statusText.text = "${label}Status: Utracono łączność. Poprzedni stan: Gotowość ⚠️"
+                statusText.text = prefix + getString(R.string.status_connection_lost_ready)
                 statusText.setTextColor(Color.RED)
             }
             9 -> {
-                statusText.text = "${label}Status: Utracono łączność (ponad 3h). Poprzedni stan: Gotowość ⚠️"
+                statusText.text = prefix + getString(R.string.status_connection_lost_3h)
+                statusText.setTextColor(Color.RED)
+            }
+            10 -> {
+                statusText.text = prefix + getString(R.string.status_should_finish)
                 statusText.setTextColor(Color.RED)
             }
         }
@@ -296,22 +303,23 @@ class RainDetailsActivity : AppCompatActivity() {
         val extDouble = extension.toDoubleOrNull() ?: 0.0
         if (isZonedWatering) {
             val (currentZone, zoneSpeed) = when {
-                extDouble <= zone1Start -> Pair("Strefa 1", zone1Speed)
-                extDouble <= zone2Start -> Pair("Strefa 2", zone2Speed)
-                extDouble <= zone3Start -> Pair("Strefa 3", zone3Speed)
-                else -> Pair("Dojazdowa (Baza)", speed)
+                extDouble <= zone1Start -> Pair(getString(R.string.zone_1), zone1Speed)
+                extDouble <= zone2Start -> Pair(getString(R.string.zone_2), zone2Speed)
+                extDouble <= zone3Start -> Pair(getString(R.string.zone_3), zone3Speed)
+                else -> Pair(getString(R.string.zone_base), speed)
             }
-            currentSpeedText.text = String.format(Locale.getDefault(), "%sPrędkość: %.1f m/h (%s)", label, zoneSpeed, currentZone)
+            currentSpeedText.text = prefix + getString(R.string.speed_zone, zoneSpeed, currentZone)
         } else {
-            currentSpeedText.text = "${label}Prędkość: $speed m/h"
+            currentSpeedText.text = prefix + getString(R.string.speed, speed)
         }
 
-        signalText.text = "${label}Zasięg: $signal dBm"
+        signalText.text = prefix + getString(R.string.signal, signal)
+        batteryText.text = prefix + getString(R.string.battery, battery)
 
         if (isWorking != 2 && isWorking != 6 && isWorking != 9) {
-            workTimeText.text = "${label}Czas pracy: $workTime"
-            extensionText.text = "${label}Rozwinięcie: $extension m"
-            timeFinishText.text = "${label}Czas do końca: $finishTime"
+            workTimeText.text = prefix + getString(R.string.work_time, workTime)
+            extensionText.text = prefix + getString(R.string.extension, extDouble)
+            timeFinishText.text = prefix + getString(R.string.time_to_finish, finishTime)
         }
     }
 
@@ -334,7 +342,7 @@ class RainDetailsActivity : AppCompatActivity() {
 
                     refreshStatusUI(
                         latest.isWorking, latest.currentSpeed, latest.timeToFinish,
-                        latest.workTime, latest.extension.toString(), currentIsOffline, latest.signalStrength
+                        latest.workTime, latest.extension.toString(), currentIsOffline, latest.signalStrength, latest.battery
                     )
 
                     CacheHelper.saveObject(this, "RAIN_LIVE_STATUS_$currentRainId", latest)
@@ -361,7 +369,7 @@ class RainDetailsActivity : AppCompatActivity() {
             nameEdit.setText(it.name)
             lengthEdit.setText(it.hoseLength)
             commentEdit.setText(it.comment)
-            supportActionBar?.title = "[Offline] ${it.name}"
+            supportActionBar?.title = "${getString(R.string.offline_label)} ${it.name}"
         }
 
         remoteRepo.getStmUpdateInfo(currentRainId, email) { czasStm, opoznienieAktualizacji ->
@@ -401,7 +409,7 @@ class RainDetailsActivity : AppCompatActivity() {
             runOnUiThread {
                 if (success) {
                     CacheHelper.saveObject(this@RainDetailsActivity, "RAIN_DETAILS_$currentRainId", rain)
-                    Toast.makeText(this, "Zapisano dane ✅", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.saved_success), Toast.LENGTH_SHORT).show()
                     finish()
                 }
             }
@@ -421,7 +429,7 @@ class RainDetailsActivity : AppCompatActivity() {
             lastDataTimestamp = lastDate.time
 
             val currentTime = Calendar.getInstance().time
-            tvLastUpdate.text = "Ostatnia aktualizacja z urządzenia: ${displayFormat.format(lastDate)}"
+            tvLastUpdate.text = getString(R.string.last_update, displayFormat.format(lastDate))
 
             val calendar = Calendar.getInstance()
             calendar.time = lastDate
@@ -431,18 +439,20 @@ class RainDetailsActivity : AppCompatActivity() {
             val diffMillis = currentTime.time - nextDate.time
             val diffMinutes = diffMillis / (1000 * 60)
 
+            val formattedNextDate = displayFormat.format(nextDate)
+
             when {
                 diffMinutes > safeDelayMinutes * 2L -> {
                     tvNextUpdate.setTextColor(Color.RED)
-                    tvNextUpdate.text = "Przewidywana następna: ${displayFormat.format(nextDate)}\nUtracono łączność z urządzeniem."
+                    tvNextUpdate.text = getString(R.string.next_update, formattedNextDate) + "\n" + getString(R.string.connection_lost)
                 }
                 diffMinutes > 0 -> {
                     tvNextUpdate.setTextColor(Color.DKGRAY)
-                    tvNextUpdate.text = "Przewidywana następna: ${displayFormat.format(nextDate)}"
+                    tvNextUpdate.text = getString(R.string.next_update, formattedNextDate)
                 }
                 else -> {
                     tvNextUpdate.setTextColor(Color.GRAY)
-                    tvNextUpdate.text = "Przewidywana następna: ${displayFormat.format(nextDate)}"
+                    tvNextUpdate.text = getString(R.string.next_update, formattedNextDate)
                 }
             }
 

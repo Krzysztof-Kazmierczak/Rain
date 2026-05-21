@@ -1,21 +1,81 @@
 <resources>
+
     <string name="app_name">Rain Tech</string>
 
-    //Ekran Logowanie
-    <string name="zalogujSieDoKonta">Zaloguj się do konta</string>
-    <string name="email">Email</string>
-    <string name="haslo">Hasło</string>
-    <string name="rejestracja">Nie masz konta? Zarejestruj się</string>
-    <string name="zalogujSie">Zaloguj się</string>
+    <!-- Login screen -->
+    <string name="login_title">Zaloguj się do konta</string>
+    <string name="login_email">Email</string>
+    <string name="login_password">Hasło</string>
+    <string name="login_re_password">Powtórz hasło</string>
+    <string name="login_register">Nie masz konta? Zarejestruj się</string>
+    <string name="login_login">Masz już konto? Zaloguj się</string>
+    <string name="login_button">Zaloguj się</string>
+    <string name="login_register_button">Zarejestruj się</string>
 
+    <!-- Common -->
     <string name="open">Open</string>
     <string name="close">Close</string>
 
+    <!-- Roles -->
     <string-array name="roles_array">
         <item>Administrator</item>
         <item>Kierownik</item>
         <item>Operator</item>
         <item>Odczyt</item>
     </string-array>
+
+    <!-- Rain details -->
+    <string name="offline_label">[Offline]</string>
+
+    <string name="status_off">Status: WYŁĄCZONE ⚪</string>
+    <string name="status_ready">Status: GOTOWOŚĆ 🟡</string>
+    <string name="status_working">Status: PRACUJE ✅</string>
+
+    <string name="status_connection_lost_working">
+        Status: Utracono łączność. Poprzedni stan: Praca ⚠️
+    </string>
+
+    <string name="status_connection_lost_ready">
+        Status: Utracono łączność. Poprzedni stan: Gotowość ⚠️
+    </string>
+
+    <string name="status_connection_lost_3h">
+        Status: Utracono łączność (ponad 3h). Poprzedni stan: Gotowość ⚠️
+    </string>
+
+    <string name="status_should_finish">
+        Status: Utracono łączność. Maszyna powinna już zakończyć pracę ⚠️
+    </string>
+
+    <string name="work_time">Czas pracy: %1$s</string>
+    <string name="extension">Rozwinięcie: %1$.1f m</string>
+    <string name="time_to_finish">Czas do końca: %1$s</string>
+    <string name="speed">Prędkość: %1$.1f m/h</string>
+    <string name="speed_zone">Prędkość: %1$.1f m/h (%2$s)</string>
+
+    <string name="signal">Zasięg: %1$d dBm</string>
+    <string name="battery">Bateria: %1$d V</string>
+
+    <!-- Zones -->
+    <string name="zone_1">Strefa 1</string>
+    <string name="zone_2">Strefa 2</string>
+    <string name="zone_3">Strefa 3</string>
+    <string name="zone_base">Dojazdowa (Baza)</string>
+
+    <!-- Update -->
+    <string name="last_update">
+        Ostatnia aktualizacja z urządzenia: %1$s
+    </string>
+
+    <string name="next_update">
+        Przewidywana następna: %1$s
+    </string>
+
+    <string name="connection_lost">
+        Utracono łączność z urządzeniem.
+    </string>
+
+    <!-- Save -->
+    <string name="saved_success">Zapisano dane ✅</string>
 
 </resources>

@@ -13,5 +13,6 @@ data class RainStatus(
     val updatedAt: String = "",
     val lat: Double,
     val lng: Double,
-    val signalStrength: Int
+    val signalStrength: Int,
+    val battery: Int
 )

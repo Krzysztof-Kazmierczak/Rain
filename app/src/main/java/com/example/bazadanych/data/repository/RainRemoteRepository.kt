@@ -489,7 +489,8 @@ class RainRemoteRepository {
                             updatedAt = obj.optString("updated_at"),
                             lat = obj.optDouble("lat"),
                             lng = obj.optDouble("lng"),
-                            signalStrength = obj.optInt("signal")
+                            signalStrength = obj.optInt("signal"),
+                            battery = obj.optInt("battery")
                         ))
                     }
                 } catch (e: Exception) { e.printStackTrace() }
