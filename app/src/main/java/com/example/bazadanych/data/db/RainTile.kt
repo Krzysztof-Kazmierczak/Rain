@@ -1,4 +1,4 @@
-package com.example.bazadanych.ui
+package com.example.bazadanych.data.db
 
 data class RainTile(
     val id: String,

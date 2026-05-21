@@ -16,6 +16,7 @@ import com.example.bazadanych.data.repository.RainRemoteRepository
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.navigation.NavigationView
 import android.util.Log
+import com.example.bazadanych.data.db.RainTile
 import com.google.firebase.messaging.FirebaseMessaging
 
 class HomeActivity : AppCompatActivity() {
@@ -28,7 +29,7 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var refreshRunnable: Runnable
 
     private lateinit var swipeRefresh: SwipeRefreshLayout
-    private val remoteRepo = RainRemoteRepository() // Przeniosłem tutaj dla porządku
+    private val remoteRepo = RainRemoteRepository()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,14 +81,14 @@ class HomeActivity : AppCompatActivity() {
 
         navigationView.setNavigationItemSelectedListener {
             when (it.itemId) {
-                R.id.nav_home -> Toast.makeText(this, "Home", Toast.LENGTH_SHORT).show()
+                R.id.nav_home -> Toast.makeText(this, getString(R.string.home_nav_home_toast), Toast.LENGTH_SHORT).show()
                 R.id.nav_profile -> goProfile()
                 R.id.nav_logout -> logout()
                 R.id.nav_alarm -> goAlarm()
                 R.id.nav_chart -> goChart()
                 R.id.nav_map -> goFullMap()
                 R.id.nav_weather -> goWeather()
-                }
+            }
             drawer.closeDrawers()
             true
         }
@@ -124,13 +125,12 @@ class HomeActivity : AppCompatActivity() {
             Log.e("AGRO_DEBUG", "UWAGA: Email jest pusty! Serwer pewnie dlatego nic nie zwraca.")
         }
 
-        // 1. NAJPIERW WCZYTUJEMY CACHE
         val cachedRains: List<RainTile>? = CacheHelper.loadList(this, "HOME_TILES_CACHE")
         if (cachedRains != null) {
             tiles.clear()
             tiles.addAll(cachedRains)
             if (tiles.none { it.isAddButton }) {
-                tiles.add(RainTile("", "Dodaj deszczownię", "", "", true, 0))
+                tiles.add(RainTile("", getString(R.string.home_tile_add_rain), "", "", true, 0))
             }
             adapter.notifyDataSetChanged()
             Log.d("AGRO_DEBUG", "2. Wczytano z cache: ${tiles.size} kafelków.")
@@ -138,24 +138,29 @@ class HomeActivity : AppCompatActivity() {
             Log.d("AGRO_DEBUG", "2. Cache jest pusty.")
         }
 
-        // 2. PRÓBA POBRANIA Z SIECI
         Log.d("AGRO_DEBUG", "3. Wysyłam zapytanie do serwera dla emaila: $email")
         remoteRepo.getRains(email) { rainsFromServer ->
             runOnUiThread {
                 Log.d("AGRO_DEBUG", "4. Odpowiedź serwera przetworzona. Ilość maszyn: ${rainsFromServer.size}")
 
-                tiles.clear() // Zawsze czyścimy listę, żeby wrzucić świeże dane
+                tiles.clear()
 
                 if (rainsFromServer.isNotEmpty()) {
-                    // Nie filtrujemy już na pracujące/stojące, tylko lecimy po kolei
-                    // i przekazujemy oryginalny status 'isWorking' z serwera
                     rainsFromServer.forEach {
-                        tiles.add(RainTile(it.id, it.name, it.hoseLength, it.comment, false, it.isWorking))
+                        tiles.add(
+                            RainTile(
+                                it.id,
+                                it.name,
+                                it.hoseLength,
+                                it.comment,
+                                false,
+                                it.isWorking
+                            )
+                        )
                     }
                 }
 
-                // Przycisk "Dodaj" musi być ZAWSZE na końcu
-                tiles.add(RainTile("", "Dodaj deszczownię", "", "", true, 0))
+                tiles.add(RainTile("", getString(R.string.home_tile_add_rain), "", "", true, 0))
 
                 Log.d("AGRO_DEBUG", "5. Zapisano nową listę do UI. Łączna ilość kafelków: ${tiles.size}")
 
@@ -170,7 +175,7 @@ class HomeActivity : AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == 100 && resultCode == RESULT_OK) {
             loadTiles()
-            Toast.makeText(this, "Dodano deszczownię", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.home_rain_added_toast), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -178,28 +183,22 @@ class HomeActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("user_session", MODE_PRIVATE)
         val userEmail = prefs.getString("user_email", "") ?: ""
 
-        // Inicjalizacja repozytorium (lub pobranie istniejącej instancji)
         val repository = RainRemoteRepository()
 
         if (userEmail.isNotEmpty()) {
-            // Wywołujemy bezpieczne czyszczenie bazy przez OkHttp wbudowane w repozytorium
             repository.removeFcmToken(userEmail) { isSuccess ->
                 if (isSuccess) {
                     Log.d("Logout", "Token FCM usunięty pomyślnie z serwera.")
                 } else {
                     Log.w("Logout", "Nie udało się usunąć tokenu z serwera (ale wylogowujemy lokalnie).")
                 }
-
-                // Kod czyszczenia sesji wykonujemy dopiero gdy zapytanie do serwera dobiegnie końca
                 proceduraLokalnegoWylogowania(prefs)
             }
         } else {
-            // Jeśli maila nie było w pamięci, od razu wyrzucamy z aplikacji
             proceduraLokalnegoWylogowania(prefs)
         }
     }
 
-    // Przeniesiona lokalna logika wylogowania do osobnej funkcji pomocniczej
     private fun proceduraLokalnegoWylogowania(prefs: android.content.SharedPreferences) {
         prefs.edit().putBoolean("logged_in", false).apply()
 
@@ -207,7 +206,7 @@ class HomeActivity : AppCompatActivity() {
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
 
-        Toast.makeText(this, "Wylogowano ✅", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.home_logged_out_toast), Toast.LENGTH_SHORT).show()
     }
 
     private fun goProfile() {
@@ -229,6 +228,7 @@ class HomeActivity : AppCompatActivity() {
         val intent = Intent(this, FullMapActivity::class.java)
         startActivity(intent)
     }
+
     private fun goWeather() {
         val intent = Intent(this, WeatherActivity::class.java)
         startActivity(intent)

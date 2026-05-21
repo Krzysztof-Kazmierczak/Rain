@@ -17,19 +17,18 @@ class CustomMarkerView(context: Context, layoutResource: Int) : MarkerView(conte
     override fun refreshContent(e: Entry?, highlight: Highlight?) {
         if (e == null) return
 
-        // 1. Pobieramy nazwę parametru z wykresu
-       // val label = chartView?.data?.getDataSetByIndex(highlight?.dataSetIndex ?: 0)?.label ?: "Dane"
+        // 1. Formatujemy wartość i wstrzykujemy do stringa z zasobów
+        val formattedValue = String.format("%.1f", e.y)
+        tvMarkerValue.text = context.getString(R.string.marker_value, formattedValue)
 
-        // 2. Formatujemy wartość (np. 22.5)
-        tvMarkerValue.text = "${String.format("%.1f", e.y)}"
-
-        // 3. Pobieramy datę z obiektu FieldHistory
+        // 2. Pobieramy datę z obiektu FieldHistory i również używamy zasobów
         val history = e.data as? FieldHistory
         if (history != null && !history.recorded_at.isNullOrEmpty()) {
-            // Wycinamy tylko znaki od 11 do 16 (czyli np. "14:30")
-            tvMarkerDate.text = history.recorded_at?.substring(11, 16) ?: ""
+            val timeString = history.recorded_at?.substring(11, 16) ?: ""
+            tvMarkerDate.text = context.getString(R.string.marker_time, timeString)
         } else {
-            tvMarkerDate.text = "Godzina: ${e.x.toInt()}:00"
+            // Tutaj przekazujemy Int, bo w XML masz %1$d (liczba całkowita)
+            tvMarkerDate.text = context.getString(R.string.marker_hour_fallback, e.x.toInt())
         }
 
         // WAŻNE: Wymuszamy na Androidzie przeliczenie wielkości dymka

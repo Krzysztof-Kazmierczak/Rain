@@ -24,58 +24,286 @@
         <item>Odczyt</item>
     </string-array>
 
-    <!-- Rain details -->
-    <string name="offline_label">[Offline]</string>
+    <!-- ============================================== -->
+    <!-- Advanced Settings Activity                     -->
+    <!-- ============================================== -->
+    <string name="adv_stop_work">ZATRZYMAJ PRACĘ</string>
+    <string name="adv_start_work">URUCHOM PRACĘ</string>
+    <string name="adv_no_connection">BRAK ŁĄCZNOŚCI Z URZĄDZENIEM</string>
+    <string name="adv_please_wait">PROSZĘ CZEKAĆ...</string>
+    <string name="adv_status_changed">Zmieniono status pracy</string>
+    <string name="adv_server_error">Błąd serwera: %1$s</string>
+    <string name="adv_connection_error">Błąd połączenia</string>
+    <string name="adv_connection_error_msg">Błąd połączenia: %1$s</string>
+    <string name="adv_delete_machine_title">USUWANIE MASZYNY</string>
+    <string name="adv_delete_machine_msg">Czy na pewno chcesz CAŁKOWICIE usunąć tę maszynę z systemu? Tej operacji nie można cofnąć.</string>
+    <string name="adv_delete">USUŃ</string>
+    <string name="adv_cancel">Anuluj</string>
+    <string name="adv_machine_deleted">Maszyna została usunięta</string>
+    <string name="adv_error_msg">Błąd: %1$s</string>
+    <string name="adv_delete_location_title">Usuwanie lokalizacji</string>
+    <string name="adv_delete_location_msg">Czy na pewno chcesz zresetować pozycję tej maszyny? Przestanie być widoczna na mapie.</string>
+    <string name="adv_yes_delete">Tak, usuń</string>
+    <string name="adv_location_reset">Lokalizacja zresetowana</string>
+    <string name="adv_max_hose_length">Maksymalna długość węża: %1$d m</string>
+    <string name="adv_set_time">Ustaw czas</string>
+    <string name="adv_ok">OK</string>
+    <string name="adv_saved">Zapisano! ✅</string>
+    <string name="adv_info_speed">Zadana Prędkość m/h</string>
+    <string name="adv_info_delay_start">Opóźnienie Startu (czas) h/m/s</string>
+    <string name="adv_info_delay_wind">Opóźnienie Rozpoczęcia zwijania (czas) h/m/s</string>
+    <string name="adv_info_delay_end">Opóźnienie Zakończenia podlewania (czas) h/m/s</string>
+    <string name="adv_info_zone">Funkcja Podlewanie strefowe</string>
 
-    <string name="status_off">Status: WYŁĄCZONE ⚪</string>
-    <string name="status_ready">Status: GOTOWOŚĆ 🟡</string>
-    <string name="status_working">Status: PRACUJE ✅</string>
+    <!-- ============================================== -->
+    <!-- ALARM Activity                                 -->
+    <!-- ============================================== -->
+    <string name="alarm_empty_list">Brak zarejestrowanych alarmów.</string>
+    <string name="alarm_delete_title">Potwierdzenie usunięcia wpisu</string>
+    <string name="alarm_delete_msg">Czy na pewno chcesz usunąć ten alarm?\n\nTa operacja jest nieodwracalna.</string>
+    <string name="alarm_delete_positive">Usuń</string>
+    <string name="alarm_delete_negative">Anuluj</string>
+    <string name="alarm_deleted_success">Alarm został usunięty</string>
+    <string name="alarm_delete_error">Brak uprawnień lub błąd serwera</string>
 
-    <string name="status_connection_lost_working">
-        Status: Utracono łączność. Poprzedni stan: Praca ⚠️
-    </string>
+    <!-- ============================================== -->
+    <!-- Alarm Adapter                                  -->
+    <!-- ============================================== -->
+    <string name="alarm_item_machine">Maszyna: %1$s</string>
+    <string name="alarm_item_date">Wystąpienie: %1$s</string>
+    <string name="alarm_item_no_permission">Nie masz uprawnień do usunięcia tego alarmu</string>
 
-    <string name="status_connection_lost_ready">
-        Status: Utracono łączność. Poprzedni stan: Gotowość ⚠️
-    </string>
+    <!-- ============================================== -->
+    <!-- Analytics Activity                             -->
+    <!-- ============================================== -->
+    <string name="analytics_default_field_name">Pole</string>
+    <string name="analytics_title">Historia i Prognoza: %1$s</string>
+    <string name="analytics_no_data">Brak danych…</string>
+    <string name="analytics_date_picker_title">Wybierz zakres dat</string>
+    <string name="analytics_no_connection">Brak połączenia. Wyświetlam dane z pamięci.</string>
 
-    <string name="status_connection_lost_3h">
-        Status: Utracono łączność (ponad 3h). Poprzedni stan: Gotowość ⚠️
-    </string>
+    <!-- Parametry wykresów -->
+    <string name="analytics_param_temp">Temperatura (°C)</string>
+    <string name="analytics_param_rain">Opady (mm)</string>
+    <string name="analytics_param_clouds">Chmury (%)</string>
+    <string name="analytics_param_wind">Wiatr (m/s)</string>
+    <string name="analytics_param_humidity">Wilgotność (%)</string>
+    <string name="analytics_param_error">Błąd</string>
 
-    <string name="status_should_finish">
-        Status: Utracono łączność. Maszyna powinna już zakończyć pracę ⚠️
-    </string>
+    <!-- Formaty etykiet osi -->
+    <string name="analytics_label_left">← %1$s</string>
+    <string name="analytics_label_right">%1$s →</string>
 
+    <!-- ============================================== -->
+    <!-- Chart Activity                                 -->
+    <!-- ============================================== -->
+    <string name="chart_no_data">Brak danych telemetrii do wyświetlenia...</string>
+    <string name="chart_loading_data">Pobieranie danych z maszyny...</string>
+    <string name="chart_date_picker_title">Wybierz zakres dat</string>
+    <string name="chart_default_value_label">Wartość</string>
+
+    <!-- Parametry maszyn -->
+    <string name="chart_param_current_speed">Prędkość aktualna (km/h)</string>
+    <string name="chart_param_target_speed">Prędkość zadana (km/h)</string>
+    <string name="chart_param_distance">Odległość (m)</string>
+    <string name="chart_param_work_time">Czas pracy (h)</string>
+    <string name="chart_param_battery">Bateria (%)</string>
+    <string name="chart_param_sim_signal">Sygnał SIM (dBm)</string>
+
+    <!-- ============================================== -->
+    <!-- Create Rain Activity                           -->
+    <!-- ============================================== -->
+    <string name="create_rain_spinner_default">Wybierz deszczownię</string>
+    <string name="create_rain_model_rm180">RM180-R (300 m)</string>
+    <string name="create_rain_model_rm200">RM200-S (450 m)</string>
+
+    <string name="create_rain_err_empty">Wypełnij nazwę i długość węża</string>
+    <string name="create_rain_err_session">Błąd sesji. Zaloguj się ponownie.</string>
+    <string name="create_rain_err_server">Błąd serwera przy zapisie ❌</string>
+    <string name="create_rain_success">Dodano pomyślnie na serwer! ✅</string>
+
+    <!-- ============================================== -->
+    <!-- Custom Marker Activity                         -->
+    <!-- ============================================== -->
+    <string name="marker_value">Wartość: %1$s</string>
+    <string name="marker_time">Godzina: %1$s</string>
+    <string name="marker_hour_fallback">Godzina: %1$d:00</string>
+
+    <!-- ============================================== -->
+    <!-- Field Edit Activity                            -->
+    <!-- ============================================== -->
+    <string name="field_edit_delete_success">Pole zostało usunięte! 🗑️</string>
+    <string name="field_edit_delete_error">Błąd podczas usuwania pola.</string>
+    <string name="field_edit_area_format">Powierzchnia: %.2f ha</string>
+    <string name="field_edit_err_no_user">Błąd: Użytkownik niezalogowany!</string>
+    <string name="field_edit_save_success">Pole zapisane! 🌾</string>
+    <string name="field_edit_save_error">Serwer odrzucił zapis.</string>
+
+    <!-- ============================================== -->
+    <!-- Full Map Activity                              -->
+    <!-- ============================================== -->
+    <string name="full_map_location_set">Lokalizacja ustawiona!</string>
+    <string name="full_map_save_error_log">Błąd zapisu! Zobacz logi.</string>
+    <string name="full_map_btn_finish_field">ZAKOŃCZ POLE</string>
+    <string name="full_map_min_points_toast">Zaznacz min. 3 punkty!</string>
+    <string name="full_map_btn_add_field">DODAJ POLE</string>
+    <string name="full_map_default_field_name">Pole</string>
+
+    <!-- CDATA pozwala na bezpieczne trzymanie znaczników HTML (np. <br>) -->
+    <string name="full_map_field_snippet"><![CDATA[Uprawa: %1$s<br>Powierzchnia: %2$.2f ha<br><br><small><i>Kliknij ponownie aby wejść w szczegóły</i></small>]]></string>
+
+    <string name="full_map_no_gps_title">Brak sygnału GPS</string>
+    <string name="full_map_no_gps_message">Brak sygnału GPS. Czy chcesz samemu ustawić aktualne miejsce urządzenia na mapie?</string>
+    <string name="full_map_btn_yes">Tak</string>
+    <string name="full_map_btn_no">Nie</string>
+    <string name="full_map_click_to_place">Kliknij na mapie miejsce, w którym stoi maszyna</string>
+
+    <!-- ============================================== -->
+    <!-- Home Activity                                  -->
+    <!-- ============================================== -->
+    <string name="home_nav_home_toast">Strona główna</string>
+    <string name="home_tile_add_rain">Dodaj deszczownię</string>
+    <string name="home_rain_added_toast">Dodano deszczownię</string>
+    <string name="home_logged_out_toast">Wylogowano ✅</string>
+
+    <!-- ============================================== -->
+    <!-- Login Activity                                 -->
+    <!-- ============================================== -->
+    <string name="login_success_toast">Zalogowano ✅</string>
+    <string name="login_error_toast">Błąd logowania ❌</string>
+
+    <!-- ============================================== -->
+    <!-- Profile Activity                               -->
+    <!-- ============================================== -->
+    <string name="profile_email_missing">Brak maila</string>
+    <string name="profile_error_network">Błąd sieci</string>
+    <string name="profile_error_fetch">Błąd pobierania danych.</string>
+    <string name="profile_error_parsing">Błąd parsowania danych.</string>
+    <string name="profile_error_generic">Błąd: %1$s</string>
+    <string name="profile_enter_email_toast">Podaj email pracownika</string>
+
+    <string name="profile_empty_workers_none">Brak powiązanych kont.</string>
+    <string name="profile_empty_workers_list">Brak dodanych użytkowników.</string>
+
+    <string name="profile_dialog_delete_title">Usuwanie dostępu</string>
+    <string name="profile_dialog_delete_msg">Czy na pewno chcesz usunąć dostęp?</string>
+    <string name="profile_dialog_btn_yes">Tak</string>
+    <string name="profile_dialog_btn_no">Nie</string>
+
+    <!-- ============================================== -->
+    <!-- Rain Details Activity                          -->
+    <!-- ============================================== -->
+    <string name="offline_label">[OFFLINE]</string>
+    <string name="offline_title_format">[OFFLINE] %1$s</string>
     <string name="work_time">Czas pracy: %1$s</string>
     <string name="extension">Rozwinięcie: %1$.1f m</string>
     <string name="time_to_finish">Czas do końca: %1$s</string>
-    <string name="speed">Prędkość: %1$.1f m/h</string>
-    <string name="speed_zone">Prędkość: %1$.1f m/h (%2$s)</string>
-
-    <string name="signal">Zasięg: %1$d dBm</string>
-    <string name="battery">Bateria: %1$d V</string>
-
-    <!-- Zones -->
     <string name="zone_1">Strefa 1</string>
     <string name="zone_2">Strefa 2</string>
     <string name="zone_3">Strefa 3</string>
-    <string name="zone_base">Dojazdowa (Baza)</string>
+    <string name="zone_base">Baza</string>
+    <string name="speed_zone">Prędkość: %1$.1f m/h (%2$s)</string>
+    <string name="speed">Prędkość: %1$.1f m/h</string>
 
-    <!-- Update -->
-    <string name="last_update">
-        Ostatnia aktualizacja z urządzenia: %1$s
-    </string>
+    <string name="status_off">Wyłączona</string>
+    <string name="status_ready">Gotowa</string>
+    <string name="status_working">Pracuje</string>
+    <string name="status_connection_lost_working">Utracono połączenie (Pracuje)</string>
+    <string name="status_connection_lost_ready">Utracono połączenie (Gotowa)</string>
+    <string name="status_connection_lost_3h">Brak komunikacji > 3h</string>
+    <string name="status_should_finish">Powinna skończyć</string>
 
-    <string name="next_update">
-        Przewidywana następna: %1$s
-    </string>
+    <string name="signal">Sygnał: %1$d%%</string>
+    <string name="battery">Bateria: %1$d%%</string>
+    <string name="saved_success">Zapisano pomyślnie</string>
+    <string name="last_update">Ostatnia aktualizacja: %1$s</string>
+    <string name="next_update">Następna aktualizacja: %1$s</string>
+    <string name="connection_lost">BRAK POŁĄCZENIA</string>
 
-    <string name="connection_lost">
-        Utracono łączność z urządzeniem.
-    </string>
+    <!-- ============================================== -->
+    <!-- Register Activity                              -->
+    <!-- ============================================== -->
+    <string name="register_success">Konto utworzone ✅</string>
+    <string name="register_error_email_exists">Email już istnieje ❗</string>
+    <string name="register_error_generic">Błąd rejestracji ❌</string>
+    <string name="register_error_invalid_email">Podaj poprawny email ❗</string>
+    <string name="register_error_invalid_password">Hasło musi mieć min. 5 znaków i zawierać cyfrę</string>
+    <string name="register_error_passwords_dont_match">Hasła się nie zgadzają ❗</string>
 
-    <!-- Save -->
-    <string name="saved_success">Zapisano dane ✅</string>
+    <!-- ============================================== -->
+    <!-- SETTINGS Activity                              -->
+    <!-- ============================================== -->
+    <string name="settings_title">Ustawienia powiadomień</string>
+    <string name="settings_main_notifications">Główne powiadomienia</string>
+    <string name="settings_all_notifications">Włącz wszystkie powiadomienia</string>
+    <string name="settings_notify_a">Powiadomienie Typ A (np. Start)</string>
+    <string name="settings_notify_b">Powiadomienie Typ B (np. Błąd)</string>
+    <string name="settings_notify_c">Powiadomienie Typ C (np. Koniec)</string>
+    <string name="settings_extra_channels">Dodatkowe kanały</string>
+    <string name="settings_sms">Powiadomienia SMS</string>
+    <string name="settings_call">Alert głosowy (dzwonienie)</string>
+    <string name="settings_language">Język / Language</string>
+    <string name="settings_language_hint">Wybierz język</string>
+    <string name="settings_save">Zapisz ustawienia</string>
+    <string name="settings_saved">Ustawienia zapisane</string>
+    <string name="settings_error">Błąd zapisu</string>
+    <string name="settings_no_user">Brak użytkownika</string>
+
+    <!-- ============================================== -->
+    <!-- Weather Activity & AI Advisor                  -->
+    <!-- ============================================== -->
+    <string name="field_no_name">Pole bez nazwy</string>
+    <string name="field_crop_format">🌾 Uprawa: %1$s</string>
+    <string name="offline_advisor_title_format">[OFFLINE] %1$s</string>
+    <string name="online_advisor_title_format">AI Doradca: %1$s</string>
+    <string name="advisor_total_rain_format">\n\n🌧 Suma opadów (5 dni): %1$.1f mm</string>
+
+    <string name="advisor_waiting_title">Oczekiwanie na dane...</string>
+    <string name="advisor_waiting_desc">Pobieram prognozę lub brak zapisanych informacji.</string>
+
+    <string name="advisor_title_dont_water">NIE PODLEWAJ DZISIAJ</string>
+    <string name="advisor_msg_dont_water">Spodziewane opady (%1$.1f mm) w ciągu doby. Oszczędź wodę i energię.</string>
+
+    <string name="advisor_title_water_moderate">PODLEJ UMIARKOWANIE</string>
+    <string name="advisor_msg_water_moderate">Deszcz za 2 dni (%1$.1f mm), ale upał (%2$.1f°C) mocno wysusza wierzchnią warstwę. Konieczne lekkie zroszenie.</string>
+
+    <string name="advisor_title_control_humidity">KONTROLUJ WILGOTNOŚĆ</string>
+    <string name="advisor_msg_control_humidity">Za 48h prognozowane są opady (%1$.1f mm). To niewiele dla wymagających upraw. Zredukuj dawkę wody, ale upewnij się czy to wystarczy.</string>
+
+    <string name="advisor_title_water">PODLEWAJ</string>
+    <string name="advisor_msg_water">Deszcz spadnie za 3 dni, a przed nami upały do %1$.1f°C. Rośliny mogą tego nie przetrwać bez Twojej pomocy.</string>
+
+    <string name="advisor_title_plan_efficiently">ZAPLANUJ OSZCZĘDNIE</string>
+    <string name="advisor_msg_plan_efficiently">Deszcz widoczny za 3 dni (%1$.1f mm). Możesz delikatnie oszczędzić na dzisiejszym cyklu nawadniania.</string>
+
+    <string name="advisor_title_water_standard">PODLEWAJ STANDARDOWO</string>
+    <string name="advisor_msg_water_standard">Opady pojawią się dopiero za 4 dni. Do tego czasu panują wysokie temperatury. Nie wstrzymuj nawadniania.</string>
+
+    <string name="advisor_title_optimal_cycle">OPTYMALNY CYKL</string>
+    <string name="advisor_msg_optimal_cycle">Lekki deszcz za 4 dni. Podlewaj uprawę normalnie, ale zwróć uwagę na to, by nie przelać w dalszej części tygodnia.</string>
+
+    <string name="advisor_title_heat_alert">ALERT: UPAŁY PRZED DESZCZEM</string>
+    <string name="advisor_msg_heat_alert">Odległe opady za 5 dni nie zrekompensują zbliżających się fal gorąca. Wymagane natychmiastowe podlewanie!</string>
+
+    <string name="advisor_title_stable_conditions">WARUNKI STABILNE</string>
+    <string name="advisor_msg_stable_conditions">Podlewaj standardowo według potrzeb uprawy. Deszcz pojawi się na horyzoncie pod koniec tygodnia.</string>
+
+    <string name="advisor_title_critical_drought">KRYTYCZNIE: DŁUGA SUSZA!</string>
+    <string name="advisor_msg_critical_drought">Kompletny brak opadów w prognozie, a temperatury osiągną %1$.1f°C! Zwiększ dawkę wody na deszczowni.</string>
+
+    <string name="advisor_title_slow_growth">WEGETACJA ZWOLNIONA</string>
+    <string name="advisor_msg_slow_growth">Chłodno (śr. %1$.1f°C). Gleba słabo paruje, a rośliny piją mniej. Kontroluj czy na polu nie stoi woda.</string>
+
+    <string name="advisor_title_optimal">WARUNKI OPTYMALNE</string>
+    <string name="advisor_msg_optimal">Utrzymuj standardowy reżim wodny dla tej uprawy. Pogoda nie zagraża przesuszeniem ani zalaniem.</string>
+
+    <!-- ============================================== -->
+    <!-- Worker Adapter                                 -->
+    <!-- ============================================== -->
+    <string name="worker_me_format">%1$s (Ty)</string>
+    <string name="worker_btn_confirm_save">Potwierdź i Zapisz</string>
+    <string name="worker_btn_save">Zapisz</string>
+    <string name="worker_btn_reject_access">Odrzuć dostęp</string>
+    <string name="worker_btn_delete">Usuń</string>
 
 </resources>

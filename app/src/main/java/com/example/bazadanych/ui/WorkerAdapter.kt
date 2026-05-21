@@ -24,24 +24,29 @@ class WorkerAdapter(
         notifyDataSetChanged()
     }
 
-    // TA METODA BYŁA BRAKUJĄCA:
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WorkerViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_worker, parent, false)
         return WorkerViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: WorkerViewHolder, position: Int) {
+        val context = holder.itemView.context
         val worker = workers[position]
         val wLevel = worker.access_level
         val isMe = worker.worker_email == currentUserEmail
         val hasConfirmed = worker.access_confirm == 1
 
-        holder.tvEmail.text = if (isMe) "${worker.worker_email} (Ty)" else worker.worker_email
+        // Dynamiczny format dla aktualnego użytkownika
+        holder.tvEmail.text = if (isMe) {
+            context.getString(R.string.worker_me_format, worker.worker_email)
+        } else {
+            worker.worker_email
+        }
 
-        // 1. Ustawienie niestandardowego adaptera dla Spinnera (blokowanie poziomów)
-        val rolesArray = holder.itemView.context.resources.getStringArray(R.array.roles_array)
+        // 1. Ustawienie niestandardowego adaptera dla Spinnera
+        val rolesArray = context.resources.getStringArray(R.array.roles_array)
         val customAdapter = RoleSpinnerAdapter(
-            holder.itemView.context,
+            context,
             android.R.layout.simple_spinner_item,
             rolesArray,
             currentUserLevel
@@ -69,12 +74,16 @@ class WorkerAdapter(
             }
         }
 
-        // 3. Widoczność UI
+        // 3. Widoczność UI i pobieranie tekstów z zasobów XML
         if (canEdit) {
             holder.spinnerRole.visibility = View.VISIBLE
             holder.tvRoleReadOnly.visibility = View.GONE
             holder.btnSave.visibility = View.VISIBLE
-            holder.btnSave.text = if (isConfirmingAction) "Potwierdź i Zapisz" else "Zapisz"
+            holder.btnSave.text = if (isConfirmingAction) {
+                context.getString(R.string.worker_btn_confirm_save)
+            } else {
+                context.getString(R.string.worker_btn_save)
+            }
         } else {
             holder.spinnerRole.visibility = View.GONE
             holder.tvRoleReadOnly.visibility = View.VISIBLE
@@ -84,7 +93,11 @@ class WorkerAdapter(
 
         if (canDelete) {
             holder.btnDelete.visibility = View.VISIBLE
-            holder.btnDelete.text = if (isMe) "Odrzuć dostęp" else "Usuń"
+            holder.btnDelete.text = if (isMe) {
+                context.getString(R.string.worker_btn_reject_access)
+            } else {
+                context.getString(R.string.worker_btn_delete)
+            }
         } else {
             holder.btnDelete.visibility = View.GONE
         }

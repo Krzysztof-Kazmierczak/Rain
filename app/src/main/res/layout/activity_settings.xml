@@ -11,7 +11,7 @@
         android:layout_height="?attr/actionBarSize"
         android:background="?attr/colorPrimary"
         android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
-        app:title="Ustawienia powiadomień"
+        app:title="@string/settings_title"
         app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.core.widget.NestedScrollView
@@ -42,7 +42,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Główne powiadomienia"
+                        android:text="@string/settings_main_notifications"
                         android:textStyle="bold"
                         android:textSize="18sp"
                         android:textColor="?attr/colorPrimary"
@@ -52,7 +52,7 @@
                         android:id="@+id/cbAllNotifications"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Włącz wszystkie powiadomienia" />
+                        android:text="@string/settings_all_notifications" />
 
                     <View
                         android:layout_width="match_parent"
@@ -64,19 +64,19 @@
                         android:id="@+id/cbNotifyA"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Powiadomienie Typ A (np. Start)" />
+                        android:text="@string/settings_notify_a" />
 
                     <CheckBox
                         android:id="@+id/cbNotifyB"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Powiadomienie Typ B (np. Błąd)" />
+                        android:text="@string/settings_notify_b" />
 
                     <CheckBox
                         android:id="@+id/cbNotifyC"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Powiadomienie Typ C (np. Koniec)" />
+                        android:text="@string/settings_notify_c" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -96,7 +96,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Dodatkowe kanały"
+                        android:text="@string/settings_extra_channels"
                         android:textStyle="bold"
                         android:textSize="18sp"
                         android:textColor="?attr/colorPrimary"
@@ -106,14 +106,54 @@
                         android:id="@+id/cbSms"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Powiadomienia SMS" />
+                        android:text="@string/settings_sms" />
 
                     <CheckBox
                         android:id="@+id/cbCall"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Alert głosowy (dzwonienie)" />
+                        android:text="@string/settings_call" />
                 </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="8dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/settings_language"
+                        android:textStyle="bold"
+                        android:textSize="18sp"
+                        android:textColor="?attr/colorPrimary"
+                        android:layout_marginBottom="12dp"/>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+
+                        <AutoCompleteTextView
+                            android:id="@+id/languageDropdown"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:hint="@string/settings_language_hint" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                </LinearLayout>
+
             </com.google.android.material.card.MaterialCardView>
 
             <Button
@@ -121,7 +161,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_margin="16dp"
-                android:text="Zapisz ustawienia"
+                android:text="@string/settings_save"
                 android:padding="12dp"
                 app:cornerRadius="8dp" />
 

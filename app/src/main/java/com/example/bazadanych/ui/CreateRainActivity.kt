@@ -31,11 +31,11 @@ class CreateRainActivity : AppCompatActivity() {
         val rainSpinner = findViewById<Spinner>(R.id.rainSpinner)
         val addButton = findViewById<Button>(R.id.addButton)
 
-        // 3. Konfiguracja Spinnera (Rozwijanej listy)
+        // 3. Konfiguracja Spinnera (Rozwijanej listy) z użyciem zasobów
         val rainList = listOf(
-            "Wybierz deszczownię",
-            "RM180-R (300 m)",
-            "RM200-S (450 m)"
+            getString(R.string.create_rain_spinner_default),
+            getString(R.string.create_rain_model_rm180),
+            getString(R.string.create_rain_model_rm200)
         )
 
         val adapter = ArrayAdapter(
@@ -76,7 +76,7 @@ class CreateRainActivity : AppCompatActivity() {
 
             // Walidacja pól
             if (name.isEmpty() || length.isEmpty()) {
-                Toast.makeText(this, "Wypełnij nazwę i długość węża", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.create_rain_err_empty), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -94,7 +94,7 @@ class CreateRainActivity : AppCompatActivity() {
             val email = prefs.getString("user_email", "") ?: ""
 
             if (email.isEmpty()) {
-                Toast.makeText(this, "Błąd sesji. Zaloguj się ponownie.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.create_rain_err_session), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -104,11 +104,11 @@ class CreateRainActivity : AppCompatActivity() {
                 // Powrót do wątku głównego (UI), aby móc zarządzać widokiem
                 runOnUiThread {
                     if (success) {
-                        Toast.makeText(this, "Dodano pomyślnie na serwer! ✅", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.create_rain_success), Toast.LENGTH_SHORT).show()
                         setResult(RESULT_OK)
                         finish() // Zamknięcie aktywności
                     } else {
-                        Toast.makeText(this, "Błąd serwera przy zapisie ❌", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.create_rain_err_server), Toast.LENGTH_SHORT).show()
                     }
                 }
             }

@@ -46,7 +46,7 @@ class AnalyticsActivity : AppCompatActivity() {
     // Aktywne checkboxy (max 2 per wykres)
     private val activeWeatherParams = mutableListOf(R.id.cbTemp, R.id.cbRain)
 
-    // 🔥 ZMIANA: Domyślnie aktywne na dolnym wykresie to Wiatr i Wilgotność (cbSpeed usunięty)
+    // Domyślnie aktywne na dolnym wykresie to Wiatr i Wilgotność (cbSpeed usunięty)
     private val activeMachineParams = mutableListOf(R.id.cbWind, R.id.cbHumidity)
 
     private var currentInterval: Int = 3
@@ -70,11 +70,11 @@ class AnalyticsActivity : AppCompatActivity() {
         database = DataBase.getDatabase(this)
         fieldDao = database.fieldDao()
         fieldId = intent.getIntExtra("FIELD_ID", 1)
-        fieldName = intent.getStringExtra("FIELD_NAME") ?: "Pole"
+        fieldName = intent.getStringExtra("FIELD_NAME") ?: getString(R.string.analytics_default_field_name)
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbarAnalytics)
         setSupportActionBar(toolbar)
-        supportActionBar?.title = "Historia i Prognoza: $fieldName"
+        supportActionBar?.title = getString(R.string.analytics_title, fieldName)
         toolbar.setNavigationOnClickListener { finish() }
 
         chartWeather = findViewById(R.id.chartWeather)
@@ -100,7 +100,7 @@ class AnalyticsActivity : AppCompatActivity() {
 
         btnDateRange.setOnClickListener {
             val datePicker = com.google.android.material.datepicker.MaterialDatePicker.Builder.dateRangePicker()
-                .setTitleText("Wybierz zakres dat")
+                .setTitleText(getString(R.string.analytics_date_picker_title))
                 .build()
 
             datePicker.addOnPositiveButtonClickListener { selection ->
@@ -142,8 +142,6 @@ class AnalyticsActivity : AppCompatActivity() {
 
     private fun setupCheckboxes() {
         val weatherCbs = listOf(R.id.cbTemp, R.id.cbRain, R.id.cbClouds)
-
-        // 🔥 ZMIANA: Lista checkboxów dla dolnego panelu bez cbSpeed
         val machineCbs = listOf(R.id.cbWind, R.id.cbHumidity)
 
         weatherCbs.forEach { id ->
@@ -202,7 +200,11 @@ class AnalyticsActivity : AppCompatActivity() {
             }
 
             override fun onFailure(call: Call<List<FieldHistory>>, t: Throwable) {
-                android.widget.Toast.makeText(this@AnalyticsActivity, "Brak połączenia. Wyświetlam dane z pamięci.", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(
+                    this@AnalyticsActivity,
+                    getString(R.string.analytics_no_connection),
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
             }
         })
     }
@@ -302,7 +304,7 @@ class AnalyticsActivity : AppCompatActivity() {
     private fun setupChartStyle(chart: LineChart, isTopChart: Boolean) {
         chart.apply {
             description.isEnabled = false
-            setNoDataText("Brak danych...")
+            setNoDataText(getString(R.string.analytics_no_data))
             setTouchEnabled(true)
             isDragEnabled = true
             setScaleEnabled(true)
@@ -375,11 +377,11 @@ class AnalyticsActivity : AppCompatActivity() {
             addLineWithForecast(weatherData, label, color, axis, extractor)
 
             if (index == 0) {
-                tvWeatherLeft.text = "← $label"
+                tvWeatherLeft.text = getString(R.string.analytics_label_left, label)
                 chartWeather.axisLeft.isEnabled = true
                 chartWeather.axisLeft.textColor = color
             } else {
-                tvWeatherRight.text = "$label →"
+                tvWeatherRight.text = getString(R.string.analytics_label_right, label)
                 chartWeather.axisRight.isEnabled = true
                 chartWeather.axisRight.textColor = color
             }
@@ -402,11 +404,11 @@ class AnalyticsActivity : AppCompatActivity() {
             addLineWithForecast(machineData, label, color, axis, extractor)
 
             if (index == 0) {
-                tvMachineLeft.text = "← $label"
+                tvMachineLeft.text = getString(R.string.analytics_label_left, label)
                 chartMachine.axisLeft.isEnabled = true
                 chartMachine.axisLeft.textColor = color
             } else {
-                tvMachineRight.text = "$label →"
+                tvMachineRight.text = getString(R.string.analytics_label_right, label)
                 chartMachine.axisRight.isEnabled = true
                 chartMachine.axisRight.textColor = color
             }
@@ -503,14 +505,12 @@ class AnalyticsActivity : AppCompatActivity() {
 
     private fun getParamInfo(id: Int): Triple<String, Int, (FieldHistory) -> Float?> {
         return when (id) {
-            R.id.cbTemp -> Triple("Temperatura (°C)", Color.RED) { it.temperature?.toFloat() }
-            R.id.cbRain -> Triple("Opady (mm)", Color.BLUE) { it.rain_mm?.toFloat() }
-            R.id.cbClouds -> Triple("Chmury (%)", Color.DKGRAY) { it.clouds?.toFloat() }
-
-            // 🔥 ZMIANA: cbSpeed został całkowicie usunięty z mapowania
-            R.id.cbWind -> Triple("Wiatr (m/s)", Color.parseColor("#FF9800")) { it.wind_speed?.toFloat() }
-            R.id.cbHumidity -> Triple("Wilgotność (%)", Color.parseColor("#00BCD4")) { it.humidity?.toFloat() }
-            else -> Triple("Błąd", Color.BLACK) { 0f }
+            R.id.cbTemp -> Triple(getString(R.string.analytics_param_temp), Color.RED) { it.temperature?.toFloat() }
+            R.id.cbRain -> Triple(getString(R.string.analytics_param_rain), Color.BLUE) { it.rain_mm?.toFloat() }
+            R.id.cbClouds -> Triple(getString(R.string.analytics_param_clouds), Color.DKGRAY) { it.clouds?.toFloat() }
+            R.id.cbWind -> Triple(getString(R.string.analytics_param_wind), Color.parseColor("#FF9800")) { it.wind_speed?.toFloat() }
+            R.id.cbHumidity -> Triple(getString(R.string.analytics_param_humidity), Color.parseColor("#00BCD4")) { it.humidity?.toFloat() }
+            else -> Triple(getString(R.string.analytics_param_error), Color.BLACK) { 0f }
         }
     }
 

@@ -41,14 +41,8 @@ class ChartActivity : AppCompatActivity() {
     private var selectedDeviceId: Int? = null
     private var selectedParamIndex: Int = 0 // Domyślnie Prędkość aktualna
 
-    private val machineParamsNames = listOf(
-        "Prędkość aktualna (km/h)",
-        "Prędkość zadana (km/h)",
-        "Odległość (m)",
-        "Czas pracy (h)",
-        "Bateria (%)",
-        "Sygnał SIM (dBm)"
-    )
+    // Lista zainicjalizowana dynamicznie w onCreate
+    private lateinit var machineParamsNames: List<String>
 
     // Dane do wykresu
     private var fullTelemetryData: List<DeviceTelemetry> = emptyList()
@@ -61,6 +55,16 @@ class ChartActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_chart)
+
+        // Bezpieczne ładowanie tłumaczonych stringów po utworzeniu kontekstu Activity
+        machineParamsNames = listOf(
+            getString(R.string.chart_param_current_speed),
+            getString(R.string.chart_param_target_speed),
+            getString(R.string.chart_param_distance),
+            getString(R.string.chart_param_work_time),
+            getString(R.string.chart_param_battery),
+            getString(R.string.chart_param_sim_signal)
+        )
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbarAnalytics)
         setSupportActionBar(toolbar)
@@ -80,7 +84,6 @@ class ChartActivity : AppCompatActivity() {
     private fun setupDropdowns() {
         val spinnerParams = findViewById<AutoCompleteTextView>(R.id.spinnerMachineParams)
 
-        // Zabezpieczenie przed błędem
         if (spinnerParams == null) {
             Log.e("ChartActivity", "Nie znaleziono spinnerMachineParams! Sprawdź layout.")
             return
@@ -89,7 +92,6 @@ class ChartActivity : AppCompatActivity() {
         val paramsAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, machineParamsNames)
         spinnerParams.setAdapter(paramsAdapter)
 
-        // Dodaj to zabezpieczenie, bo przy pustej liście maszyny crashują aplikację
         if (machineParamsNames.isNotEmpty()) {
             spinnerParams.setText(machineParamsNames[0], false)
         }
@@ -105,7 +107,7 @@ class ChartActivity : AppCompatActivity() {
 
         btnDateRange.setOnClickListener {
             val datePicker = MaterialDatePicker.Builder.dateRangePicker()
-                .setTitleText("Wybierz zakres dat")
+                .setTitleText(getString(R.string.chart_date_picker_title))
                 .build()
 
             datePicker.addOnPositiveButtonClickListener { selection ->
@@ -133,7 +135,6 @@ class ChartActivity : AppCompatActivity() {
                 R.id.chipDay -> 24
                 else -> 3
             }
-            // ZMIANA: Przeliczamy i rysujemy wykres na nowo po zmianie rozdzielczości
             filterAndProcessData()
         }
     }
@@ -145,14 +146,12 @@ class ChartActivity : AppCompatActivity() {
             runOnUiThread {
                 this.deviceList = devices
                 if (devices.isNotEmpty()) {
-                    // Zmieniono: używamy 'hose_length' zamiast nieistniejącego 'serialNumber'
-                    val deviceNames = devices.map { "${it.name}" }
+                    val deviceNames = devices.map { it.name }
 
                     val spinnerDevices = findViewById<AutoCompleteTextView>(R.id.spinnerDevices)
                     val devicesAdapter = ArrayAdapter(this@ChartActivity, android.R.layout.simple_dropdown_item_1line, deviceNames)
                     spinnerDevices.setAdapter(devicesAdapter)
 
-                    // Ustawienie domyślne
                     spinnerDevices.setText(deviceNames[0], false)
                     selectedDeviceId = devices[0].id
                     loadTelemetry(devices[0].id)
@@ -171,15 +170,13 @@ class ChartActivity : AppCompatActivity() {
     private fun loadTelemetry(deviceId: Int) {
         val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
 
-        // Pokaż, że ładuje (czyszczenie wykresu)
         chartMachine.clear()
-        chartMachine.setNoDataText("Pobieranie danych z maszyny...")
+        chartMachine.setNoDataText(getString(R.string.chart_loading_data))
 
         remoteRepo.getTelemetryForDevice(deviceId, email) { telemetry ->
             Log.d("API_DEBUG", "Pobrano telemetrię: ${telemetry.size} punktów danych")
             runOnUiThread {
                 val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                // Sortujemy po dacie, by wykres zawsze szedł od lewej do prawej chronologicznie
                 this.fullTelemetryData = telemetry.sortedBy {
                     try { sdf.parse(it.recordedAt)?.time ?: 0L } catch (e: Exception) { 0L }
                 }
@@ -187,8 +184,6 @@ class ChartActivity : AppCompatActivity() {
             }
         }
     }
-
-
 
     private fun filterAndProcessData() {
         if (fullTelemetryData.isEmpty()) {
@@ -199,7 +194,6 @@ class ChartActivity : AppCompatActivity() {
 
         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
 
-        // 1. Filtrowanie po kalendarzu (zakres dat)
         val filteredByDate = if (startDateFilter != null && endDateFilter != null) {
             fullTelemetryData.filter {
                 val time = try { sdf.parse(it.recordedAt)?.time ?: 0L } catch (e: Exception) { 0L }
@@ -209,7 +203,6 @@ class ChartActivity : AppCompatActivity() {
             fullTelemetryData
         }
 
-        // 2. Próbkowanie według interwałów (1h, 3h, 12h, 1 dzień)
         val sampledData = mutableListOf<DeviceTelemetry>()
         var currentSlotKey = ""
         val cal = Calendar.getInstance()
@@ -222,18 +215,15 @@ class ChartActivity : AppCompatActivity() {
                 val dayOfYear = cal.get(Calendar.DAY_OF_YEAR)
                 val year = cal.get(Calendar.YEAR)
 
-                // Sprawdzamy, czy dana godzina pasuje do naszego filtra
                 val isHourMatch = when (currentInterval) {
-                    1 -> true // Akceptujemy każdą pełną godzinę (00, 01, 02...)
-                    3 -> hour % 3 == 0 // Akceptujemy 00, 03, 06, 09, 12...
-                    12 -> hour == 6 || hour == 18 // Akceptujemy TYLKO 06:00 i 18:00
-                    24 -> hour == 12 // Akceptujemy TYLKO 12:00
+                    1 -> true
+                    3 -> hour % 3 == 0
+                    12 -> hour == 6 || hour == 18
+                    24 -> hour == 12
                     else -> true
                 }
 
                 if (isHourMatch) {
-                    // Tworzymy klucz, żeby wziąć tylko JEDEN pomiar na ten konkretny "slot" czasowy
-                    // (zabezpieczenie na wypadek, gdyby maszyna wysyłała po 5 pomiarów na godzinę)
                     val slotKey = when (currentInterval) {
                         1 -> "$year-$dayOfYear-$hour"
                         3 -> "$year-$dayOfYear-${hour / 3}"
@@ -242,7 +232,6 @@ class ChartActivity : AppCompatActivity() {
                         else -> "$year-$dayOfYear-$hour"
                     }
 
-                    // Jeśli jeszcze nie dodaliśmy pomiaru z tego slota, to go dodajemy
                     if (slotKey != currentSlotKey) {
                         sampledData.add(tel)
                         currentSlotKey = slotKey
@@ -251,22 +240,20 @@ class ChartActivity : AppCompatActivity() {
             }
         }
 
-        // 3. Przypisujemy przefiltrowane dane do wyświetlenia na wykresie
         displayData = sampledData
-
         updateChart()
     }
 
     private fun setupChartStyle() {
         chartMachine.apply {
             description.isEnabled = false
-            setNoDataText("Brak danych telemetrii do wyświetlenia...")
+            setNoDataText(getString(R.string.chart_no_data))
             setTouchEnabled(true)
             isDragEnabled = true
             setScaleEnabled(true)
             setPinchZoom(true)
 
-            axisRight.isEnabled = false // Zostawiamy tylko jedną oś (lewą)
+            axisRight.isEnabled = false
             extraBottomOffset = 15f
 
             setXAxisRenderer(MultilineXAxisRenderer(viewPortHandler, xAxis, getTransformer(YAxis.AxisDependency.LEFT)))
@@ -302,7 +289,7 @@ class ChartActivity : AppCompatActivity() {
 
         if (displayData.isEmpty()) {
             chartMachine.clear()
-            tvChartLeftLabel.text = "Wartość"
+            tvChartLeftLabel.text = getString(R.string.chart_default_value_label)
             return
         }
 
@@ -312,7 +299,6 @@ class ChartActivity : AppCompatActivity() {
         val entries = mutableListOf<Entry>()
 
         displayData.forEachIndexed { index, tel ->
-            // Używamy operatora ?: 0f, który zamienia null na 0
             val value = when (selectedParamIndex) {
                 0 -> tel.currentSpeed ?: 0f
                 1 -> tel.targetSpeed ?: 0f
@@ -322,8 +308,6 @@ class ChartActivity : AppCompatActivity() {
                 5 -> tel.simSignal ?: 0f
                 else -> 0f
             }
-
-            // Teraz 'value' nigdy nie będzie null, więc możemy zawsze dodać punkt
             entries.add(Entry(index.toFloat(), value))
         }
 
@@ -335,7 +319,7 @@ class ChartActivity : AppCompatActivity() {
                 lineWidth = 2.5f
                 circleRadius = 4f
                 setDrawValues(false)
-                mode = LineDataSet.Mode.HORIZONTAL_BEZIER // Wygładzona linia
+                mode = LineDataSet.Mode.HORIZONTAL_BEZIER
             }
 
             val lineData = LineData(dataSet)
@@ -358,7 +342,6 @@ class ChartActivity : AppCompatActivity() {
         chartMachine.data?.notifyDataChanged()
         chartMachine.notifyDataSetChanged()
 
-        // Jeśli nie filtrujemy daty na twardo - pokazujemy końcówkę (ostatnie pomiary)
         if (startDateFilter == null && endDateFilter == null) {
             val visiblePoints = when(currentInterval) {
                 24 -> 14f
@@ -366,8 +349,6 @@ class ChartActivity : AppCompatActivity() {
                 else -> 50f
             }
             chartMachine.setVisibleXRangeMaximum(visiblePoints)
-
-            // Przesuń na sam koniec wykresu (do najnowszych danych z prawej strony)
             chartMachine.moveViewToX(displayData.size.toFloat())
         } else {
             chartMachine.setVisibleXRangeMaximum(displayData.size.toFloat())

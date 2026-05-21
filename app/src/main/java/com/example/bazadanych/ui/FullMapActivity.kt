@@ -74,9 +74,6 @@ class FullMapActivity : AppCompatActivity() {
         conf.userAgentValue = packageName
         conf.tileFileSystemCacheMaxBytes = 1000L * 1024L * 1024L
 
-        // NAPRAWIONY BLOK:
-        // Używamy wartości 1 (pozwolenie na bulk) i 0 (brak restrykcji flagowych)
-// To ominie problem z brakującymi nazwami w bibliotece
         val bulkPolicy = org.osmdroid.tileprovider.tilesource.TileSourcePolicy(1, 0)
 
         val mapnikWithBulk = org.osmdroid.tileprovider.tilesource.XYTileSource(
@@ -91,7 +88,6 @@ class FullMapActivity : AppCompatActivity() {
             bulkPolicy
         )
 
-
         setContentView(R.layout.activity_full_map)
 
         map = findViewById(R.id.fullMap)
@@ -102,7 +98,6 @@ class FullMapActivity : AppCompatActivity() {
         setupMap()
         initUI()
 
-        // 5. Przywracanie pozycji z pamięci
         val lastConfig = CacheHelper.loadObject<CacheHelper.MapConfig>(this, MAP_CONFIG_KEY)
         if (lastConfig != null) {
             map.controller.setZoom(lastConfig.zoom)
@@ -113,24 +108,21 @@ class FullMapActivity : AppCompatActivity() {
         }
 
         map.addMapListener(object : MapListener {
-            override fun onScroll(event: ScrollEvent?): Boolean = false // Ignorujemy zwykłe przesuwanie mapy
+            override fun onScroll(event: ScrollEvent?): Boolean = false
 
             override fun onZoom(event: ZoomEvent?): Boolean {
-                // Pobieramy aktualny poziom przybliżenia
                 val currentZoom = map.zoomLevelDouble
                 val newIcon = getOrCreateScaledDrawable(currentZoom)
 
-                // Przeszukujemy wszystkie nakładki na mapie i aktualizujemy tylko nasze deszczownie
                 map.overlays.forEach { overlay ->
                     if (overlay is Marker && overlay.id?.startsWith("rain_") == true) {
                         overlay.icon = newIcon
                     }
                 }
-                map.invalidate() // Odświeżamy widok mapy
+                map.invalidate()
                 return true
             }
         })
-
 
         loadData()
     }
@@ -139,31 +131,18 @@ class FullMapActivity : AppCompatActivity() {
         val intZoom = zoom.toInt()
 
         return scaledRainDrawablesCache.getOrPut(intZoom) {
-            // 1. Ustalmy poziom przybliżenia "odniesienia"
             val baseZoom = 15
-
-            // 2. Skala mapy to potęgi dwójki. Różnica zoomu określa mnożnik.
-            // Jeśli zoom wzrośnie z 15 na 16, mnożnik wyniesie 2.0 (ikona będzie 2x większa).
-            // Jeśli spadnie z 15 na 14, mnożnik wyniesie 0.5 (ikona będzie 2x mniejsza).
             val zoomDiff = intZoom - baseZoom
             var scaleFactor = Math.pow(2.0, zoomDiff.toDouble())
 
-            // 3. Zabezpieczenie przed ekstremami, by grafika nie była mikroskopijna ani nie zajęła ekranu
-            // Minimalnie może zmaleć do 20% (0.2), a maksymalnie urosnąć trzykrotnie (3.0)
             scaleFactor = scaleFactor.coerceIn(0.8, 3.0)
 
-            // 4. BAZOWY ROZMIAR IKONY W PIKSELACH dla zoomu 15
-            // (Zmień tę wartość z 120, np. na 80 albo 160, żeby zmienić globalną wielkość ikonek!)
             val baseWidthPx = 120
-
-            // 5. Pobieramy proporcje oryginalnego pliku, żeby obrazek nie był ściśnięty
             val aspectRatio = originalRainBitmap.height.toFloat() / originalRainBitmap.width.toFloat()
 
-            // 6. Wyliczamy ostateczny rozmiar
             var targetWidth = (baseWidthPx * scaleFactor).toInt()
             var targetHeight = (targetWidth * aspectRatio).toInt()
 
-            // 7. Zabezpieczenie przez próbą stworzenia bitmapy o rozmiarze 0x0
             if (targetWidth <= 0) targetWidth = 1
             if (targetHeight <= 0) targetHeight = 1
 
@@ -184,7 +163,6 @@ class FullMapActivity : AppCompatActivity() {
     private fun setupMap() {
         val eventsOverlay = MapEventsOverlay(object : MapEventsReceiver {
             override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
-                // Rysowanie pól (Twój stary kod)
                 if (isDrawingMode && p != null) {
                     fieldPoints.add(p)
                     btnUndo.visibility = View.VISIBLE
@@ -192,7 +170,6 @@ class FullMapActivity : AppCompatActivity() {
                     return true
                 }
 
-                // NOWY KOD: Ręczne ustawianie deszczowni
                 if (isPlacingRainMode && p != null && rainIdToPlace != null) {
                     saveRainManualLocation(rainIdToPlace!!, p)
                     return true
@@ -209,20 +186,19 @@ class FullMapActivity : AppCompatActivity() {
     private fun saveRainManualLocation(rainId: String, p: GeoPoint) {
         val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
 
-        // LOG 5: Sprawdzamy, czy tryb 'placing' złapał kliknięcie
         Log.d("FullMapDebug", "Próba zapisu dla RainID: $rainId, Email: $email na koordynatach: ${p.latitude}, ${p.longitude}")
 
         remoteRepo.updateRainManualLocation(rainId, email, p.latitude, p.longitude) { success ->
             runOnUiThread {
                 if (success) {
                     Log.d("FullMapDebug", "Sukces! Lokalizacja zapisana w bazie.")
-                    Toast.makeText(this, "Lokalizacja ustawiona!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.full_map_location_set), Toast.LENGTH_SHORT).show()
                     isPlacingRainMode = false
                     rainIdToPlace = null
                     loadData()
                 } else {
                     Log.e("FullMapDebug", "Porażka! Sprawdź Logcat dla RainRepoDebug.")
-                    Toast.makeText(this, "Błąd zapisu! Zobacz logi.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, getString(R.string.full_map_save_error_log), Toast.LENGTH_LONG).show()
                     isPlacingRainMode = false
                     rainIdToPlace = null
                 }
@@ -261,7 +237,6 @@ class FullMapActivity : AppCompatActivity() {
     private fun drawFieldOnMap(field: FieldItem) {
         val pts = field.coordinates.split(";").mapNotNull {
             val latLng = it.split(",")
-            // Bezpieczniejsza wersja:
             if (latLng.size == 2) {
                 val lat = latLng[0].toDoubleOrNull() ?: 0.0
                 val lng = latLng[1].toDoubleOrNull() ?: 0.0
@@ -272,22 +247,18 @@ class FullMapActivity : AppCompatActivity() {
         val poly = Polygon(map).apply {
             points = pts
             fillPaint.color = Color.parseColor(field.color)
-            fillPaint.alpha = 100 // Półprzezroczystość
+            fillPaint.alpha = 100
             outlinePaint.color = Color.BLACK
             outlinePaint.strokeWidth = 2f
-            title = field.name ?: "Pole"
 
-            snippet = """
-        Uprawa: ${field.cropType}<br>
-        Powierzchnia: ${String.format("%.2f", field.areaHa)} ha<br><br>
-        <small><i>Kliknij ponownie aby wejść w szczegóły</i></small>
-    """.trimIndent()
+            // Tłumaczenie tytułu i wstrzyknięcie zmiennych do zasobu HTML (snippet)
+            title = field.name ?: getString(R.string.full_map_default_field_name)
+            snippet = getString(R.string.full_map_field_snippet, field.cropType, field.areaHa)
 
             infoWindow = BasicInfoWindow(org.osmdroid.library.R.layout.bonuspack_bubble, map)
         }
 
         poly.setOnClickListener { polygon, _, _ ->
-
             if (isPlacingRainMode || isDrawingMode) {
                 return@setOnClickListener false
             }
@@ -313,11 +284,9 @@ class FullMapActivity : AppCompatActivity() {
 
     private fun addRainMarker(rain: Rain) {
         val HISTORY_KEY = "HISTORY_${rain.id}"
-        // Pobieramy email z SharedPreferences
         val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
 
         Thread {
-            // 1. Sprawdzanie cache w TLE
             val cachedHistory = CacheHelper.loadList<com.example.bazadanych.data.db.RainStatus>(this, HISTORY_KEY)
 
             if (cachedHistory != null && cachedHistory.isNotEmpty()) {
@@ -326,18 +295,13 @@ class FullMapActivity : AppCompatActivity() {
                 }
             }
 
-            // 2. Pobieranie online - TUTAJ DODAJEMY email
             remoteRepo.getRainHistory(rain.id, email) { history ->
-                // 1. Zapisujemy ZAWSZE.
-                // Jeśli history jest pusta, to nadpiszemy stary cache pustą listą.
                 CacheHelper.saveList(this, HISTORY_KEY, history)
 
                 runOnUiThread {
                     if (history.isNotEmpty()) {
-                        // Rysujemy marker tylko, gdy mamy koordynaty
                         drawRainMarkerOnMap(rain, history[0].lat, history[0].lng)
                     } else {
-                        // OPCJONALNIE: Jeśli historia jest pusta, usuwamy marker z mapy
                         map.overlays.removeAll { it is Marker && it.title == rain.name }
                         map.invalidate()
                     }
@@ -346,27 +310,20 @@ class FullMapActivity : AppCompatActivity() {
         }.start()
     }
 
-    // Pomocnicza funkcja, żeby nie powtarzać kodu rysowania markera
     private fun drawRainMarkerOnMap(rain: Rain, lat: Double, lng: Double) {
-        // 1. Zawsze usuwamy stary marker tej maszyny po unikalnym ID
         map.overlays.removeAll { it is Marker && it.id == "rain_${rain.id}" }
 
-        // 2. Jeśli nowe koordynaty to 0,0 - kończymy
         if (lat == 0.0 && lng == 0.0) {
             map.invalidate()
             return
         }
 
-        // 3. Jeśli są poprawne dane, rysujemy nowy marker
         val marker = Marker(map).apply {
-            id = "rain_${rain.id}" // Przypisujemy ID zamiast porównywać po nazwie
+            id = "rain_${rain.id}"
             position = GeoPoint(lat, lng)
             title = rain.name
 
-            // Ustawiamy naszą przeskalowaną grafikę dopasowaną do obecnego zoomu mapy
             icon = getOrCreateScaledDrawable(map.zoomLevelDouble)
-
-            // Kotwica na środku na dole (jeśli grafika to szpilka/baza urządzenia)
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
 
             setOnMarkerClickListener { m, _ ->
@@ -384,13 +341,13 @@ class FullMapActivity : AppCompatActivity() {
         isDrawingMode = !isDrawingMode
         if (isDrawingMode) {
             fieldPoints.clear()
-            btnStartDrawing.text = "ZAKOŃCZ POLE"
+            btnStartDrawing.text = getString(R.string.full_map_btn_finish_field)
             btnUndo.visibility = View.VISIBLE
         } else {
             if (fieldPoints.size >= 3) {
                 goToFieldEdit()
             } else {
-                Toast.makeText(this, "Zaznacz min. 3 punkty!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.full_map_min_points_toast), Toast.LENGTH_SHORT).show()
                 isDrawingMode = true
             }
         }
@@ -398,7 +355,7 @@ class FullMapActivity : AppCompatActivity() {
 
     private fun resetDrawingState() {
         isDrawingMode = false
-        btnStartDrawing.text = "DODAJ POLE"
+        btnStartDrawing.text = getString(R.string.full_map_btn_add_field)
         btnUndo.visibility = View.GONE
         fieldPoints.clear()
     }
@@ -443,7 +400,6 @@ class FullMapActivity : AppCompatActivity() {
         if (allPoints.isNotEmpty()) {
             val box = BoundingBox.fromGeoPoints(allPoints)
 
-            // Zapisujemy środek tego boxa do pamięci konfiguracji
             val center = box.centerWithDateLine
             val config = CacheHelper.MapConfig(center.latitude, center.longitude, 14.0)
             CacheHelper.saveObject(this, MAP_CONFIG_KEY, config)
@@ -462,13 +418,12 @@ class FullMapActivity : AppCompatActivity() {
                 }
 
                 if (allPoints.isNotEmpty()) {
-                    // OBLICZANIE ŚRODKA: Wyciągamy średnią ze wszystkich szerokości i długości
                     val centerLat = allPoints.map { it.latitude }.average()
                     val centerLng = allPoints.map { it.longitude }.average()
 
                     MapSidebarAdapter.SidebarItem(
                         field.id.toString(),
-                        field.name ?: "Pole",
+                        field.name ?: getString(R.string.full_map_default_field_name),
                         centerLat,
                         centerLng
                     )
@@ -479,7 +434,6 @@ class FullMapActivity : AppCompatActivity() {
         val recycler = findViewById<RecyclerView>(R.id.recyclerFields)
         recycler.layoutManager = LinearLayoutManager(this)
         recycler.adapter = MapSidebarAdapter(items) { item ->
-            // 1. Znajdujemy pole w liście po ID
             val field = fields.find { it.id.toString() == item.id }
 
             if (field != null) {
@@ -490,7 +444,6 @@ class FullMapActivity : AppCompatActivity() {
 
                 if (pts.isNotEmpty()) {
                     val box = BoundingBox.fromGeoPoints(pts)
-                    // Przybliż do granic pola z marginesem 150 pikseli
                     map.zoomToBoundingBox(box, true, 150)
                 }
             }
@@ -502,23 +455,21 @@ class FullMapActivity : AppCompatActivity() {
         val recycler = findViewById<RecyclerView>(R.id.recyclerRains)
         recycler.layoutManager = LinearLayoutManager(this)
 
-        // Pobieramy email raz, przed pętlą dla wszystkich maszyn
         val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
 
         val sidebarItems = mutableListOf<MapSidebarAdapter.SidebarItem>()
         val adapter = MapSidebarAdapter(sidebarItems) { item ->
             if (item.lat == 0.0 && item.lng == 0.0) {
-                // ZAMIAST TOASTA - WYŚWIETLAMY DIALOG
                 androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle("Brak sygnału GPS")
-                    .setMessage("Brak sygnału GPS. Czy chcesz samemu ustawić aktualne miejsce urządzenia na mapie?")
-                    .setPositiveButton("Tak") { _, _ ->
+                    .setTitle(getString(R.string.full_map_no_gps_title))
+                    .setMessage(getString(R.string.full_map_no_gps_message))
+                    .setPositiveButton(getString(R.string.full_map_btn_yes)) { _, _ ->
                         isPlacingRainMode = true
                         rainIdToPlace = item.id
-                        Toast.makeText(this, "Kliknij na mapie miejsce, w którym stoi maszyna", Toast.LENGTH_LONG).show()
-                        drawerLayout.closeDrawers() // Zamykamy pasek boczny
+                        Toast.makeText(this, getString(R.string.full_map_click_to_place), Toast.LENGTH_LONG).show()
+                        drawerLayout.closeDrawers()
                     }
-                    .setNegativeButton("Nie", null)
+                    .setNegativeButton(getString(R.string.full_map_btn_no), null)
                     .show()
             } else {
                 map.controller.animateTo(GeoPoint(item.lat, item.lng))
@@ -532,7 +483,6 @@ class FullMapActivity : AppCompatActivity() {
             val HISTORY_KEY = "HISTORY_${rain.id}"
 
             Thread {
-                // 1. CACHE (Tu nie potrzebujemy maila, bo to dane lokalne)
                 val cachedHistory = CacheHelper.loadList<com.example.bazadanych.data.db.RainStatus>(this, HISTORY_KEY)
                 if (cachedHistory != null && cachedHistory.isNotEmpty()) {
                     val cachedItem = MapSidebarAdapter.SidebarItem(
@@ -550,7 +500,6 @@ class FullMapActivity : AppCompatActivity() {
                     }
                 }
 
-                // 2. SERWER - DODANO email jako drugi parametr
                 remoteRepo.getRainHistory(rain.id, email) { history ->
                     if (history.isNotEmpty()) {
                         val newItem = MapSidebarAdapter.SidebarItem(
@@ -574,6 +523,7 @@ class FullMapActivity : AppCompatActivity() {
             }.start()
         }
     }
+
     private fun isOnline(): Boolean {
         val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         return cm.activeNetworkInfo?.isConnected ?: false
@@ -585,7 +535,6 @@ class FullMapActivity : AppCompatActivity() {
         val RAINS_KEY = "CACHED_RAINS"
 
         Thread {
-            // --- 1. WCZYTYWANIE CACHE (to zostaje bez zmian) ---
             val cachedFields = CacheHelper.loadList<FieldItem>(this, FIELDS_KEY)
             runOnUiThread {
                 if (cachedFields != null) {
@@ -601,15 +550,11 @@ class FullMapActivity : AppCompatActivity() {
                 }
             }
 
-            // --- 2. POBIERANIE Z SERWERA (TUTAJ POPRAWKA) ---
-
             remoteRepo.getAgriculturalFields(email) { fields ->
-                // USUNIĘTO: if (fields.isNotEmpty())
-                // Zapisujemy listę ZAWSZE (nawet pustą), aby wyczyścić cache
                 CacheHelper.saveList(this, FIELDS_KEY, fields)
 
                 runOnUiThread {
-                    updateFieldsUI(fields) // To wyczyści polygony na mapie, jeśli lista jest pusta
+                    updateFieldsUI(fields)
                     if (isOnline() && fields.isNotEmpty()) {
                         fields.forEach { downloadFieldTiles(it) }
                     }
@@ -617,30 +562,26 @@ class FullMapActivity : AppCompatActivity() {
             }
 
             remoteRepo.getRains(email) { rains ->
-                // USUNIĘTO: if (rains.isNotEmpty())
                 CacheHelper.saveList(this, RAINS_KEY, rains)
 
                 runOnUiThread {
-                    updateRainsUI(rains) // To wyczyści markery maszyn, jeśli lista jest pusta
+                    updateRainsUI(rains)
                 }
             }
         }.start()
     }
 
-    // Pomocnicza funkcja do odświeżania widoku PÓL (żeby nie powtarzać kodu)
     private fun updateFieldsUI(fields: List<FieldItem>) {
-        // Czyścimy stare poligony, ale zostawiamy markery i inne rzeczy
         map.overlays.removeAll { it is Polygon }
         fields.forEach { drawFieldOnMap(it) }
-        setupFieldsSidebar(fields) // <--- TO NAPRAWIA PUSTY PASEK BOCZNY
+        setupFieldsSidebar(fields)
         map.invalidate()
     }
 
-    // Pomocnicza funkcja do odświeżania widoku MASZYN
     private fun updateRainsUI(rains: List<Rain>) {
         map.overlays.removeAll { it is Marker }
         rains.forEach { addRainMarker(it) }
-        setupRainsSidebar(rains) // <--- TO NAPRAWIA PUSTY PASEK BOCZNY
+        setupRainsSidebar(rains)
         map.invalidate()
     }
 
@@ -668,13 +609,12 @@ class FullMapActivity : AppCompatActivity() {
 
     private fun triggerCacheDownload(center: GeoPoint, label: String) {
         val cacheManager = CacheManager(map)
-        val delta = 0.005 // Zmniejszamy z 0.01 na 0.005 (węższy obszar wokół pola)
+        val delta = 0.005
         val bbox = BoundingBox(
             center.latitude + delta, center.longitude + delta,
             center.latitude - delta, center.longitude - delta
         )
 
-        // Pobieramy zoomy 14-17 (zamiast 13-17), żeby było mniej kafelków do pobrania na raz
         cacheManager.downloadAreaAsync(this, bbox, 14, 17, object : CacheManager.CacheManagerCallback {
             override fun downloadStarted() { Log.d("OFFLINE", "Start: $label") }
             override fun setPossibleTilesInArea(total: Int) {}
@@ -683,8 +623,6 @@ class FullMapActivity : AppCompatActivity() {
             override fun onTaskFailed(errors: Int) {}
         })
     }
-
-
 
     override fun onResume() {
         super.onResume()

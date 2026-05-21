@@ -112,7 +112,7 @@ class RainDetailsActivity : AppCompatActivity() {
                 extensionText.text = prefix + getString(R.string.extension, currentExtension)
                 timeFinishText.text = prefix + getString(R.string.time_to_finish, formatSecondsToTimeStr(timeToFinishSec))
 
-                // POPRAWIONE: Odwrócone warunki sprawdzania strefy dla tickera
+                // Odwrócone warunki sprawdzania strefy dla tickera
                 if (isZonedWatering) {
                     val (currentZone, zoneSpeed) = when {
                         currentExtension <= zone1Start -> Pair(getString(R.string.zone_1), zone1Speed)
@@ -135,7 +135,7 @@ class RainDetailsActivity : AppCompatActivity() {
         }
     }
 
-    // POPRAWIONE: Zwraca prędkość dla nowej logiki stref (0 -> strefa1 -> strefa2 -> strefa3 -> baza)
+    // Zwraca prędkość dla nowej logiki stref (0 -> strefa1 -> strefa2 -> strefa3 -> baza)
     private fun getSpeedForExtension(ext: Double): Double {
         if (!isZonedWatering) return baseSpeed
 
@@ -147,7 +147,7 @@ class RainDetailsActivity : AppCompatActivity() {
         }
     }
 
-    // POPRAWIONE: Precyzyjne obliczanie czasu do końca dla nowej kolejności stref
+    // Precyzyjne obliczanie czasu do końca dla nowej kolejności stref
     private fun calculateTimeToFinishAnallytically(ext: Double): Long {
         if (ext <= 0.0) return 0L
         if (!isZonedWatering) {
@@ -264,7 +264,7 @@ class RainDetailsActivity : AppCompatActivity() {
         }
     }
 
-    // POPRAWIONE: Odwrócone warunki sprawdzania strefy dla głównej metody UI
+    // Odwrócone warunki sprawdzania strefy dla głównej metody UI
     private fun refreshStatusUI(isWorking: Int, speed: Double, finishTime: String, workTime: String, extension: String, isOffline: Boolean, signal: Int, battery: Int) {
         val prefix = if (isOffline) getString(R.string.offline_label) + " " else ""
 
@@ -369,7 +369,8 @@ class RainDetailsActivity : AppCompatActivity() {
             nameEdit.setText(it.name)
             lengthEdit.setText(it.hoseLength)
             commentEdit.setText(it.comment)
-            supportActionBar?.title = "${getString(R.string.offline_label)} ${it.name}"
+            // TUTAJ ZMIANA: bez brzydkiego łączenia zmiennych, użyte formatowanie w XML:
+            supportActionBar?.title = getString(R.string.offline_title_format, it.name)
         }
 
         remoteRepo.getStmUpdateInfo(currentRainId, email) { czasStm, opoznienieAktualizacji ->

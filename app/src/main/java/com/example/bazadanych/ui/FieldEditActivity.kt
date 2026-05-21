@@ -60,10 +60,10 @@ class FieldEditActivity : AppCompatActivity() {
                 remoteRepo.deleteAgriculturalField(email, fieldId) { success ->
                     runOnUiThread {
                         if (success) {
-                            Toast.makeText(this, "Pole zostało usunięte! 🗑️", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, getString(R.string.field_edit_delete_success), Toast.LENGTH_SHORT).show()
                             finish()
                         } else {
-                            Toast.makeText(this, "Błąd podczas usuwania pola.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, getString(R.string.field_edit_delete_error), Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -104,7 +104,8 @@ class FieldEditActivity : AppCompatActivity() {
         coordinates = intent.getStringExtra("coords") ?: ""
         areaHa = intent.getDoubleExtra("area", 0.0)
 
-        areaText.text = "Powierzchnia: ${String.format("%.2f", areaHa)} ha"
+        // Wykorzystujemy formatowanie bezpośrednio ze stringów: "Powierzchnia: %.2f ha"
+        areaText.text = getString(R.string.field_edit_area_format, areaHa)
 
         if (fieldId != "0") {
             btnDeleteField.visibility = View.VISIBLE
@@ -137,7 +138,7 @@ class FieldEditActivity : AppCompatActivity() {
         val email = prefs.getString("user_email", "") ?: ""
 
         if (email.isEmpty()) {
-            Toast.makeText(this, "Błąd: Użytkownik niezalokowany!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.field_edit_err_no_user), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -153,10 +154,10 @@ class FieldEditActivity : AppCompatActivity() {
         ) { success ->
             runOnUiThread {
                 if (success) {
-                    Toast.makeText(this, "Pole zapisane! 🌾", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.field_edit_save_success), Toast.LENGTH_SHORT).show()
                     finish()
                 } else {
-                    Toast.makeText(this, "Serwer odrzucił zapis.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, getString(R.string.field_edit_save_error), Toast.LENGTH_LONG).show()
                 }
             }
         }

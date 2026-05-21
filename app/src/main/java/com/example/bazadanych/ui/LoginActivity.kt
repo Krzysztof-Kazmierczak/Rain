@@ -34,11 +34,11 @@ class LoginActivity : AppCompatActivity() {
         // OBSERWUJEMY WYNIK LOGOWANIA
         viewModel.loginResult.observe(this) { success ->
             if (success) {
-                Toast.makeText(this, "Zalogowano ✅", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.login_success_toast), Toast.LENGTH_SHORT).show()
                 // PRZEJŚCIE DO HOME
                 val intent = Intent(this, HomeActivity::class.java)
-                val prefs = getSharedPreferences("user_session", MODE_PRIVATE)
-                prefs.edit()
+                val sessionPrefs = getSharedPreferences("user_session", MODE_PRIVATE)
+                sessionPrefs.edit()
                     .putBoolean("logged_in", true)
                     .putString("user_email", email.text.toString().trim())
                     .apply()
@@ -46,7 +46,7 @@ class LoginActivity : AppCompatActivity() {
                 startActivity(intent)
                 finish() // zamyka LoginActivity
             } else {
-                Toast.makeText(this, "Błąd połączenia ❌", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.login_error_toast), Toast.LENGTH_SHORT).show()
             }
         }
 

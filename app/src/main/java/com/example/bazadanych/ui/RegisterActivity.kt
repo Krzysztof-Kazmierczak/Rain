@@ -36,49 +36,40 @@ class RegisterActivity : AppCompatActivity() {
         val loginText = findViewById<TextView>(R.id.buttonLogin)
 
         viewModel.registerResult.observe(this) { result ->
-
             when (result) {
-
                 "OK" -> {
-                    Toast.makeText(this, "Konto utworzone ✅", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.register_success), Toast.LENGTH_SHORT).show()
                     finish()
                 }
-
                 "EMAIL_EXISTS" -> {
-                    Toast.makeText(this, "Email już istnieje ❗", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, getString(R.string.register_error_email_exists), Toast.LENGTH_LONG).show()
                 }
-
                 else -> {
-                    Toast.makeText(this, "Błąd rejestracji ❌", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.register_error_generic), Toast.LENGTH_SHORT).show()
                 }
             }
         }
 
         registerButton.setOnClickListener {
-
             val emailText = email.text.toString().trim()
             val passwordText = password.text.toString()
             val confirmText = confirmPassword.text.toString()
 
             // EMAIL
             if (!isValidEmail(emailText)) {
-                Toast.makeText(this, "Podaj poprawny email ❗", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.register_error_invalid_email), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             // HASŁO WARUNKI
             if (!isValidPassword(passwordText)) {
-                Toast.makeText(
-                    this,
-                    "Hasło musi mieć min. 5 znaków i zawierać cyfrę",
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(this, getString(R.string.register_error_invalid_password), Toast.LENGTH_LONG).show()
                 return@setOnClickListener
             }
 
             // ZGODNOŚĆ HASEŁ
             if (passwordText != confirmText) {
-                Toast.makeText(this, "Hasła się nie zgadzają ❗", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.register_error_passwords_dont_match), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 

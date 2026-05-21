@@ -47,7 +47,6 @@ class AdvancedSettingsActivity : AppCompatActivity() {
     private lateinit var btnToggleWork: MaterialButton
     private var isMachineWorking: Int = 0
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_advanced_settings)
@@ -116,7 +115,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         isMachineWorking = isWorking
 
         if (isWorking == 2) {
-            btnToggleWork.text = "ZATRZYMAJ PRACĘ"
+            btnToggleWork.text = getString(R.string.adv_stop_work)
             btnToggleWork.backgroundTintList =
                 android.content.res.ColorStateList.valueOf(
                     android.graphics.Color.parseColor("#F44336")
@@ -125,7 +124,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             btnToggleWork.isEnabled = true
 
         } else if (isWorking == 1) {
-            btnToggleWork.text = "URUCHOM PRACĘ"
+            btnToggleWork.text = getString(R.string.adv_start_work)
             btnToggleWork.backgroundTintList =
                 android.content.res.ColorStateList.valueOf(
                     android.graphics.Color.parseColor("#4CAF50")
@@ -134,7 +133,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             btnToggleWork.isEnabled = true
 
         } else {
-            btnToggleWork.text = "BRAK ŁĄCZNOŚCI Z URZĄDZENIEM"
+            btnToggleWork.text = getString(R.string.adv_no_connection)
             btnToggleWork.backgroundTintList =
                 android.content.res.ColorStateList.valueOf(
                     android.graphics.Color.parseColor("#9E9E9E")
@@ -149,11 +148,10 @@ class AdvancedSettingsActivity : AppCompatActivity() {
 
         // Pokazujemy, że coś się dzieje
         btnToggleWork.isEnabled = false
-        btnToggleWork.text = "PROSZĘ CZEKAĆ..."
+        btnToggleWork.text = getString(R.string.adv_please_wait)
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                // Przykładowy endpoint do zmiany statusu
                 val url = URL("https://rain-tech.pl/android/update_work_status.php")
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "POST"
@@ -169,16 +167,16 @@ class AdvancedSettingsActivity : AppCompatActivity() {
                     btnToggleWork.isEnabled = true
                     if (response == "OK") {
                         updateWorkStatusUI(newStatus)
-                        Toast.makeText(this@AdvancedSettingsActivity, "Zmieniono status pracy", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@AdvancedSettingsActivity, getString(R.string.adv_status_changed), Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(this@AdvancedSettingsActivity, "Błąd serwera: $response", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@AdvancedSettingsActivity, getString(R.string.adv_server_error, response), Toast.LENGTH_SHORT).show()
                         loadDataFromServer() // Odświeżamy dane, by wrócić do realnego stanu
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     btnToggleWork.isEnabled = true
-                    Toast.makeText(this@AdvancedSettingsActivity, "Błąd połączenia", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@AdvancedSettingsActivity, getString(R.string.adv_connection_error), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -188,12 +186,12 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         val userEmail = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
 
         AlertDialog.Builder(this)
-            .setTitle("USUWANIE MASZYNY")
-            .setMessage("Czy na pewno chcesz CAŁKOWICIE usunąć tę maszynę z systemu? Tej operacji nie można cofnąć.")
-            .setPositiveButton("USUŃ") { _, _ ->
+            .setTitle(getString(R.string.adv_delete_machine_title))
+            .setMessage(getString(R.string.adv_delete_machine_msg))
+            .setPositiveButton(getString(R.string.adv_delete)) { _, _ ->
                 performDeleteMachine(currentRainId, userEmail)
             }
-            .setNegativeButton("Anuluj", null)
+            .setNegativeButton(getString(R.string.adv_cancel), null)
             .setIcon(android.R.drawable.ic_dialog_alert)
             .show()
     }
@@ -216,22 +214,19 @@ class AdvancedSettingsActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     if (responseCode == 200 && response == "OK") {
-                        Toast.makeText(this@AdvancedSettingsActivity, "Maszyna została usunięta", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@AdvancedSettingsActivity, getString(R.string.adv_machine_deleted), Toast.LENGTH_SHORT).show()
                         val intent = Intent(this@AdvancedSettingsActivity, HomeActivity::class.java)
-
-                        // Flagi: Czyścimy stos, aby HomeActivity była "na górze", a poprzednie ekrany usunięte
                         intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-
                         startActivity(intent)
-                        finish() // Zamykamy AdvancedSettingsActivity
+                        finish()
                     } else {
                         Log.e("DELETE_ERROR", "Serwer zwrócił: $response")
-                        Toast.makeText(this@AdvancedSettingsActivity, "Błąd: $response", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@AdvancedSettingsActivity, getString(R.string.adv_error_msg, response), Toast.LENGTH_LONG).show()
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@AdvancedSettingsActivity, "Błąd połączenia: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@AdvancedSettingsActivity, getString(R.string.adv_connection_error_msg, e.message), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -241,35 +236,26 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         val userEmail = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
         val rainId = intent.getStringExtra("id") ?: ""
 
-        // Wyświetlamy proste pytanie przed usunięciem
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Usuwanie lokalizacji")
-            .setMessage("Czy na pewno chcesz zresetować pozycję tej maszyny? Przestanie być widoczna na mapie.")
-            .setPositiveButton("Tak, usuń") { _, _ ->
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.adv_delete_location_title))
+            .setMessage(getString(R.string.adv_delete_location_msg))
+            .setPositiveButton(getString(R.string.adv_yes_delete)) { _, _ ->
                 performDelete(rainId, userEmail)
             }
-            .setNegativeButton("Anuluj", null)
+            .setNegativeButton(getString(R.string.adv_cancel), null)
             .show()
     }
 
-    // Przeniosłem logikę do osobnej funkcji dla czystości kodu
     private fun performDelete(rainId: String, userEmail: String) {
         if (rainId.isNotEmpty() && userEmail.isNotEmpty()) {
             remoteRepo.updateRainManualLocation(rainId, userEmail, 0.0, 0.0) { success ->
                 runOnUiThread {
                     if (success) {
-                        // --- TO DODAJEMY: ---
-                        // Musimy wyczyścić cache historii dla tej konkretnej maszyny
                         val historyKey = "HISTORY_$rainId"
-                        val sharedPrefs = getSharedPreferences("CachePrefs", MODE_PRIVATE) // Upewnij się, że nazwa SP pasuje do CacheHelper
+                        val sharedPrefs = getSharedPreferences("CachePrefs", MODE_PRIVATE)
                         sharedPrefs.edit().remove(historyKey).apply()
-                        // --------------------
 
-                        Toast.makeText(this, "Lokalizacja zresetowana", Toast.LENGTH_SHORT).show()
-
-                        //val intent = Intent(this, HomeActivity::class.java)
-                       // intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                      //  startActivity(intent)
+                        Toast.makeText(this, getString(R.string.adv_location_reset), Toast.LENGTH_SHORT).show()
                         finish()
                     }
                 }
@@ -285,13 +271,11 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             editTargetSpeed.isEnabled = !isChecked
             editTargetSpeed.alpha = if (isChecked) 0.5f else 1.0f
 
-            // Autouzupełnianie przy pierwszym włączeniu
             if (isChecked && z1End.text.isEmpty()) {
                 applyDefaultZones()
             }
         }
 
-        // --- SYNCHRONIZACJA "POPYCHANIE" ---
         z1End.doAfterTextChanged { s ->
             val y = s.toIntOrNull() ?: 0
             tvZ2Start.text = y.toString()
@@ -310,7 +294,7 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             val a = s.toIntOrNull() ?: 0
             if (a > maxHoseLength) {
                 z3End.setText(maxHoseLength.toString())
-                Toast.makeText(this, "Maksymalna długość węża: $maxHoseLength m", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.adv_max_hose_length, maxHoseLength), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -324,7 +308,6 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         z3End.setText(maxHoseLength.toString())
     }
 
-    // --- LOGIKA CZASU (NumberPicker) ---
     private fun setupDelayField(checkBoxId: Int, editTextId: Int) {
         val cb = findViewById<CheckBox>(checkBoxId)
         val et = findViewById<EditText>(editTextId)
@@ -334,8 +317,6 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             if (!isChecked) {
                 et.setText("")
             } else {
-                // Pokazuj dialog TYLKO jeśli CheckBox został zaznaczony, a pole tekstowe jest puste
-                // i (opcjonalnie) użytkownik dotknął ekranu (ma fokus)
                 if (et.text.isEmpty()) {
                     showTimePickerDialog(et)
                 }
@@ -351,24 +332,21 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         val npS = dialogView.findViewById<NumberPicker>(R.id.npSeconds).apply { minValue = 0; maxValue = 59 }
 
         AlertDialog.Builder(this)
-            .setTitle("Ustaw czas")
+            .setTitle(getString(R.string.adv_set_time))
             .setView(dialogView)
-            .setPositiveButton("OK") { _, _ ->
+            .setPositiveButton(getString(R.string.adv_ok)) { _, _ ->
                 editText.setText(String.format("%02d:%02d:%02d", npH.value, npM.value, npS.value))
             }
-            .setNegativeButton("Anuluj", null)
+            .setNegativeButton(getString(R.string.adv_cancel), null)
             .show()
     }
 
-    // --- SERWER ---
     private fun loadDataFromServer() {
-        // 1. Pobieramy email z SharedPreferences
         val userEmail = getSharedPreferences("user_session", MODE_PRIVATE)
             .getString("user_email", "") ?: ""
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                // 2. Dodajemy email do adresu URL
                 val urlString = "https://rain-tech.PL/android/get_rain_adv.php?id=$currentRainId&email=$userEmail"
                 val url = URL(urlString)
 
@@ -380,7 +358,6 @@ class AdvancedSettingsActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) {
                     editTargetSpeed.setText(json.optString("target_speed"))
 
-                    // Ładowanie stref
                     cbZoneWatering.isChecked = json.optInt("zone_watering") == 1
                     z1End.setText(json.optString("z1_end"))
                     z2End.setText(json.optString("z2_end"))
@@ -390,7 +367,6 @@ class AdvancedSettingsActivity : AppCompatActivity() {
                     editZ2Speed.setText(json.optString("z2_speed"))
                     editZ3Speed.setText(json.optString("z3_speed"))
 
-                    // Ładowanie opóźnień
                     checkAndSetDelay(R.id.cbDelayStart, R.id.editDelayStart, json.optString("delay_start"))
                     checkAndSetDelay(R.id.cbDelayWind, R.id.editDelayWind, json.optString("delay_wind"))
                     checkAndSetDelay(R.id.cbDelayEnd, R.id.editDelayEnd, json.optString("delay_end"))
@@ -413,20 +389,18 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             val et = findViewById<EditText>(etId)
             val cb = findViewById<CheckBox>(cbId)
 
-            et.setText(value) // 1. Najpierw ustawiamy tekst
-            cb.isChecked = true // 2. Potem zaznaczamy - listener sprawdzi et.text i zobaczy, że nie jest puste
+            et.setText(value)
+            cb.isChecked = true
         }
     }
 
     private fun saveDataToServer() {
-        // 1. POBIERZ EMAIL Z SESJI
         val userEmail = getSharedPreferences("user_session", MODE_PRIVATE)
             .getString("user_email", "") ?: ""
 
-        // 2. DODAJ EMAIL DO JSONA
         val jsonParams = JSONObject().apply {
             put("id", currentRainId)
-            put("email", userEmail) // <--- TEGO BRAKOWAŁO!
+            put("email", userEmail)
             put("target_speed", editTargetSpeed.text.toString().ifEmpty { "0" })
             put("zone_watering", if (cbZoneWatering.isChecked) 1 else 0)
             put("z1_end", z1End.text.toString().ifEmpty { "0" })
@@ -449,35 +423,33 @@ class AdvancedSettingsActivity : AppCompatActivity() {
                 conn.requestMethod = "POST"
                 conn.doOutput = true
                 conn.setRequestProperty("Content-Type", "application/json")
-                conn.connectTimeout = 5000 // 5 sekund na połączenie
+                conn.connectTimeout = 5000
 
                 OutputStreamWriter(conn.outputStream).use { it.write(jsonParams.toString()) }
 
                 val responseCode = conn.responseCode
 
                 if (responseCode == 200) {
-                    // Czytamy odpowiedź sukcesu (opcjonalnie)
                     val response = conn.inputStream.bufferedReader().readText()
                     android.util.Log.d("DEBUG_SAVE", "Sukces serwera: $response")
 
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(this@AdvancedSettingsActivity, "Zapisano! ✅", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@AdvancedSettingsActivity, getString(R.string.adv_saved), Toast.LENGTH_SHORT).show()
                         finish()
                     }
                 } else {
-                    // TUTAJ KLUCZ: Czytamy co serwer wyrzucił jako błąd (np. błąd SQL z PHP)
                     val errorResponse = conn.errorStream?.bufferedReader()?.readText() ?: "Brak szczegółów błędu"
                     android.util.Log.e("DEBUG_SAVE", "Błąd serwera ($responseCode): $errorResponse")
 
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(this@AdvancedSettingsActivity, "Błąd serwera: $responseCode", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@AdvancedSettingsActivity, getString(R.string.adv_server_error, responseCode.toString()), Toast.LENGTH_LONG).show()
                     }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 android.util.Log.e("DEBUG_SAVE", "Wyjątek: ${e.message}")
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@AdvancedSettingsActivity, "Błąd połączenia: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@AdvancedSettingsActivity, getString(R.string.adv_connection_error_msg, e.message), Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -489,17 +461,16 @@ class AdvancedSettingsActivity : AppCompatActivity() {
                 Toast.makeText(this, message, Toast.LENGTH_LONG).show()
             }
         }
-        setInfo(R.id.btnInfoSpeed, "Zadana Prędkość m/h")
-        setInfo(R.id.btnInfoDelayStart, "Opóźnienie Startu (czas) h/m/s")
-        setInfo(R.id.btnInfoDelayWind, "Opóźnienie Rozpoczęcia zwijania (czas) h/m/s")
-        setInfo(R.id.btnInfoDelayEnd, "Opóźnienie Zakończenia podlewania (czas) h/m/s")
-        setInfo(R.id.btnInfoZone, "Funkcja Podlewanie strefowe")
+        setInfo(R.id.btnInfoSpeed, getString(R.string.adv_info_speed))
+        setInfo(R.id.btnInfoDelayStart, getString(R.string.adv_info_delay_start))
+        setInfo(R.id.btnInfoDelayWind, getString(R.string.adv_info_delay_wind))
+        setInfo(R.id.btnInfoDelayEnd, getString(R.string.adv_info_delay_end))
+        setInfo(R.id.btnInfoZone, getString(R.string.adv_info_zone))
     }
 
-    // Pomocnicze rozszerzenie
     private fun EditText.doAfterTextChanged(action: (String) -> Unit) {
         this.addTextChangedListener(object : android.text.TextWatcher {
-            override fun afterTextChanged(s: Editable?) { // <--- Tutaj musi być Editable?
+            override fun afterTextChanged(s: Editable?) {
                 action(s.toString())
             }
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}

@@ -30,20 +30,22 @@ class AlarmAdapter(
 
     override fun onBindViewHolder(holder: AlarmViewHolder, position: Int) {
         val alarm = alarms[position]
+        val context = holder.itemView.context
 
         holder.tvName.text = alarm.nazwaAlarmu
         holder.tvCode.text = alarm.kodAlarmu
-        holder.tvMachine.text = "Maszyna: ${alarm.nazwaMaszyny}"
-        holder.tvDate.text = "Wystąpienie: ${alarm.dataWystapienia}"
+
+        // Dynamiczne formatowanie tekstu z pliku strings.xml
+        holder.tvMachine.text = context.getString(R.string.alarm_item_machine, alarm.nazwaMaszyny)
+        holder.tvDate.text = context.getString(R.string.alarm_item_date, alarm.dataWystapienia)
 
         holder.cardAlarm.setOnClickListener {
-            // Logika uprawnień pobrana bezpośrednio ze zmiennej canDelete przygotowanej przez PHP
             if (alarm.canDelete) {
                 onItemClick(alarm)
             } else {
                 Toast.makeText(
-                    holder.itemView.context,
-                    "Nie masz uprawnień do usunięcia tego alarmu",
+                    context,
+                    context.getString(R.string.alarm_item_no_permission),
                     Toast.LENGTH_SHORT
                 ).show()
             }

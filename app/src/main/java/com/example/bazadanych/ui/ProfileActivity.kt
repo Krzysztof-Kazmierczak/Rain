@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.bazadanych.R
+import com.example.bazadanych.data.db.RainTile
 import com.example.bazadanych.data.db.WorkerResponse
 import com.example.bazadanych.data.repository.RainRemoteRepository
 import com.google.android.material.appbar.MaterialToolbar
@@ -41,7 +42,8 @@ class ProfileActivity : AppCompatActivity() {
         setContentView(R.layout.activity_profile)
 
         val sharedPrefs = getSharedPreferences("user_session", MODE_PRIVATE)
-        userEmail = sharedPrefs.getString("user_email", "Brak maila") ?: "Brak maila"
+        val defaultEmailStr = getString(R.string.profile_email_missing)
+        userEmail = sharedPrefs.getString("user_email", defaultEmailStr) ?: defaultEmailStr
 
         setupToolbar()
         initUI()
@@ -93,7 +95,7 @@ class ProfileActivity : AppCompatActivity() {
             if (emailToAdd.isNotEmpty()) {
                 saveWorker(0, emailToAdd, levelToSave)
             } else {
-                Toast.makeText(this, "Podaj email pracownika", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.profile_enter_email_toast), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -107,7 +109,7 @@ class ProfileActivity : AppCompatActivity() {
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 runOnUiThread {
-                    tvEmptyWorkers.text = "Błąd pobierania danych."
+                    tvEmptyWorkers.text = getString(R.string.profile_error_fetch)
                     tvEmptyWorkers.visibility = View.VISIBLE
                 }
             }
@@ -124,7 +126,7 @@ class ProfileActivity : AppCompatActivity() {
                         }
                     } catch (e: Exception) {
                         runOnUiThread {
-                            tvEmptyWorkers.text = "Błąd parsowania danych."
+                            tvEmptyWorkers.text = getString(R.string.profile_error_parsing)
                             tvEmptyWorkers.visibility = View.VISIBLE
                         }
                     }
@@ -147,7 +149,7 @@ class ProfileActivity : AppCompatActivity() {
         // Widoczność formularza dodawania
         if (data.role == "none") {
             layoutAddUser.visibility = View.VISIBLE
-            tvEmptyWorkers.text = "Brak powiązanych kont."
+            tvEmptyWorkers.text = getString(R.string.profile_empty_workers_none)
             tvEmptyWorkers.visibility = View.VISIBLE
             rvWorkers.visibility = View.GONE
             return
@@ -161,7 +163,7 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         if (data.workers.isEmpty()) {
-            tvEmptyWorkers.text = "Brak dodanych użytkowników."
+            tvEmptyWorkers.text = getString(R.string.profile_empty_workers_list)
             tvEmptyWorkers.visibility = View.VISIBLE
             rvWorkers.visibility = View.GONE
         } else {
@@ -203,7 +205,9 @@ class ProfileActivity : AppCompatActivity() {
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                runOnUiThread { Toast.makeText(this@ProfileActivity, "Błąd sieci", Toast.LENGTH_SHORT).show() }
+                runOnUiThread {
+                    Toast.makeText(this@ProfileActivity, getString(R.string.profile_error_network), Toast.LENGTH_SHORT).show()
+                }
             }
 
             override fun onResponse(call: Call, response: Response) {
@@ -213,21 +217,20 @@ class ProfileActivity : AppCompatActivity() {
                         if (id == 0) etNewUserEmail.text.clear()
                         loadWorkers() // To odświeży listę i zaktualizuje access_confirm w UI
                     } else {
-                        Toast.makeText(this@ProfileActivity, "Błąd: $result", Toast.LENGTH_LONG).show()
+                        // Tutaj używamy parametru dla stringa: Błąd: %1$s
+                        Toast.makeText(this@ProfileActivity, getString(R.string.profile_error_generic, result), Toast.LENGTH_LONG).show()
                     }
                 }
             }
         })
     }
 
-
-
     private fun confirmDeleteWorker(id: Int) {
         AlertDialog.Builder(this)
-            .setTitle("Usuwanie dostępu")
-            .setMessage("Czy na pewno chcesz usunąć dostęp?")
-            .setPositiveButton("Tak") { _, _ -> deleteWorker(id) }
-            .setNegativeButton("Nie", null)
+            .setTitle(getString(R.string.profile_dialog_delete_title))
+            .setMessage(getString(R.string.profile_dialog_delete_msg))
+            .setPositiveButton(getString(R.string.profile_dialog_btn_yes)) { _, _ -> deleteWorker(id) }
+            .setNegativeButton(getString(R.string.profile_dialog_btn_no), null)
             .show()
     }
 
@@ -244,7 +247,9 @@ class ProfileActivity : AppCompatActivity() {
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                runOnUiThread { Toast.makeText(this@ProfileActivity, "Błąd sieci", Toast.LENGTH_SHORT).show() }
+                runOnUiThread {
+                    Toast.makeText(this@ProfileActivity, getString(R.string.profile_error_network), Toast.LENGTH_SHORT).show()
+                }
             }
 
             override fun onResponse(call: Call, response: Response) {
@@ -253,7 +258,7 @@ class ProfileActivity : AppCompatActivity() {
                     if (result == "OK") {
                         loadWorkers() // Odśwież listę
                     } else {
-                        Toast.makeText(this@ProfileActivity, "Błąd: $result", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@ProfileActivity, getString(R.string.profile_error_generic, result), Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -263,7 +268,7 @@ class ProfileActivity : AppCompatActivity() {
     // --- LOGIKA MASZYN (Twoja istniejąca) ---
     private fun loadMachineStats() {
         val tvStats = findViewById<TextView>(R.id.tvProfileStats)
-        val cachedTiles = com.example.bazadanych.data.local_db.CacheHelper.loadList<com.example.bazadanych.ui.RainTile>(this, "HOME_TILES_CACHE")
+        val cachedTiles = com.example.bazadanych.data.local_db.CacheHelper.loadList<RainTile>(this, "HOME_TILES_CACHE")
 
         if (cachedTiles != null && cachedTiles.isNotEmpty()) {
             val actualMachines = cachedTiles.filter { !it.isAddButton }

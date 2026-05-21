@@ -1,5 +1,6 @@
 package com.example.bazadanych.ui
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -43,16 +44,21 @@ data class AdviceResult(
     val title: String,
     val message: String,
     val colorHex: String,
-    val urgencyScore: Int // Od 1 (najwyższy priorytet - susza) do 10 (najniższy - ulewa)
+    val urgencyScore: Int
 )
 
 // =================================================================
 // 🔥 SILNIK LOGIKI AI - Przeniesiony poza widok dla łatwego sortowania
 // =================================================================
 object AIAdvisor {
-    fun analyzeWeather(historyAndForecast: List<FieldHistory>?): AdviceResult {
+    fun analyzeWeather(context: Context, historyAndForecast: List<FieldHistory>?): AdviceResult {
         if (historyAndForecast.isNullOrEmpty()) {
-            return AdviceResult("Oczekiwanie na dane...", "Pobieram prognozę lub brak zapisanych informacji.", "#9E9E9E", 99)
+            return AdviceResult(
+                context.getString(R.string.advisor_waiting_title),
+                context.getString(R.string.advisor_waiting_desc),
+                "#9E9E9E",
+                99
+            )
         }
 
         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
@@ -84,7 +90,7 @@ object AIAdvisor {
 
         // Suma opadów do wyświetlenia zawsze na końcu komunikatu
         val totalRain5Days = rain24h + rain48h + rain72h + rain96h + rain120h
-        val rainInfoString = "\n\n🌧 Suma opadów (5 dni): ${"%.1f".format(totalRain5Days)} mm"
+        val rainInfoString = context.getString(R.string.advisor_total_rain_format, totalRain5Days)
 
         val avgTemp24h = list24h.mapNotNull { it.temperature }.average().let { if (it.isNaN()) 15.0 else it }
         val maxTemp3Days = forecastData.take(24).mapNotNull { it.temperature }.maxOrNull() ?: 15.0
@@ -96,8 +102,8 @@ object AIAdvisor {
         val advice: AdviceResult = when {
             // 1. DZIŚ / JUTRO MOCNY DESZCZ
             rain24h >= AdvisorConfig.DESZCZ_MIN_24H -> AdviceResult(
-                "NIE PODLEWAJ DZISIAJ",
-                "Spodziewane opady (${"%.1f".format(rain24h)} mm) w ciągu doby. Oszczędź wodę i energię.",
+                context.getString(R.string.advisor_title_dont_water),
+                context.getString(R.string.advisor_msg_dont_water, rain24h),
                 "#2196F3",
                 urgencyScore = 10
             )
@@ -106,15 +112,15 @@ object AIAdvisor {
             rain48h >= AdvisorConfig.DESZCZ_MIN_48H -> {
                 if (avgTemp24h >= AdvisorConfig.TEMP_UPAL) {
                     AdviceResult(
-                        "PODLEJ UMIARKOWANIE",
-                        "Deszcz za 2 dni (${"%.1f".format(rain48h)} mm), ale upał (${"%.1f".format(avgTemp24h)}°C) mocno wysusza wierzchnią warstwę. Konieczne lekkie zroszenie.",
+                        context.getString(R.string.advisor_title_water_moderate),
+                        context.getString(R.string.advisor_msg_water_moderate, rain48h, avgTemp24h),
                         "#FF9800",
                         urgencyScore = 4
                     )
                 } else {
                     AdviceResult(
-                        "KONTROLUJ WILGOTNOŚĆ",
-                        "Za 48h prognozowane są opady (${"%.1f".format(rain48h)} mm). To niewiele dla wymagających upraw. Zredukuj dawkę wody, ale upewnij się czy to wystarczy.",
+                        context.getString(R.string.advisor_title_control_humidity),
+                        context.getString(R.string.advisor_msg_control_humidity, rain48h),
                         "#CDDC39",
                         urgencyScore = 8
                     )
@@ -125,15 +131,15 @@ object AIAdvisor {
             rain72h >= AdvisorConfig.DESZCZ_MIN_72H -> {
                 if (maxTemp3Days >= AdvisorConfig.TEMP_UPAL) {
                     AdviceResult(
-                        "PODLEWAJ",
-                        "Deszcz spadnie za 3 dni, a przed nami upały do ${"%.1f".format(maxTemp3Days)}°C. Rośliny mogą tego nie przetrwać bez Twojej pomocy.",
+                        context.getString(R.string.advisor_title_water),
+                        context.getString(R.string.advisor_msg_water, maxTemp3Days),
                         "#E91E63",
                         urgencyScore = 3
                     )
                 } else {
                     AdviceResult(
-                        "ZAPLANUJ OSZCZĘDNIE",
-                        "Deszcz widoczny za 3 dni (${"%.1f".format(rain72h)} mm). Możesz delikatnie oszczędzić na dzisiejszym cyklu nawadniania.",
+                        context.getString(R.string.advisor_title_plan_efficiently),
+                        context.getString(R.string.advisor_msg_plan_efficiently, rain72h),
                         "#8BC34A",
                         urgencyScore = 7
                     )
@@ -144,15 +150,15 @@ object AIAdvisor {
             rain96h >= AdvisorConfig.DESZCZ_MIN_96H -> {
                 if (maxTemp5Days >= AdvisorConfig.TEMP_UPAL) {
                     AdviceResult(
-                        "PODLEWAJ STANDARDOWO",
-                        "Opady pojawią się dopiero za 4 dni. Do tego czasu panują wysokie temperatury. Nie wstrzymuj nawadniania.",
+                        context.getString(R.string.advisor_title_water_standard),
+                        context.getString(R.string.advisor_msg_water_standard),
                         "#FF5722",
                         urgencyScore = 2
                     )
                 } else {
                     AdviceResult(
-                        "OPTYMALNY CYKL",
-                        "Lekki deszcz za 4 dni. Podlewaj uprawę normalnie, ale zwróć uwagę na to, by nie przelać w dalszej części tygodnia.",
+                        context.getString(R.string.advisor_title_optimal_cycle),
+                        context.getString(R.string.advisor_msg_optimal_cycle),
                         "#4CAF50",
                         urgencyScore = 6
                     )
@@ -163,15 +169,15 @@ object AIAdvisor {
             rain120h >= AdvisorConfig.DESZCZ_MIN_120H -> {
                 if (maxTemp5Days >= AdvisorConfig.TEMP_UPAL) {
                     AdviceResult(
-                        "ALERT: UPAŁY PRZED DESZCZEM",
-                        "Odległe opady za 5 dni nie zrekompensują zbliżających się fal gorąca. Wymagane natychmiastowe podlewanie!",
+                        context.getString(R.string.advisor_title_heat_alert),
+                        context.getString(R.string.advisor_msg_heat_alert),
                         "#F44336",
                         urgencyScore = 1
                     )
                 } else {
                     AdviceResult(
-                        "WARUNKI STABILNE",
-                        "Podlewaj standardowo według potrzeb uprawy. Deszcz pojawi się na horyzoncie pod koniec tygodnia.",
+                        context.getString(R.string.advisor_title_stable_conditions),
+                        context.getString(R.string.advisor_msg_stable_conditions),
                         "#4CAF50",
                         urgencyScore = 5
                     )
@@ -180,30 +186,29 @@ object AIAdvisor {
 
             // 6. CAŁKOWITA SUSZA (Brak opadów przez 5 dni)
             maxTemp5Days >= AdvisorConfig.TEMP_UPAL -> AdviceResult(
-                "KRYTYCZNIE: DŁUGA SUSZA!",
-                "Kompletny brak opadów w prognozie, a temperatury osiągną ${"%.1f".format(maxTemp5Days)}°C! Zwiększ dawkę wody na deszczowni.",
+                context.getString(R.string.advisor_title_critical_drought),
+                context.getString(R.string.advisor_msg_critical_drought, maxTemp5Days),
                 "#B71C1C",
-                urgencyScore = 0 // Najwyższy możliwy priorytet - będzie zawsze na samej górze
+                urgencyScore = 0
             )
 
             // 7. CHŁODNE DNI BEZ DESZCZU
             avgTemp24h <= AdvisorConfig.TEMP_ZIMNO -> AdviceResult(
-                "WEGETACJA ZWOLNIONA",
-                "Chłodno (śr. ${"%.1f".format(avgTemp24h)}°C). Gleba słabo paruje, a rośliny piją mniej. Kontroluj czy na polu nie stoi woda.",
+                context.getString(R.string.advisor_title_slow_growth),
+                context.getString(R.string.advisor_msg_slow_growth, avgTemp24h),
                 "#9E9E9E",
                 urgencyScore = 9
             )
 
             // 8. OPTYMALNIE (Norma)
             else -> AdviceResult(
-                "WARUNKI OPTYMALNE",
-                "Utrzymuj standardowy reżim wodny dla tej uprawy. Pogoda nie zagraża przesuszeniem ani zalaniem.",
+                context.getString(R.string.advisor_title_optimal),
+                context.getString(R.string.advisor_msg_optimal),
                 "#4CAF50",
                 urgencyScore = 5
             )
         }
 
-        // Dodajemy sumę opadów do wiadomości
         return advice.copy(message = advice.message + rainInfoString)
     }
 }
@@ -228,14 +233,12 @@ class WeatherActivity : AppCompatActivity() {
         loadFieldsAndWeather()
     }
 
-    // Funkcja która sortuje pola wg "UrgencyScore" obliczonego na bazie pamięci Cache
     private fun sortFieldsByUrgency(fields: List<FieldItem>): List<FieldItem> {
         return fields.sortedBy { field ->
             val weatherCacheKey = "WEATHER_HISTORY_LIST_FIELD_${field.id}"
             val cachedWeatherList = com.example.bazadanych.data.local_db.CacheHelper.loadList<FieldHistory>(this, weatherCacheKey)
 
-            // AI analizuje cache i zwraca punktację, po której sortujemy listę
-            val advice = AIAdvisor.analyzeWeather(cachedWeatherList)
+            val advice = AIAdvisor.analyzeWeather(this, cachedWeatherList)
             advice.urgencyScore
         }
     }
@@ -249,7 +252,7 @@ class WeatherActivity : AppCompatActivity() {
         adapter = WeatherAdapter(sortFieldsByUrgency(cachedFields ?: emptyList()))
         recyclerWeather.adapter = adapter
 
-        // 2. POBRANIE PÓL Z SIECI, POSORTOWANIE (na bazie starej pogody w cache) I AKTUALIZACJA
+        // 2. POBRANIE PÓL Z SIECI, POSORTOWANIE I AKTUALIZACJA
         remoteRepo.getAgriculturalFields(email) { fields ->
             runOnUiThread {
                 com.example.bazadanych.data.local_db.CacheHelper.saveList(this@WeatherActivity, "WEATHER_FIELDS_CACHE", fields)
@@ -280,35 +283,32 @@ class WeatherActivity : AppCompatActivity() {
             val email = context.getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
             val field = fields[position]
 
-            holder.tvFieldName.text = field.name ?: "Pole bez nazwy"
-            holder.tvFieldCrop.text = "🌾 Uprawa: ${field.cropType}"
+            holder.tvFieldName.text = field.name ?: context.getString(R.string.field_no_name)
+            holder.tvFieldCrop.text = context.getString(R.string.field_crop_format, field.cropType)
 
             val weatherCacheKey = "WEATHER_HISTORY_LIST_FIELD_${field.id}"
             val cachedWeatherList: List<FieldHistory>? = com.example.bazadanych.data.local_db.CacheHelper.loadList(context, weatherCacheKey)
 
-            // Jeśli jest cache, pokaż z dopiskiem OFFLINE
             if (!cachedWeatherList.isNullOrEmpty()) {
-                val advice = AIAdvisor.analyzeWeather(cachedWeatherList)
-                holder.tvAdviceTitle.text = "[OFFLINE] ${advice.title}"
+                val advice = AIAdvisor.analyzeWeather(context, cachedWeatherList)
+                holder.tvAdviceTitle.text = context.getString(R.string.offline_advisor_title_format, advice.title)
                 holder.tvAdviceTitle.setTextColor(Color.parseColor(advice.colorHex))
                 holder.tvAdviceMessage.text = advice.message
             } else {
-                val initAdvice = AIAdvisor.analyzeWeather(null)
+                val initAdvice = AIAdvisor.analyzeWeather(context, null)
                 holder.tvAdviceTitle.text = initAdvice.title
                 holder.tvAdviceMessage.text = initAdvice.message
             }
 
-            // Pobieranie nowych danych pogodowych z sieci
             ApiClient.rainTech.getFieldHistory(field.id.toInt(), email).enqueue(object : Callback<List<FieldHistory>> {
                 override fun onResponse(call: Call<List<FieldHistory>>, response: Response<List<FieldHistory>>) {
                     val dataList = response.body()
                     if (response.isSuccessful && !dataList.isNullOrEmpty()) {
                         com.example.bazadanych.data.local_db.CacheHelper.saveList(context, weatherCacheKey, dataList)
 
-                        // Zaktualizuj pojedynczą komórkę po pobraniu danych (już bez prefiksu offline)
                         runOnUiThread {
-                            val advice = AIAdvisor.analyzeWeather(dataList)
-                            holder.tvAdviceTitle.text = "AI Doradca: ${advice.title}"
+                            val advice = AIAdvisor.analyzeWeather(context, dataList)
+                            holder.tvAdviceTitle.text = context.getString(R.string.online_advisor_title_format, advice.title)
                             holder.tvAdviceTitle.setTextColor(Color.parseColor(advice.colorHex))
                             holder.tvAdviceMessage.text = advice.message
                         }

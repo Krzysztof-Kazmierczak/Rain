@@ -48,7 +48,7 @@ class AlarmActivity : AppCompatActivity() {
     private fun loadAlarms() {
         remoteRepo.getAlarms(userEmail) { alarms ->
             if (alarms.isEmpty()) {
-                tvEmptyAlarms.text = "Brak zarejestrowanych alarmów."
+                tvEmptyAlarms.text = getString(R.string.alarm_empty_list)
                 tvEmptyAlarms.visibility = View.VISIBLE
                 rvAlarms.visibility = View.GONE
             } else {
@@ -75,12 +75,12 @@ class AlarmActivity : AppCompatActivity() {
 
     private fun confirmDeleteAlarm(alarm: AlarmItem) {
         AlertDialog.Builder(this)
-            .setTitle("Potwierdzenie usunięcia wpisu")
-            .setMessage("Czy na pewno chcesz usunąć ten alarm?\n\nTa operacja jest nieodwracalna.")
-            .setPositiveButton("Usuń") { _, _ ->
+            .setTitle(getString(R.string.alarm_delete_title))
+            .setMessage(getString(R.string.alarm_delete_msg))
+            .setPositiveButton(getString(R.string.alarm_delete_positive)) { _, _ ->
                 deleteSingleAlarm(alarm.id)
             }
-            .setNegativeButton("Anuluj", null)
+            .setNegativeButton(getString(R.string.alarm_delete_negative), null)
             .setIcon(android.R.drawable.ic_dialog_alert)
             .show()
     }
@@ -88,10 +88,10 @@ class AlarmActivity : AppCompatActivity() {
     private fun deleteSingleAlarm(id: Int) {
         remoteRepo.deleteAlarm(id, userEmail) { success ->
             if (success) {
-                Toast.makeText(this, "Alarm został usunięty", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.alarm_deleted_success), Toast.LENGTH_SHORT).show()
                 loadAlarms()
             } else {
-                Toast.makeText(this, "Brak uprawnień lub błąd serwera", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.alarm_delete_error), Toast.LENGTH_SHORT).show()
             }
         }
     }

@@ -8,6 +8,7 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.example.bazadanych.R
+import com.example.bazadanych.data.db.RainTile
 
 class RainTileAdapter(
     private val tiles: List<RainTile>,
