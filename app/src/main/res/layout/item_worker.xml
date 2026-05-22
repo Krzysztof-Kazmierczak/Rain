@@ -18,7 +18,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="worker@email.com"
+            android:text="@string/profile_mail"
             android:textSize="16sp"
             android:textStyle="bold"
             android:textColor="#2c3e50"
@@ -34,7 +34,7 @@
             android:id="@+id/tvRoleReadOnly"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Rola"
+            android:text="@string/profile_role"
             android:textColor="#666666"
             android:textSize="14sp"
             android:visibility="gone" />
@@ -53,7 +53,7 @@
             style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Zapisz"
+            android:text="@string/profile_save"
             android:textColor="#38b2ac" />
 
         <Button
@@ -61,7 +61,7 @@
             style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Usuń"
+            android:text="@string/profile_delete"
             android:textColor="#e53e3e" />
     </LinearLayout>
 </LinearLayout>

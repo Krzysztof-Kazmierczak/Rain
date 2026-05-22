@@ -30,7 +30,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Dane urządzenia"
+                android:text="@string/details_data"
                 android:textStyle="bold"
                 android:textSize="18sp"
                 android:layout_marginBottom="4dp"/>
@@ -39,20 +39,20 @@
                 android:id="@+id/nameEdit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Nazwa deszczowni" />
+                android:hint="@string/details_name" />
 
             <EditText
                 android:id="@+id/lengthEdit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Długość węża (m)"
+                android:hint="@string/details_hose"
                 android:inputType="number" />
 
             <EditText
                 android:id="@+id/commentEdit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Komentarz" />
+                android:hint="@string/details_comment" />
 
             <View
                 android:layout_width="match_parent"
@@ -65,7 +65,7 @@
                 android:id="@+id/statusHeader"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Aktualny status pracy"
+                android:text="@string/details_current"
                 android:textStyle="bold"
                 android:textSize="18sp"
                 android:textColor="?attr/colorPrimary"
@@ -75,7 +75,7 @@
                 android:id="@+id/statusText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Status: Pobieranie..."
+                android:text="@string/details_status"
                 android:textSize="16sp"
                 android:padding="4dp"/>
 
@@ -83,7 +83,7 @@
                 android:id="@+id/currentSpeedText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Prędkość: -- m/h"
+                android:text="@string/details_speed"
                 android:textSize="16sp"
                 android:padding="4dp"/>
 
@@ -91,7 +91,7 @@
                 android:id="@+id/timeFinishText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Czas do końca: --"
+                android:text="@string/details_endtime"
                 android:textSize="16sp"
                 android:padding="4dp"/>
 
@@ -99,7 +99,7 @@
                 android:id="@+id/workTimeText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Czas pracy: --"
+                android:text="@string/details_worktime"
                 android:textSize="16sp"
                 android:padding="4dp"/>
 
@@ -107,7 +107,7 @@
                 android:id="@+id/extensionText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Rozwinięcie: -- m"
+                android:text="@string/details_extension"
                 android:textSize="16sp"
                 android:padding="4dp"/>
 
@@ -115,7 +115,7 @@
                 android:id="@+id/signalText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Zasięg: -- dBm"
+                android:text="@string/details_signal"
                 android:textSize="16sp"
                 android:padding="4dp"/>
 
@@ -123,7 +123,7 @@
                 android:id="@+id/batteryText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Bateria: -- V"
+                android:text="@string/details_battery"
                 android:textSize="16sp"
                 android:padding="4dp"/>
 
@@ -140,7 +140,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="ZAPISZ"
+                    android:text="@string/details_save"
                     android:layout_marginEnd="8dp"
                     android:backgroundTint="#4CAF50"
                     android:textColor="#FFFFFF" />
@@ -150,7 +150,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="ZAAWANSOWANE"
+                    android:text="@string/details_advance"
                     android:layout_marginStart="8dp"
                     android:backgroundTint="?attr/colorPrimary"
                     android:textColor="#FFFFFF" />
@@ -169,11 +169,11 @@
                     android:layout_width="0dp"
                     android:layout_weight="1"
                     android:layout_height="wrap_content"
-                    android:text="Aktualizacja z urządzenia: --:--"
+                    android:text="@string/details_update"
                     android:textSize="12sp" />
 
-
             </LinearLayout>
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -181,13 +181,12 @@
                 android:padding="0dp"
                 android:gravity="center">
 
-
                 <TextView
                     android:id="@+id/tvNextUpdate"
                     android:layout_width="0dp"
                     android:layout_weight="1"
                     android:layout_height="wrap_content"
-                    android:text="Przewidywana następna: --:--"
+                    android:text="@string/details_next"
                     android:textSize="12sp"/>
             </LinearLayout>
 

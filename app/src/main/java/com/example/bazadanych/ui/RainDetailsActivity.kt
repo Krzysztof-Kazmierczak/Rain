@@ -314,7 +314,9 @@ class RainDetailsActivity : AppCompatActivity() {
         }
 
         signalText.text = prefix + getString(R.string.signal, signal)
-        batteryText.text = prefix + getString(R.string.battery, battery)
+
+        val batteryFormatted = String.format("%.2f", battery / 100.0)
+        batteryText.text = prefix + getString(R.string.battery, batteryFormatted)
 
         if (isWorking != 2 && isWorking != 6 && isWorking != 9) {
             workTimeText.text = prefix + getString(R.string.work_time, workTime)

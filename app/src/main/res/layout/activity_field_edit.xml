@@ -13,7 +13,7 @@
         android:background="?attr/colorPrimary"
         android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
         app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
-        app:title="Dane Pola"
+        app:title="@string/field_data_title"
         app:titleTextColor="@color/white" />
 
     <ScrollView
@@ -38,7 +38,7 @@
                     android:id="@+id/fieldNameEdit"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Nazwa pola (np. Ziemniak pod lasem)"
+                    android:hint="@string/field_name_hint"
                     android:inputType="textCapSentences" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -54,7 +54,7 @@
                     android:id="@+id/cropTypeEdit"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Typ uprawy (np. Ziemniak wczesny)"
+                    android:hint="@string/crop_type_hint"
                     android:inputType="textCapSentences" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -70,7 +70,7 @@
                     android:id="@+id/fieldAreaText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Powierzchnia: 0.00 ha"
+                    android:text="@string/field_area"
                     android:textSize="18sp"
                     android:textColor="@color/black"
                     android:textStyle="bold"
@@ -90,7 +90,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="top|start"
-                    android:hint="Dodatkowe informacje (komentarz)..."
+                    android:hint="@string/field_comment_hint"
                     android:inputType="textMultiLine"
                     android:minLines="4" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -98,7 +98,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Kolor pola"
+                android:text="@string/field_color"
                 android:layout_marginTop="16dp"
                 android:textStyle="bold" />
 
@@ -115,10 +115,7 @@
                     android:layout_height="50dp"
                     android:layout_margin="8dp"
                     app:cardBackgroundColor="#4CAF50"
-                    app:cardCornerRadius="25dp"
-                    app:cardElevation="4dp"
-                    app:strokeWidth="0dp"
-                    app:strokeColor="#FFFFFF"/>
+                    app:cardCornerRadius="25dp"/>
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/colorYellow"
@@ -126,10 +123,7 @@
                     android:layout_height="50dp"
                     android:layout_margin="8dp"
                     app:cardBackgroundColor="#FFEB3B"
-                    app:cardCornerRadius="25dp"
-                    app:cardElevation="4dp"
-                    app:strokeWidth="0dp"
-                    app:strokeColor="#FFFFFF"/>
+                    app:cardCornerRadius="25dp"/>
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/colorBlue"
@@ -137,17 +131,13 @@
                     android:layout_height="50dp"
                     android:layout_margin="8dp"
                     app:cardBackgroundColor="#2196F3"
-                    app:cardCornerRadius="25dp"
-                    app:cardElevation="4dp"
-                    app:strokeWidth="0dp"
-                    app:strokeColor="#FFFFFF"/>
+                    app:cardCornerRadius="25dp"/>
             </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="0dp"
                 android:gravity="center">
 
                 <Button
@@ -155,7 +145,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="ZAPISZ POLE"
+                    android:text="@string/save_field"
                     android:layout_marginEnd="8dp"
                     android:backgroundTint="#4CAF50"
                     android:textColor="#FFFFFF" />
@@ -165,12 +155,13 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="USUŃ POLE"
+                    android:text="@string/delete_field"
                     android:layout_marginStart="8dp"
                     android:backgroundTint="#F44336"
                     android:textColor="#FFFFFF" />
 
             </LinearLayout>
+
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

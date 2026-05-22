@@ -3,37 +3,37 @@
 
     <item
         android:id="@+id/nav_home"
-        android:title="Strona główna"
+        android:title="@string/home_menu_home"
         android:icon="@drawable/baseline_home_24"/>
 
     <item
         android:id="@+id/nav_profile"
-        android:title="Profil"
+        android:title="@string/home_menu_profile"
         android:icon="@drawable/baseline_person_24"/>
 
     <item
         android:id="@+id/nav_map"
-        android:title="Mapa"
+        android:title="@string/home_menu_map"
         android:icon="@android:drawable/ic_dialog_map"/>
 
     <item
         android:id="@+id/nav_weather"
         android:icon="@drawable/baseline_cloud_24"
-        android:title="Pogoda" />
+        android:title="@string/home_menu_weather" />
 
     <item
         android:id="@+id/nav_chart"
         android:icon="@drawable/outline_show_chart_24"
-        android:title="Wykresy" />
+        android:title="@string/home_menu_charts" />
 
     <item
         android:id="@+id/nav_alarm"
         android:icon="@drawable/round_report_gmailerrorred_24"
-        android:title="Alarmy" />
+        android:title="@string/home_menu_alarms" />
 
     <item
         android:id="@+id/nav_logout"
-        android:title="Wyloguj"
+        android:title="@string/home_menu_logout"
         android:icon="@android:drawable/ic_lock_power_off"/>
 
 </menu>

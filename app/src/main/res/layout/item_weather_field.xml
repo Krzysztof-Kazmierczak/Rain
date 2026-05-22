@@ -20,7 +20,7 @@
             android:id="@+id/tvFieldName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Nazwa Pola"
+            android:text="@string/advisor_title_name"
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="#333333"/>
@@ -29,7 +29,7 @@
             android:id="@+id/tvFieldCrop"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🌾 Uprawa: Pszenica"
+            android:text="@string/advisor_title_crop"
             android:layout_marginBottom="12dp"/>
 
         <LinearLayout
@@ -42,7 +42,7 @@
             android:id="@+id/tvAdviceTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="✅ Ładowanie doradcy..."
+            android:text="@string/advisor_title_loading"
             android:textStyle="bold"
             android:textColor="#1B5E20"/>
 
@@ -51,7 +51,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Sprawdzam chmury..."
+                android:text="@string/advisor_title_clouds"
                 android:textColor="#333333"/>
         </LinearLayout>
     </LinearLayout>

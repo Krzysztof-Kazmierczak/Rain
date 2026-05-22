@@ -12,7 +12,7 @@
         android:background="?attr/colorPrimary"
         android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
         app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
-        app:title="Ustawienia Zaawansowane"
+        app:title="@string/settings_advanced_title"
         app:titleTextColor="@android:color/white"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -40,7 +40,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:hint="Zadana Prędkość (m/h)"
+                    android:hint="@string/target_speed_hint"
                     android:inputType="numberDecimal" />
 
                 <ImageButton
@@ -51,7 +51,11 @@
                     android:background="?attr/selectableItemBackgroundBorderless"/>
             </LinearLayout>
 
-            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#DDDDDD" android:layout_marginBottom="12dp"/>
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#DDDDDD"
+                android:layout_marginBottom="12dp"/>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -63,14 +67,14 @@
                     android:id="@+id/cbDelayStart"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Opóźnienie Startu"/>
+                    android:text="@string/delay_start"/>
 
                 <EditText
                     android:id="@+id/editDelayStart"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:hint="hh:mm:ss"
+                    android:hint="@string/time_format_hint"
                     android:enabled="false"
                     android:focusable="false"
                     android:clickable="true"
@@ -94,14 +98,14 @@
                     android:id="@+id/cbDelayWind"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Opóźnienie Zwijania"/>
+                    android:text="@string/delay_wind"/>
 
                 <EditText
                     android:id="@+id/editDelayWind"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:hint="hh:mm:ss"
+                    android:hint="@string/time_format_hint"
                     android:enabled="false"
                     android:focusable="false"
                     android:clickable="true"
@@ -126,14 +130,14 @@
                     android:id="@+id/cbDelayEnd"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Opóźnienie Końca"/>
+                    android:text="@string/delay_end"/>
 
                 <EditText
                     android:id="@+id/editDelayEnd"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:hint="hh:mm:ss"
+                    android:hint="@string/time_format_hint"
                     android:enabled="false"
                     android:focusable="false"
                     android:clickable="true"
@@ -147,7 +151,11 @@
                     android:background="?attr/selectableItemBackgroundBorderless"/>
             </LinearLayout>
 
-            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#DDDDDD" android:layout_marginBottom="12dp"/>
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#DDDDDD"
+                android:layout_marginBottom="12dp"/>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -161,7 +169,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Podlewanie Strefowe"
+                    android:text="@string/zone_watering"
                     android:textSize="16sp"/>
 
                 <ImageButton
@@ -181,29 +189,132 @@
                 android:padding="8dp"
                 android:background="#F5F5F5">
 
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Strefa I" android:textStyle="bold" android:textColor="?attr/colorPrimary"/>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-                    <EditText android:id="@+id/editZ1Speed" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="m/h" android:inputType="numberDecimal" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=" Zakres: 0m do " />
-                    <EditText android:id="@+id/editZ1End" android:layout_width="80dp" android:layout_height="wrap_content" android:inputType="number" android:hint="Y"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/zone_1"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorPrimary"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <EditText
+                        android:id="@+id/editZ1Speed"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/speed_unit_hint"
+                        android:inputType="numberDecimal" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/range_from_0" />
+
+                    <EditText
+                        android:id="@+id/editZ1End"
+                        android:layout_width="80dp"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:hint="@string/zone_y_hint"/>
                 </LinearLayout>
 
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Strefa II" android:textStyle="bold" android:textColor="?attr/colorPrimary" android:layout_marginTop="8dp"/>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-                    <EditText android:id="@+id/editZ2Speed" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="m/h" android:inputType="numberDecimal" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=" Zakres: " />
-                    <TextView android:id="@+id/tvZ2Start" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textStyle="bold"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="m do " />
-                    <EditText android:id="@+id/editZ2End" android:layout_width="80dp" android:layout_height="wrap_content" android:inputType="number" android:hint="Z"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/zone_2"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorPrimary"
+                    android:layout_marginTop="8dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <EditText
+                        android:id="@+id/editZ2Speed"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/speed_unit_hint"
+                        android:inputType="numberDecimal" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/range_label" />
+
+                    <TextView
+                        android:id="@+id/tvZ2Start"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/meter_to" />
+
+                    <EditText
+                        android:id="@+id/editZ2End"
+                        android:layout_width="80dp"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:hint="@string/zone_z_hint"/>
                 </LinearLayout>
 
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Strefa III" android:textStyle="bold" android:textColor="?attr/colorPrimary" android:layout_marginTop="8dp"/>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-                    <EditText android:id="@+id/editZ3Speed" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="m/h" android:inputType="numberDecimal" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=" Zakres: " />
-                    <TextView android:id="@+id/tvZ3Start" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textStyle="bold"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="m do " />
-                    <EditText android:id="@+id/editZ3End" android:layout_width="80dp" android:layout_height="wrap_content" android:inputType="number" android:hint="A"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/zone_3"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorPrimary"
+                    android:layout_marginTop="8dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <EditText
+                        android:id="@+id/editZ3Speed"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/speed_unit_hint"
+                        android:inputType="numberDecimal" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/range_label" />
+
+                    <TextView
+                        android:id="@+id/tvZ3Start"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/meter_to" />
+
+                    <EditText
+                        android:id="@+id/editZ3End"
+                        android:layout_width="80dp"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:hint="@string/zone_a_hint"/>
                 </LinearLayout>
             </LinearLayout>
 
@@ -225,7 +336,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="ON/OFF Maszyny"
+                        android:text="@string/machine_on_off"
                         android:textSize="12sp"
                         android:textStyle="bold"
                         android:textColor="#757575"
@@ -235,7 +346,7 @@
                         android:id="@+id/btnToggleWork"
                         android:layout_width="match_parent"
                         android:layout_height="64dp"
-                        android:text="POBIERANIE STATUSU..."
+                        android:text="@string/loading_status"
                         android:textSize="18sp"
                         app:iconGravity="textStart"
                         app:cornerRadius="8dp"
@@ -243,12 +354,11 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Sekcja Akcji (Zapisz / Usuń) -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSaveAdvanced"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="ZAPISZ USTAWIENIA"
+                android:text="@string/save_advanced_settings"
                 android:layout_marginTop="24dp"
                 app:icon="@android:drawable/ic_menu_save"
                 app:backgroundTint="#4CAF50" />
@@ -268,7 +378,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="4dp"
-                    android:text="RESET Lokalizacji"
+                    android:text="@string/reset_localization"
                     android:textSize="12sp"
                     android:textColor="@android:color/white"
                     app:backgroundTint="#2196F3"
@@ -281,13 +391,13 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginStart="4dp"
-                    android:text="USUŃ MASZYNĘ"
+                    android:text="@string/delete_machine"
                     android:textSize="12sp"
                     android:textColor="@android:color/white"
                     app:backgroundTint="#F44336"/>
             </LinearLayout>
 
-
         </LinearLayout>
     </ScrollView>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

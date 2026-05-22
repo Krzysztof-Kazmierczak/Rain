@@ -55,6 +55,31 @@
     <string name="adv_info_delay_end">Watering End Delay (time) h/m/s</string>
     <string name="adv_info_zone">Zone Watering Function</string>
 
+    <string name="hh">HH</string>
+    <string name="mm">MM</string>
+    <string name="ss">SS</string>
+    <string name="colon">:</string>
+
+    <string name="settings_advanced_title">Advanced Settings</string>
+    <string name="target_speed_hint">Target Speed (m/h)</string>
+    <string name="delay_start">Start Delay</string>
+    <string name="delay_wind">Rewind Delay</string>
+    <string name="delay_end">End Delay</string>
+    <string name="time_format_hint">hh:mm:ss</string>
+    <string name="zone_watering">Zone Watering</string>
+    <string name="speed_unit_hint">m/h</string>
+    <string name="range_from_0">Range: 0m to </string>
+    <string name="range_label">Range: </string>
+    <string name="meter_to">m to </string>
+    <string name="zone_y_hint">Y</string>
+    <string name="zone_z_hint">Z</string>
+    <string name="zone_a_hint">A</string>
+    <string name="machine_on_off">Machine ON/OFF</string>
+    <string name="loading_status">LOADING STATUS...</string>
+    <string name="save_advanced_settings">SAVE SETTINGS</string>
+    <string name="reset_localization">RESET LOCATION</string>
+    <string name="delete_machine">DELETE MACHINE</string>
+
     <!-- ============================================== -->
     <!-- ALARM Activity                                 -->
     <!-- ============================================== -->
@@ -66,12 +91,21 @@
     <string name="alarm_deleted_success">Alarm has been deleted</string>
     <string name="alarm_delete_error">No permission or server error</string>
 
+    <string name="alarm_history">Alarms history</string>
+    <string name="alarm_delete_all">Delet all alarms</string>
+    <string name="alarm_load">Alarm loading...</string>
+
     <!-- ============================================== -->
     <!-- Alarm Adapter                                  -->
     <!-- ============================================== -->
     <string name="alarm_item_machine">Machine: %1$s</string>
     <string name="alarm_item_date">Occurrence: %1$s</string>
     <string name="alarm_item_no_permission">You do not have permission to delete this alarm</string>
+
+    <string name="alarm_item_initial_name">Alarm name</string>
+    <string name="alarm_item_initial_code">Code</string>
+    <string name="alarm_item_initial_machine">Machine: ---</string>
+    <string name="alarm_item_initial_date">Date: 2026-05-18 12:00</string>
 
     <!-- ============================================== -->
     <!-- Analytics Activity                             -->
@@ -94,6 +128,23 @@
     <string name="analytics_label_left">← %1$s</string>
     <string name="analytics_label_right">%1$s →</string>
 
+    <string name="analytics_history_title">Analysis AND History</string>
+    <string name="weather_label">WEATHER:</string>
+    <string name="temp_label">Temp (°C)</string>
+    <string name="rain_label">Rainfall (mm)</string>
+    <string name="clouds_label">Clouds (%)</string>
+    <string name="field_data_label">FIELD DATA:</string>
+    <string name="wind_label">Wind (m/s)</string>
+    <string name="humidity_label">Humidity (%)</string>
+    <string name="one_day">1 Day</string>
+    <string name="toggle_forecast">Show/hide forecast</string>
+    <string name="clear_date_filter">Clear date filter</string>
+    <string name="select_date_range">Select date range</string>
+    <string name="left_units">← Left Units</string>
+    <string name="right_units">Right Units →</string>
+    <string name="left_label">Left</string>
+    <string name="right_label">Right</string>
+
     <!-- ============================================== -->
     <!-- Chart Activity                                 -->
     <!-- ============================================== -->
@@ -110,6 +161,11 @@
     <string name="chart_param_battery">Battery (%)</string>
     <string name="chart_param_sim_signal">SIM signal (dBm)</string>
 
+    <string name="machine_analysis_title">Machine Analysis</string>
+    <string name="select_device">Select Device</string>
+    <string name="select_parameter">Select Parameter</string>
+    <string name="chart_value_label">Value</string>
+
     <!-- ============================================== -->
     <!-- Create Rain Activity                           -->
     <!-- ============================================== -->
@@ -121,6 +177,13 @@
     <string name="create_rain_err_session">Błąd sesji. Zaloguj się ponownie.</string>
     <string name="create_rain_err_server">Błąd serwera przy zapisie ❌</string>
     <string name="create_rain_success">Dodano pomyślnie na serwer! ✅</string>
+
+    <string name="sprinkler_create_title">Create Sprinkler</string>
+    <string name="sprinkler_or_custom">or enter custom data</string>
+    <string name="sprinkler_name">Sprinkler Name:</string>
+    <string name="sprinkler_hose_length">Hose Length:</string>
+    <string name="sprinkler_comment">Comment:</string>
+    <string name="sprinkler_add">Add</string>
 
     <!-- ============================================== -->
     <!-- Custom Marker Activity                         -->
@@ -139,6 +202,15 @@
     <string name="field_edit_save_success">Field saved! 🌾</string>
     <string name="field_edit_save_error">Server rejected the save.</string>
 
+    <string name="field_data_title">Field Data</string>
+    <string name="field_name_hint">Field name (e.g. Potato near forest)</string>
+    <string name="crop_type_hint">Crop type (e.g. Early potato)</string>
+    <string name="field_area">Area: 0.00 ha</string>
+    <string name="field_comment_hint">Additional information (comment)...</string>
+    <string name="field_color">Field color</string>
+    <string name="save_field">SAVE FIELD</string>
+    <string name="delete_field">DELETE FIELD</string>
+
     <!-- ============================================== -->
     <!-- Full Map Activity                              -->
     <!-- ============================================== -->
@@ -148,14 +220,16 @@
     <string name="full_map_min_points_toast">Select at least 3 points!</string>
     <string name="full_map_btn_add_field">ADD FIELD</string>
     <string name="full_map_default_field_name">Field</string>
-
     <string name="full_map_field_snippet"><![CDATA[Crop: %1$s<br>Area: %2$.2f ha<br><br><small><i>Click again to view details</i></small>]]></string>
-
     <string name="full_map_no_gps_title">No GPS signal</string>
     <string name="full_map_no_gps_message">No GPS signal. Do you want to manually set the device\'s current location on the map?</string>
     <string name="full_map_btn_yes">Yes</string>
     <string name="full_map_btn_no">No</string>
     <string name="full_map_click_to_place">Click on the map where the machine is located</string>
+
+    <string name="map_map">Map</string>
+    <string name="map_add">ADD FIELD</string>
+    <string name="map_back">BACK</string>
 
     <!-- ============================================== -->
     <!-- Home Activity                                  -->
@@ -164,6 +238,18 @@
     <string name="home_tile_add_rain">Add irrigator</string>
     <string name="home_rain_added_toast">Irrigator added</string>
     <string name="home_logged_out_toast">Logged out ✅</string>
+
+    <string name="home_menu_home">Home</string>
+    <string name="home_menu_profile">Profile</string>
+    <string name="home_menu_map">Map</string>
+    <string name="home_menu_weather">Weather</string>
+    <string name="home_menu_charts">Charts</string>
+    <string name="home_menu_alarms">Alarms</string>
+    <string name="home_menu_logout">Logout</string>
+
+    <string name="home_menu_add">Add</string>
+    <string name="home_menu_hose">300 m</string>
+    <string name="home_menu_comment">Comment</string>
 
     <!-- ============================================== -->
     <!-- Login Activity                                 -->
@@ -188,6 +274,23 @@
     <string name="profile_dialog_delete_msg">Are you sure you want to remove access?</string>
     <string name="profile_dialog_btn_yes">Yes</string>
     <string name="profile_dialog_btn_no">No</string>
+    <string name="profile_settings">Settings</string>
+
+    <string name="profile_mail">worker@email.com</string>
+    <string name="profile_role">Role</string>
+    <string name="profile_save">Save</string>
+    <string name="profile_delete">Delete</string>
+
+    <string name="profile_profile">My Profile</string>
+    <string name="profile_loggin">Logged in as</string>
+    <string name="profile_user_mail">user@email.com</string>
+    <string name="profile_yours">Your rain systems</string>
+    <string name="profile_numbers">0 / 0</string>
+    <string name="profile_activr">(active / all)</string>
+    <string name="profile_admin">Access Management</string>
+    <string name="profile_email">User Email</string>
+    <string name="profile_add">Add</string>
+    <string name="profile_load">Loading user list...</string>
 
     <!-- ============================================== -->
     <!-- Rain Details Activity                          -->
@@ -213,11 +316,28 @@
     <string name="status_should_finish">Should finish</string>
 
     <string name="signal">Signal: %1$d%%</string>
-    <string name="battery">Battery: %1$d%%</string>
+    <string name="battery">Battery: %1$s V</string>
     <string name="saved_success">Saved successfully</string>
     <string name="last_update">Last update: %1$s</string>
     <string name="next_update">Next update: %1$s</string>
     <string name="connection_lost">CONNECTION LOST</string>
+
+    <string name="details_data">Device data</string>
+    <string name="details_name">Sprinkler name</string>
+    <string name="details_hose">Hose length (m)</string>
+    <string name="details_comment">Comment</string>
+    <string name="details_current">Current working status</string>
+    <string name="details_status">Status: Loading...</string>
+    <string name="details_speed">Speed: -- m/h</string>
+    <string name="details_endtime">Time remaining: --</string>
+    <string name="details_worktime">Working time: --</string>
+    <string name="details_extension">Extension: -- m</string>
+    <string name="details_signal">Signal: -- dBm</string>
+    <string name="details_battery">Battery: -- V</string>
+    <string name="details_save">SAVE</string>
+    <string name="details_advance">ADVANCED</string>
+    <string name="details_update">Device update: --:--</string>
+    <string name="details_next">Estimated next update: --:--</string>
 
     <!-- ============================================== -->
     <!-- Register Activity                              -->
@@ -228,6 +348,7 @@
     <string name="register_error_invalid_email">Enter a valid email address ❗</string>
     <string name="register_error_invalid_password">Password must be at least 5 characters long and contain a digit</string>
     <string name="register_error_passwords_dont_match">Passwords do not match ❗</string>
+    <string name="register_create">Create account</string>
 
     <!-- ============================================== -->
     <!-- SETTINGS Activity                              -->
@@ -295,6 +416,13 @@
 
     <string name="advisor_title_optimal">OPTIMAL CONDITIONS</string>
     <string name="advisor_msg_optimal">Maintain standard water regime for this crop. Weather poses no risk of drought or flooding.</string>
+
+    <string name="advisor_title_name">Field Name</string>
+    <string name="advisor_title_crop">🌾 Crop: Wheat</string>
+    <string name="advisor_title_loading">✅ Loading advisor...</string>
+    <string name="advisor_title_clouds">Check clouds...</string>
+
+    <string name="weather_title">Weather i Water</string>
 
     <!-- ============================================== -->
     <!-- Worker Adapter                                 -->

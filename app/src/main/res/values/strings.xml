@@ -55,6 +55,32 @@
     <string name="adv_info_delay_end">Opóźnienie Zakończenia podlewania (czas) h/m/s</string>
     <string name="adv_info_zone">Funkcja Podlewanie strefowe</string>
 
+    <string name="hh">HH</string>
+    <string name="mm">MM</string>
+    <string name="ss">SS</string>
+    <string name="colon">:</string>
+
+    <string name="settings_advanced_title">Ustawienia Zaawansowane</string>
+    <string name="target_speed_hint">Zadana Prędkość (m/h)</string>
+    <string name="delay_start">Opóźnienie Startu</string>
+    <string name="delay_wind">Opóźnienie Zwijania</string>
+    <string name="delay_end">Opóźnienie Końca</string>
+    <string name="time_format_hint">hh:mm:ss</string>
+    <string name="zone_watering">Podlewanie Strefowe</string>
+    <string name="speed_unit_hint">m/h</string>
+    <string name="range_from_0">Zakres: 0m do </string>
+    <string name="range_label">Zakres: </string>
+    <string name="meter_to">m do </string>
+    <string name="zone_y_hint">Y</string>
+    <string name="zone_z_hint">Z</string>
+    <string name="zone_a_hint">A</string>
+    <string name="machine_on_off">ON/OFF Maszyny</string>
+    <string name="loading_status">POBIERANIE STATUSU...</string>
+    <string name="save_advanced_settings">ZAPISZ USTAWIENIA</string>
+    <string name="reset_localization">RESET Lokalizacji</string>
+    <string name="delete_machine">USUŃ MASZYNĘ</string>
+
+
     <!-- ============================================== -->
     <!-- ALARM Activity                                 -->
     <!-- ============================================== -->
@@ -66,12 +92,21 @@
     <string name="alarm_deleted_success">Alarm został usunięty</string>
     <string name="alarm_delete_error">Brak uprawnień lub błąd serwera</string>
 
+    <string name="alarm_history">Historia alarmów</string>
+    <string name="alarm_delete_all">Usuń wszystkie alarmy</string>
+    <string name="alarm_load">Ładowanie alarmów...</string>
+
     <!-- ============================================== -->
     <!-- Alarm Adapter                                  -->
     <!-- ============================================== -->
     <string name="alarm_item_machine">Maszyna: %1$s</string>
     <string name="alarm_item_date">Wystąpienie: %1$s</string>
     <string name="alarm_item_no_permission">Nie masz uprawnień do usunięcia tego alarmu</string>
+
+    <string name="alarm_item_initial_name">Nazwa alarmu</string>
+    <string name="alarm_item_initial_code">KOD</string>
+    <string name="alarm_item_initial_machine">Maszyna: ---</string>
+    <string name="alarm_item_initial_date">Data: 2026-05-18 12:00</string>
 
     <!-- ============================================== -->
     <!-- Analytics Activity                             -->
@@ -94,6 +129,23 @@
     <string name="analytics_label_left">← %1$s</string>
     <string name="analytics_label_right">%1$s →</string>
 
+    <string name="analytics_history_title">Analiza i Historia</string>
+    <string name="weather_label">POGODA:</string>
+    <string name="temp_label">Temperatura (°C)</string>
+    <string name="rain_label">Opady (mm)</string>
+    <string name="clouds_label">Zachmurzenie (%)</string>
+    <string name="field_data_label">DANE Z POLA:</string>
+    <string name="wind_label">Wiatr (m/s)</string>
+    <string name="humidity_label">Wilgotność (%)</string>
+    <string name="one_day">1 Dzień</string>
+    <string name="toggle_forecast">Pokaż/ukryj prognozę</string>
+    <string name="clear_date_filter">Wyczyść filtr daty</string>
+    <string name="select_date_range">Wybierz zakres dat</string>
+    <string name="left_units">← Jednostki lewe</string>
+    <string name="right_units">Jednostki prawe →</string>
+    <string name="left_label">Lewa</string>
+    <string name="right_label">Prawa</string>
+
     <!-- ============================================== -->
     <!-- Chart Activity                                 -->
     <!-- ============================================== -->
@@ -110,6 +162,11 @@
     <string name="chart_param_battery">Bateria (%)</string>
     <string name="chart_param_sim_signal">Sygnał SIM (dBm)</string>
 
+    <string name="machine_analysis_title">Analiza Maszyny</string>
+    <string name="select_device">Wybierz Urządzenie</string>
+    <string name="select_parameter">Wybierz Parametr</string>
+    <string name="chart_value_label">Wartość</string>
+
     <!-- ============================================== -->
     <!-- Create Rain Activity                           -->
     <!-- ============================================== -->
@@ -121,6 +178,13 @@
     <string name="create_rain_err_session">Błąd sesji. Zaloguj się ponownie.</string>
     <string name="create_rain_err_server">Błąd serwera przy zapisie ❌</string>
     <string name="create_rain_success">Dodano pomyślnie na serwer! ✅</string>
+
+    <string name="sprinkler_create_title">Tworzenie deszczowni</string>
+    <string name="sprinkler_or_custom">lub wpisz własne dane</string>
+    <string name="sprinkler_name">Nazwa Deszczowni:</string>
+    <string name="sprinkler_hose_length">Długość węża:</string>
+    <string name="sprinkler_comment">Komentarz:</string>
+    <string name="sprinkler_add">Dodaj</string>
 
     <!-- ============================================== -->
     <!-- Custom Marker Activity                         -->
@@ -138,6 +202,15 @@
     <string name="field_edit_err_no_user">Błąd: Użytkownik niezalogowany!</string>
     <string name="field_edit_save_success">Pole zapisane! 🌾</string>
     <string name="field_edit_save_error">Serwer odrzucił zapis.</string>
+
+    <string name="field_data_title">Dane Pola</string>
+    <string name="field_name_hint">Nazwa pola (np. Ziemniak pod lasem)</string>
+    <string name="crop_type_hint">Typ uprawy (np. Ziemniak wczesny)</string>
+    <string name="field_area">Powierzchnia: 0.00 ha</string>
+    <string name="field_comment_hint">Dodatkowe informacje (komentarz)...</string>
+    <string name="field_color">Kolor pola</string>
+    <string name="save_field">ZAPISZ POLE</string>
+    <string name="delete_field">USUŃ POLE</string>
 
     <!-- ============================================== -->
     <!-- Full Map Activity                              -->
@@ -158,6 +231,10 @@
     <string name="full_map_btn_no">Nie</string>
     <string name="full_map_click_to_place">Kliknij na mapie miejsce, w którym stoi maszyna</string>
 
+    <string name="map_map">Mapa</string>
+    <string name="map_add">DODAJ POLE</string>
+    <string name="map_back">COFNIJ</string>
+
     <!-- ============================================== -->
     <!-- Home Activity                                  -->
     <!-- ============================================== -->
@@ -165,6 +242,18 @@
     <string name="home_tile_add_rain">Dodaj deszczownię</string>
     <string name="home_rain_added_toast">Dodano deszczownię</string>
     <string name="home_logged_out_toast">Wylogowano ✅</string>
+
+    <string name="home_menu_home">Strona główna</string>
+    <string name="home_menu_profile">Profil</string>
+    <string name="home_menu_map">Mapa</string>
+    <string name="home_menu_weather">Pogoda</string>
+    <string name="home_menu_charts">Wykresy</string>
+    <string name="home_menu_alarms">Alarmy</string>
+    <string name="home_menu_logout">Wyloguj</string>
+
+    <string name="home_menu_add">Dodaj</string>
+    <string name="home_menu_hose">300 m</string>
+    <string name="home_menu_comment">Komentarz</string>
 
     <!-- ============================================== -->
     <!-- Login Activity                                 -->
@@ -189,6 +278,23 @@
     <string name="profile_dialog_delete_msg">Czy na pewno chcesz usunąć dostęp?</string>
     <string name="profile_dialog_btn_yes">Tak</string>
     <string name="profile_dialog_btn_no">Nie</string>
+    <string name="profile_settings">Ustawienia</string>
+
+    <string name="profile_mail">worker@email.com</string>
+    <string name="profile_role">Rolna</string>
+    <string name="profile_save">Zapisz</string>
+    <string name="profile_delete">Usuń</string>
+
+    <string name="profile_profile">Mój Profil</string>
+    <string name="profile_loggin">Zalogowany jako</string>
+    <string name="profile_user_mail">user@email.com</string>
+    <string name="profile_yours">Twoje deszczownie</string>
+    <string name="profile_numbers">0 / 0</string>
+    <string name="profile_activr">(aktywne / wszystkie)</string>
+    <string name="profile_admin">Zarządzanie dostępem</string>
+    <string name="profile_email">Email użytkownika</string>
+    <string name="profile_add">Dodaj</string>
+    <string name="profile_load">Ładowanie listy użytkowników...</string>
 
     <!-- ============================================== -->
     <!-- Rain Details Activity                          -->
@@ -214,11 +320,29 @@
     <string name="status_should_finish">Powinna skończyć</string>
 
     <string name="signal">Sygnał: %1$d%%</string>
-    <string name="battery">Bateria: %1$d%%</string>
+    <string name="battery">Bateria: %1$s V</string>
     <string name="saved_success">Zapisano pomyślnie</string>
     <string name="last_update">Ostatnia aktualizacja: %1$s</string>
     <string name="next_update">Następna aktualizacja: %1$s</string>
     <string name="connection_lost">BRAK POŁĄCZENIA</string>
+
+    <string name="details_data">Dane urządzenia</string>
+    <string name="details_name">Nazwa deszczowni</string>
+    <string name="details_hose">Długość węża (m)</string>
+    <string name="details_comment">Komentarz</string>
+    <string name="details_current">Aktualny status pracy</string>
+    <string name="details_status">Status: Pobieranie...</string>
+    <string name="details_speed">Prędkość: -- m/h</string>
+    <string name="details_endtime">Czas do końca: --</string>
+    <string name="details_worktime">Czas pracy: --</string>
+    <string name="details_extension">Rozwinięcie: -- m</string>
+    <string name="details_signal">Zasięg: -- dBm</string>
+    <string name="details_battery">Bateria: -- V</string>
+    <string name="details_save">ZAPISZ</string>
+    <string name="details_advance">ZAAWANSOWANE</string>
+    <string name="details_update">Aktualizacja z urządzenia: --:--</string>
+    <string name="details_next">Przewidywana następna: --:--</string>
+
 
     <!-- ============================================== -->
     <!-- Register Activity                              -->
@@ -229,6 +353,7 @@
     <string name="register_error_invalid_email">Podaj poprawny email ❗</string>
     <string name="register_error_invalid_password">Hasło musi mieć min. 5 znaków i zawierać cyfrę</string>
     <string name="register_error_passwords_dont_match">Hasła się nie zgadzają ❗</string>
+    <string name="register_create">Utwórz konto</string>
 
     <!-- ============================================== -->
     <!-- SETTINGS Activity                              -->
@@ -296,6 +421,14 @@
 
     <string name="advisor_title_optimal">WARUNKI OPTYMALNE</string>
     <string name="advisor_msg_optimal">Utrzymuj standardowy reżim wodny dla tej uprawy. Pogoda nie zagraża przesuszeniem ani zalaniem.</string>
+
+    <string name="advisor_title_name">Nazwa Pola</string>
+    <string name="advisor_title_crop">🌾 Uprawa: Pszenica</string>
+    <string name="advisor_title_loading">✅ Ładowanie doradcy...</string>
+    <string name="advisor_title_clouds">Sprawdzam chmury...</string>
+
+    <string name="weather_title">Pogoda i Podlewanie</string>
+
 
     <!-- ============================================== -->
     <!-- Worker Adapter                                 -->

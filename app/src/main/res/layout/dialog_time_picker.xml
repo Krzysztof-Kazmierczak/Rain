@@ -11,7 +11,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center">
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="HH"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/hh"/>
         <NumberPicker
             android:id="@+id/npHours"
             android:layout_width="wrap_content"
@@ -21,7 +21,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text=":"
+        android:text="@string/colon"
         android:textSize="30sp"
         android:textStyle="bold"
         android:layout_marginTop="15dp"
@@ -33,7 +33,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center">
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="MM"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/mm"/>
         <NumberPicker
             android:id="@+id/npMinutes"
             android:layout_width="wrap_content"
@@ -43,7 +43,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text=":"
+        android:text="@string/colon"
         android:textSize="30sp"
         android:textStyle="bold"
         android:layout_marginTop="15dp"
@@ -55,7 +55,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center">
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="SS"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/ss"/>
         <NumberPicker
             android:id="@+id/npSeconds"
             android:layout_width="wrap_content"

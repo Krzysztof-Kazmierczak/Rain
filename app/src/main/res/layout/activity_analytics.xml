@@ -13,7 +13,7 @@
         android:background="?attr/colorPrimary"
         android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
         app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
-        app:title="Analiza i Historia"
+        app:title="@string/analytics_history_title"
         app:navigationIcon="@drawable/baseline_arrow_back_24"
         app:navigationIconTint="@android:color/white"/>
 
@@ -33,17 +33,64 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="POGODA:" android:textStyle="bold" android:layout_marginEnd="8dp"/>
-                <CheckBox android:id="@+id/cbTemp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Temp (°C)" android:checked="true" />
-                <CheckBox android:id="@+id/cbRain" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Opady (mm)" android:layout_marginStart="8dp" android:checked="true"/>
-                <CheckBox android:id="@+id/cbClouds" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Chmury (%)" android:layout_marginStart="8dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/weather_label"
+                    android:textStyle="bold"
+                    android:layout_marginEnd="8dp"/>
 
-                <View android:layout_width="1dp" android:layout_height="match_parent" android:background="#CCC" android:layout_marginStart="16dp" android:layout_marginEnd="16dp"/>
+                <CheckBox
+                    android:id="@+id/cbTemp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/temp_label"
+                    android:checked="true" />
 
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="DANE Z POLA:" android:textStyle="bold" android:layout_marginEnd="8dp"/>
+                <CheckBox
+                    android:id="@+id/cbRain"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/rain_label"
+                    android:layout_marginStart="8dp"
+                    android:checked="true"/>
 
-                <CheckBox android:id="@+id/cbWind" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Wiatr (m/s)" android:layout_marginStart="8dp" android:checked="true"/>
-                <CheckBox android:id="@+id/cbHumidity" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Wilgotność (%)" android:layout_marginStart="8dp" android:checked="true"/>
+                <CheckBox
+                    android:id="@+id/cbClouds"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/clouds_label"
+                    android:layout_marginStart="8dp" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="match_parent"
+                    android:background="#CCC"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/field_data_label"
+                    android:textStyle="bold"
+                    android:layout_marginEnd="8dp"/>
+
+                <CheckBox
+                    android:id="@+id/cbWind"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/wind_label"
+                    android:layout_marginStart="8dp"
+                    android:checked="true"/>
+
+                <CheckBox
+                    android:id="@+id/cbHumidity"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/humidity_label"
+                    android:layout_marginStart="8dp"
+                    android:checked="true"/>
 
             </LinearLayout>
         </HorizontalScrollView>
@@ -97,31 +144,26 @@
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="1 Dzień"/>
+                    android:text="@string/one_day"/>
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnToggleForecast"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:layout_gravity="top|end"
                     android:layout_margin="8dp"
-
                     android:background="@android:color/transparent"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
                     android:insetLeft="0dp"
                     android:insetRight="0dp"
                     android:padding="8dp"
-
                     app:icon="@drawable/ic_visibility"
                     app:iconTint="@color/black"
                     app:iconSize="24dp"
-
-                    android:contentDescription="Pokaż/ukryj prognozę"/>
+                    android:contentDescription="@string/toggle_forecast"/>
             </com.google.android.material.chip.ChipGroup>
         </HorizontalScrollView>
-
-
-
 
         <ImageButton
             android:id="@+id/btnClearDate"
@@ -129,7 +171,7 @@
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/baseline_close_24"
-            android:tooltipText="Wyczyść filtr daty"
+            android:tooltipText="@string/clear_date_filter"
             android:visibility="gone"
             app:tint="?attr/colorError" />
 
@@ -139,7 +181,7 @@
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/outline_calendar_month_24"
-            android:tooltipText="Wybierz zakres dat"
+            android:tooltipText="@string/select_date_range"
             app:tint="?attr/colorPrimary" />
     </LinearLayout>
 
@@ -164,7 +206,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_alignParentLeft="true"
-                    android:text="← Jednostki Lewa"
+                    android:text="@string/left_units"
                     android:textSize="10sp"
                     android:textStyle="bold" />
 
@@ -173,7 +215,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_alignParentRight="true"
-                    android:text="Jednostki Prawa →"
+                    android:text="@string/right_units"
                     android:textSize="10sp"
                     android:textStyle="bold" />
             </RelativeLayout>
@@ -184,25 +226,26 @@
                 android:layout_height="300dp" />
         </FrameLayout>
 
-
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingHorizontal="10dp">
+
             <TextView
                 android:id="@+id/tvMachineLeftLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentLeft="true"
-                android:text="Lewa"
+                android:text="@string/left_label"
                 android:textSize="10sp"
                 android:textStyle="bold" />
+
             <TextView
                 android:id="@+id/tvMachineRightLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentRight="true"
-                android:text="Prawa"
+                android:text="@string/right_label"
                 android:textSize="10sp"
                 android:textStyle="bold" />
         </RelativeLayout>

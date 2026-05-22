@@ -14,7 +14,7 @@
         android:background="?attr/colorPrimary"
         android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
         app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
-        app:title="Analiza Maszyny"
+        app:title="@string/machine_analysis_title"
         app:navigationIcon="@drawable/baseline_arrow_back_24"
         app:navigationIconTint="@android:color/white"/>
 
@@ -32,7 +32,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:hint="Wybierz Urządzenie">
+            android:hint="@string/select_device">
 
             <AutoCompleteTextView
                 android:id="@+id/spinnerDevices"
@@ -45,7 +45,7 @@
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Wybierz Parametr">
+            android:hint="@string/select_parameter">
 
             <AutoCompleteTextView
                 android:id="@+id/spinnerMachineParams"
@@ -104,7 +104,7 @@
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="1 Dzień"/>
+                    android:text="@string/one_day"/>
             </com.google.android.material.chip.ChipGroup>
         </HorizontalScrollView>
 
@@ -114,7 +114,7 @@
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/baseline_close_24"
-            android:tooltipText="Wyczyść filtr daty"
+            android:tooltipText="@string/clear_date_filter"
             android:visibility="gone"
             app:tint="?attr/colorError" />
 
@@ -124,7 +124,7 @@
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/outline_calendar_month_24"
-            android:tooltipText="Wybierz zakres dat"
+            android:tooltipText="@string/select_date_range"
             app:tint="?attr/colorPrimary" />
     </LinearLayout>
 
@@ -146,7 +146,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentLeft="true"
-                android:text="Wartość"
+                android:text="@string/chart_value_label"
                 android:textSize="12sp"
                 android:textColor="@color/black"
                 android:textStyle="bold" />
@@ -158,4 +158,5 @@
             android:layout_height="match_parent"
             android:layout_marginTop="8dp"/>
     </LinearLayout>
+
 </LinearLayout>

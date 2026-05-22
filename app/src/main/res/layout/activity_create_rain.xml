@@ -7,18 +7,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- TOOLBAR (bez paddingu rodzica!) -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
         app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
-        app:title="Tworzenie deszczowni"
+        app:title="@string/sprinkler_create_title"
         android:background="?attr/colorPrimary"
         android:titleTextColor="@android:color/white"/>
 
-    <!-- RESZTA Z PADDINGIEM -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -38,15 +36,15 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="lub wpisz własne dane"
+                android:text="@string/sprinkler_or_custom"
                 android:layout_marginTop="8dp"
                 android:textStyle="italic"
                 android:textColor="@android:color/darker_gray"/>
 
             <TextView
-                android:text="Nazwa Deszczowni:"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:text="@string/sprinkler_name"
                 android:layout_marginTop="16dp"/>
 
             <EditText
@@ -55,9 +53,9 @@
                 android:layout_height="wrap_content"/>
 
             <TextView
-                android:text="Długość węża:"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:text="@string/sprinkler_hose_length"
                 android:layout_marginTop="8dp"/>
 
             <EditText
@@ -67,9 +65,9 @@
                 android:inputType="number"/>
 
             <TextView
-                android:text="Komentarz:"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:text="@string/sprinkler_comment"
                 android:layout_marginTop="8dp"/>
 
             <EditText
@@ -81,7 +79,7 @@
                 android:id="@+id/addButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Dodaj"
+                android:text="@string/sprinkler_add"
                 android:layout_marginTop="16dp"
                 android:layout_gravity="center_horizontal"
                 android:paddingStart="40dp"
