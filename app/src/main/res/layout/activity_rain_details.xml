@@ -54,6 +54,12 @@
                 android:layout_height="wrap_content"
                 android:hint="@string/details_comment" />
 
+            <EditText
+                android:id="@+id/delayEdit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/delay_comment" />
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"

@@ -326,6 +326,7 @@
     <string name="details_name">Sprinkler name</string>
     <string name="details_hose">Hose length (m)</string>
     <string name="details_comment">Comment</string>
+    <string name="delay_comment">Update delay</string>
     <string name="details_current">Current working status</string>
     <string name="details_status">Status: Loading...</string>
     <string name="details_speed">Speed: -- m/h</string>

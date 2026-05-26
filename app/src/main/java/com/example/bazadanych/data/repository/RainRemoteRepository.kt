@@ -460,6 +460,35 @@ class RainRemoteRepository {
         })
     }
 
+    fun saveNewDelay(email: String, rainId: String, delayTime: String, callback: (Boolean) -> Unit) {
+        // Podobnie jak przy głównym zapisie, upewniamy się, co wysyłamy
+        val finalId = if (rainId.isEmpty()) "0" else rainId
+
+        val formBody = FormBody.Builder()
+            .add("id", finalId)
+            .add("delay_time", delayTime) // Klucz dla PHP: $_REQUEST['delay_time']
+            .add("email", email)
+            .build()
+
+        val request = Request.Builder()
+            .url(baseUrl + "save_delay.php") // Podmień na poprawny plik na swoim serwerze PHP
+            .post(formBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("RainRepo", "Błąd połączenia (delay): ${e.message}")
+                callback(false)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val result = response.body?.string()?.trim() ?: ""
+                Log.d("RainRepo", "Odpowiedź serwera (delay): $result")
+                callback(result.contains("OK"))
+            }
+        })
+    }
+
     fun getRainHistory(rainId: String, email: String, callback: (List<RainStatus>) -> Unit) {
         // Dodajemy email do adresu URL
         val url = "${baseUrl}get_rain_history.php?rain_id=$rainId&email=$email"

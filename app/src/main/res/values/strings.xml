@@ -330,6 +330,7 @@
     <string name="details_name">Nazwa deszczowni</string>
     <string name="details_hose">Długość węża (m)</string>
     <string name="details_comment">Komentarz</string>
+    <string name="delay_comment">Opóźnienie aktualizacji</string>
     <string name="details_current">Aktualny status pracy</string>
     <string name="details_status">Status: Pobieranie...</string>
     <string name="details_speed">Prędkość: -- m/h</string>

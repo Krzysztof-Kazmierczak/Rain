@@ -30,6 +30,7 @@ class RainDetailsActivity : AppCompatActivity() {
     private lateinit var nameEdit: EditText
     private lateinit var lengthEdit: EditText
     private lateinit var commentEdit: EditText
+    private lateinit var delayEdit: EditText
     private lateinit var statusText: TextView
     private lateinit var currentSpeedText: TextView
     private lateinit var timeFinishText: TextView
@@ -241,6 +242,7 @@ class RainDetailsActivity : AppCompatActivity() {
         nameEdit = findViewById(R.id.nameEdit)
         lengthEdit = findViewById(R.id.lengthEdit)
         commentEdit = findViewById(R.id.commentEdit)
+        delayEdit = findViewById(R.id.delayEdit)
         statusText = findViewById(R.id.statusText)
         currentSpeedText = findViewById(R.id.currentSpeedText)
         timeFinishText = findViewById(R.id.timeFinishText)
@@ -254,6 +256,7 @@ class RainDetailsActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.saveButton).setOnClickListener {
             saveMainData()
+            saveDelayData()
         }
 
         findViewById<Button>(R.id.btnAdvancedSettings).setOnClickListener {
@@ -371,7 +374,7 @@ class RainDetailsActivity : AppCompatActivity() {
             nameEdit.setText(it.name)
             lengthEdit.setText(it.hoseLength)
             commentEdit.setText(it.comment)
-            // TUTAJ ZMIANA: bez brzydkiego łączenia zmiennych, użyte formatowanie w XML:
+
             supportActionBar?.title = getString(R.string.offline_title_format, it.name)
         }
 
@@ -381,6 +384,7 @@ class RainDetailsActivity : AppCompatActivity() {
                 runOnUiThread {
                     displayUpdateTimes(czasStm, delay)
                 }
+                delayEdit.setText(delay.toString())
             }
         }
 
@@ -400,6 +404,7 @@ class RainDetailsActivity : AppCompatActivity() {
 
     private fun saveMainData() {
         val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+
         val rain = Rain(
             id = currentRainId,
             name = nameEdit.text.toString(),
@@ -414,6 +419,22 @@ class RainDetailsActivity : AppCompatActivity() {
                     CacheHelper.saveObject(this@RainDetailsActivity, "RAIN_DETAILS_$currentRainId", rain)
                     Toast.makeText(this, getString(R.string.saved_success), Toast.LENGTH_SHORT).show()
                     finish()
+                }
+            }
+        }
+    }
+
+    private fun saveDelayData() {
+        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+        val delayTime = delayEdit.text.toString().trim()
+        if (delayTime.isNotEmpty()) {
+            remoteRepo.saveNewDelay(email, currentRainId, delayTime) { successDelay ->
+                runOnUiThread {
+                    if (successDelay) {
+                        CacheHelper.saveObject(this@RainDetailsActivity, "RAIN_DETAILS_$currentRainId", delayTime)
+                        Toast.makeText(this, getString(R.string.saved_success), Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
                 }
             }
         }
