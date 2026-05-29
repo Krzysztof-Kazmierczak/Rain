@@ -106,7 +106,15 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         }
 
         btnToggleWork.setOnClickListener {
-            val newStatus = if (isMachineWorking == 1) 0 else 1
+            var newStatus = 0
+            if (isMachineWorking == 1)
+            {
+                newStatus = 2
+            }
+            else if(isMachineWorking == 2)
+            {
+                newStatus = 1
+            }
             toggleMachineWork(newStatus)
         }
     }
