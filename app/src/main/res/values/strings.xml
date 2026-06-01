@@ -319,7 +319,7 @@
     <string name="status_connection_lost_3h">Brak komunikacji > 3h</string>
     <string name="status_should_finish">Powinna skończyć</string>
 
-    <string name="signal">Sygnał: %1$d%%</string>
+    <string name="signal">Sygnał: %1$d dBm</string>
     <string name="battery">Bateria: %1$s V</string>
     <string name="saved_success">Zapisano pomyślnie</string>
     <string name="last_update">Ostatnia aktualizacja: %1$s</string>

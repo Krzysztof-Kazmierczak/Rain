@@ -315,7 +315,7 @@
     <string name="status_connection_lost_3h">No communication > 3h</string>
     <string name="status_should_finish">Should finish</string>
 
-    <string name="signal">Signal: %1$d%%</string>
+    <string name="signal">Signal: %1$d dBm</string>
     <string name="battery">Battery: %1$s V</string>
     <string name="saved_success">Saved successfully</string>
     <string name="last_update">Last update: %1$s</string>
