@@ -159,7 +159,7 @@
     <string name="chart_param_target_speed">Prędkość zadana (km/h)</string>
     <string name="chart_param_distance">Odległość (m)</string>
     <string name="chart_param_work_time">Czas pracy (h)</string>
-    <string name="chart_param_battery">Bateria (%)</string>
+    <string name="chart_param_battery">Bateria (V)</string>
     <string name="chart_param_sim_signal">Sygnał SIM (dBm)</string>
 
     <string name="machine_analysis_title">Analiza Maszyny</string>

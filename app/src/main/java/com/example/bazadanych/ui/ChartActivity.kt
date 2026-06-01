@@ -304,7 +304,7 @@ class ChartActivity : AppCompatActivity() {
                 1 -> tel.targetSpeed ?: 0f
                 2 -> tel.distance ?: 0f
                 3 -> tel.workTime ?: 0f
-                4 -> tel.battery ?: 0f
+                4 -> (tel.battery ?: 0f) / 100f
                 5 -> tel.simSignal ?: 0f
                 else -> 0f
             }
