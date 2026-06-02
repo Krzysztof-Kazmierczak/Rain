@@ -46,6 +46,7 @@ class RainDetailsActivity : AppCompatActivity() {
     private var baseWorkTimeSec = 0L
     private var baseExtension = 0.0
     private var baseSpeed = 0.0
+    private var setSpeed = 0.0
     private var isMachineWorking = false
     private var lastDataTimestamp = 0L
     var lastStmTimeStr: String? = null
@@ -53,12 +54,20 @@ class RainDetailsActivity : AppCompatActivity() {
 
     // --- POLA DLA PODLEWANIA STREFOWEGO ---
     private var isZonedWatering = false
+
+    private var opoznionyStartPracy = 0
+    private var opoznioneRozpoczecieZwijania = 0
+    private var opoznioneZakonczeniePodlewania = 0
     private var zone1Speed = 0.0
     private var zone2Speed = 0.0
     private var zone3Speed = 0.0
     private var zone1Start = 0.0
     private var zone2Start = 0.0
     private var zone3Start = 0.0
+
+    private var czasOpoznionyStartPracy = 0
+    private var czasOpoznioneZwijanie = 0
+    private var czasOpoznioneZakonczeniePodlewania = 0
 
     private val refreshRunnable = object : Runnable {
         override fun run() {
@@ -77,38 +86,32 @@ class RainDetailsActivity : AppCompatActivity() {
 
             if (diffSec >= 0) {
                 var currentExtension = baseExtension
-                var secondsToReachZero = 0L
-                var reachedZero = false
 
-                // 1. SYMULACJA RUCHU SEKUNDA PO SEKUNDZIE
+                // Łączny czas, przez który maszyna stoi na starcie i nie zwija węża
+                val totalStartDelay = (if (opoznionyStartPracy == 1) czasOpoznionyStartPracy.toLong() else 0L) +
+                        (if (opoznioneRozpoczecieZwijania == 1) czasOpoznioneZwijanie.toLong() else 0L)
+
+                // 1. SYMULACJA ZWIJANIA
                 for (i in 1..diffSec) {
-                    val activeSpeed = getSpeedForExtension(currentExtension)
-                    val speedPerSecond = activeSpeed / 3600.0
-                    currentExtension -= speedPerSecond
+                    val currentWorkTimeInLoop = baseWorkTimeSec + i
 
-                    if (currentExtension <= 0.0) {
-                        currentExtension = 0.0
-                        if (!reachedZero) {
-                            secondsToReachZero = i.toLong()
-                            reachedZero = true
+                    // Ruszamy ze zwijaniem dopiero gdy miną OBA opóźnienia startowe!
+                    if (currentWorkTimeInLoop > totalStartDelay) {
+                        val activeSpeed = getSpeedForExtension(currentExtension)
+                        if (activeSpeed > 0.0) {
+                            val speedPerSecond = activeSpeed / 3600.0
+                            currentExtension -= speedPerSecond
+                            if (currentExtension <= 0.0) currentExtension = 0.0
                         }
-                        break
                     }
                 }
 
-                // 2. OBLICZENIE CZASU PRACY
-                val currentWorkTimeSec = if (reachedZero) {
-                    baseWorkTimeSec + secondsToReachZero
-                } else {
-                    baseWorkTimeSec + diffSec
-                }
+                // 2. OBLICZENIE CZASÓW I AKTUALIZACJA UI
+                val currentWorkTimeSec = baseWorkTimeSec + diffSec
+                val timeToFinishSec = calculateTimeToFinishAnallytically(currentExtension, currentWorkTimeSec)
 
-                // 3. OBLICZENIE CZASU DO KOŃCA (Analityczne uwzględnienie stref odwróconych)
-                val timeToFinishSec = calculateTimeToFinishAnallytically(currentExtension)
-
-                // Aktualizacja UI
+                // Sekcja aktualizacji widoków tekstowych (workTimeText, extensionText, itp.)
                 val prefix = if (currentIsOffline) getString(R.string.offline_label) + " " else ""
-
                 workTimeText.text = prefix + getString(R.string.work_time, formatSecondsToTimeStr(currentWorkTimeSec))
                 extensionText.text = prefix + getString(R.string.extension, currentExtension)
                 timeFinishText.text = prefix + getString(R.string.time_to_finish, formatSecondsToTimeStr(timeToFinishSec))
@@ -119,15 +122,14 @@ class RainDetailsActivity : AppCompatActivity() {
                         currentExtension <= zone1Start -> Pair(getString(R.string.zone_1), zone1Speed)
                         currentExtension <= zone2Start -> Pair(getString(R.string.zone_2), zone2Speed)
                         currentExtension <= zone3Start -> Pair(getString(R.string.zone_3), zone3Speed)
-                        else -> Pair(getString(R.string.zone_base), baseSpeed)
+                        else -> Pair(getString(R.string.zone_base), setSpeed)
                     }
                     currentSpeedText.text = prefix + getString(R.string.speed_zone, zoneSpeed, currentZone)
                 } else {
                     currentSpeedText.text = prefix + getString(R.string.speed, baseSpeed)
                 }
 
-                if (currentExtension <= 0.0) {
-                    Log.d("TICKER", "Rozwinięcie osiągnęło 0.0 - zatrzymuję licznik.")
+                if (timeToFinishSec <= 0L) {
                     return
                 }
             }
@@ -138,54 +140,69 @@ class RainDetailsActivity : AppCompatActivity() {
 
     // Zwraca prędkość dla nowej logiki stref (0 -> strefa1 -> strefa2 -> strefa3 -> baza)
     private fun getSpeedForExtension(ext: Double): Double {
-        if (!isZonedWatering) return baseSpeed
+        if (!isZonedWatering) return setSpeed
 
         return when {
             ext <= zone1Start -> zone1Speed
             ext <= zone2Start -> zone2Speed
             ext <= zone3Start -> zone3Speed
-            else -> baseSpeed
+            else -> setSpeed
         }
     }
 
     // Precyzyjne obliczanie czasu do końca dla nowej kolejności stref
-    private fun calculateTimeToFinishAnallytically(ext: Double): Long {
-        if (ext <= 0.0) return 0L
-        if (!isZonedWatering) {
-            return if (baseSpeed > 0) (ext / (baseSpeed / 3600.0)).toLong() else 0L
+    private fun calculateTimeToFinishAnallytically(ext: Double, czasPracySec: Long): Long {
+        var totalRemainingTimeSec = 0.0
+
+        // 1. OBLICZANIE CZASU JAZDY (Logika strefowa)
+        if (ext > 0.0) {
+            if (!isZonedWatering) {
+                if (setSpeed > 0) {
+                    totalRemainingTimeSec += ext / (setSpeed / 3600.0)
+                }
+            } else {
+                var remainingDist = ext
+
+                if (remainingDist > zone3Start) {
+                    val chunk = remainingDist - zone3Start
+                    if (setSpeed > 0) totalRemainingTimeSec += chunk / (setSpeed / 3600.0)
+                    remainingDist = zone3Start
+                }
+                if (remainingDist > zone2Start && remainingDist <= zone3Start) {
+                    val chunk = remainingDist - zone2Start
+                    if (zone3Speed > 0) totalRemainingTimeSec += chunk / (zone3Speed / 3600.0)
+                    remainingDist = zone2Start
+                }
+                if (remainingDist > zone1Start && remainingDist <= zone2Start) {
+                    val chunk = remainingDist - zone1Start
+                    if (zone2Speed > 0) totalRemainingTimeSec += chunk / (zone2Speed / 3600.0)
+                    remainingDist = zone1Start
+                }
+                if (remainingDist > 0.0 && remainingDist <= zone1Start) {
+                    val chunk = remainingDist
+                    if (zone1Speed > 0) totalRemainingTimeSec += chunk / (zone1Speed / 3600.0)
+                }
+            }
         }
 
-        var remainingDist = ext
-        var totalTimeSec = 0.0
+        // 2. ŁĄCZNE OPÓŹNIENIA STARTOWE (Praca + Zwijanie)
+        // Sumujemy oba opóźnienia, które muszą minąć na początku
+        val totalStartDelay = (if (opoznionyStartPracy == 1) czasOpoznionyStartPracy.toLong() else 0L) +
+                (if (opoznioneRozpoczecieZwijania == 1) czasOpoznioneZwijanie.toLong() else 0L)
 
-        // 1. Odcinek powyżej Strefy 3 (Dojazdowa) -> od aktualnej pozycji do zone3Start
-        if (remainingDist > zone3Start) {
-            val chunk = remainingDist - zone3Start
-            if (baseSpeed > 0) totalTimeSec += chunk / (baseSpeed / 3600.0) else return 0L
-            remainingDist = zone3Start
+        // Od łącznego czasu startowego odejmujemy to, co maszyna już przepracowała
+        val remainingStartDelay = maxOf(0L, totalStartDelay - czasPracySec)
+        totalRemainingTimeSec += remainingStartDelay.toDouble()
+
+        // 3. OPÓŹNIENIE KOŃCOWE (Tylko podlewanie na postoju po zwinięciu)
+        // To opóźnienie czeka na maszynę na samym końcu (gdy ext dojdzie do 0.0)
+        if (ext > 0.0) {
+            if (opoznioneZakonczeniePodlewania == 1) {
+                totalRemainingTimeSec += czasOpoznioneZakonczeniePodlewania.toDouble()
+            }
         }
 
-        // 2. Odcinek w Strefie 3 -> od pozycji do zone2Start
-        if (remainingDist > zone2Start && remainingDist <= zone3Start) {
-            val chunk = remainingDist - zone2Start
-            if (zone3Speed > 0) totalTimeSec += chunk / (zone3Speed / 3600.0) else return 0L
-            remainingDist = zone2Start
-        }
-
-        // 3. Odcinek w Strefie 2 -> od pozycji do zone1Start
-        if (remainingDist > zone1Start && remainingDist <= zone2Start) {
-            val chunk = remainingDist - zone1Start
-            if (zone2Speed > 0) totalTimeSec += chunk / (zone2Speed / 3600.0) else return 0L
-            remainingDist = zone1Start
-        }
-
-        // 4. Odcinek w Strefie 1 -> od pozycji do samego końca (0m)
-        if (remainingDist > 0.0 && remainingDist <= zone1Start) {
-            val chunk = remainingDist
-            if (zone1Speed > 0) totalTimeSec += chunk / (zone1Speed / 3600.0) else return 0L
-        }
-
-        return totalTimeSec.toLong()
+        return totalRemainingTimeSec.toLong()
     }
 
     private fun pobierzUstawieniaStrefowe(onComplete: () -> Unit) {
@@ -199,6 +216,9 @@ class RainDetailsActivity : AppCompatActivity() {
                     zone2Speed = advInt.predkoscStrefa2.toDouble()
                     zone3Speed = advInt.predkoscStrefa3.toDouble()
                 }
+                opoznionyStartPracy = if (advInt.opoznionyStartPracy) 1 else 0
+                opoznioneRozpoczecieZwijania = if (advInt.opoznionyStartZwijania) 1 else 0
+                opoznioneZakonczeniePodlewania = if (advInt.opoznioneZakonczenie) 1 else 0
             } else {
                 Log.e("TEST_DANYCH", "Brak danych INT")
             }
@@ -208,6 +228,10 @@ class RainDetailsActivity : AppCompatActivity() {
                     zone1Start = advUInt.strefa1Start?.toDouble() ?: 0.0
                     zone2Start = advUInt.strefa2Start?.toDouble() ?: 0.0
                     zone3Start = advUInt.strefa3Start?.toDouble() ?: 0.0
+
+                    czasOpoznionyStartPracy = (advUInt.opoznionyStartPracyH) * 3600 + (advUInt.opoznionyStartPracyMin) * 60 + (advUInt.opoznionyStartPracyS)
+                    czasOpoznioneZwijanie = (advUInt.opoznionyStartZwijaniaH) * 3600 + (advUInt.opoznionyStartZwijaniaMin) * 60 + (advUInt.opoznionyStartZwijaniaS)
+                    czasOpoznioneZakonczeniePodlewania = (advUInt.opoznioneZakonczeniePracyH) * 3600 + (advUInt.opoznioneZakonczeniePracyMin) * 60 + (advUInt.opoznioneZakonczeniePracyS)
                 } else {
                     Log.e("TEST_DANYCH", "Brak danych UINT")
                 }
@@ -344,6 +368,20 @@ class RainDetailsActivity : AppCompatActivity() {
                     baseWorkTimeSec = parseTimeStrToSeconds(latest.workTime)
                     baseExtension = latest.extension.toString().toDoubleOrNull() ?: 0.0
                     baseSpeed = latest.currentSpeed
+                    setSpeed = latest.setSpeed
+
+                    // POPRAWKA: Aktualizujemy timestamp dla tickera z najświeższych danych!
+                    try {
+                        latest.updatedAt?.let { timestampStr ->
+                            val dbFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                            val date = dbFormat.parse(timestampStr)
+                            if (date != null) {
+                                lastDataTimestamp = date.time
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("TICKER_ERROR", "Błąd parsowania czasu dla tickera: ${e.message}")
+                    }
 
                     refreshStatusUI(
                         latest.isWorking, latest.currentSpeed, latest.timeToFinish,
