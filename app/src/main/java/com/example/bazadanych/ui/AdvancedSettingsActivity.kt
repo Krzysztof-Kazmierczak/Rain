@@ -367,9 +367,15 @@ class AdvancedSettingsActivity : AppCompatActivity() {
                     editTargetSpeed.setText(json.optString("target_speed"))
 
                     cbZoneWatering.isChecked = json.optInt("zone_watering") == 1
-                    z1End.setText(json.optString("z1_end"))
-                    z2End.setText(json.optString("z2_end"))
-                    z3End.setText(json.optString("z3_end"))
+
+                    val z1EndValue = json.optDouble("z1_end", 0.0) / 1000
+                    z1End.setText(z1EndValue.toInt().toString())
+
+                    val z2EndValue = json.optDouble("z2_end", 0.0) / 1000
+                    z2End.setText(z2EndValue.toInt().toString())
+
+                    val z3EndValue = json.optDouble("z3_end", 0.0) / 1000
+                    z3End.setText(z3EndValue.toInt().toString())
 
                     editZ1Speed.setText(json.optString("z1_speed"))
                     editZ2Speed.setText(json.optString("z2_speed"))
@@ -411,9 +417,9 @@ class AdvancedSettingsActivity : AppCompatActivity() {
             put("email", userEmail)
             put("target_speed", editTargetSpeed.text.toString().ifEmpty { "0" })
             put("zone_watering", if (cbZoneWatering.isChecked) 1 else 0)
-            put("z1_end", z1End.text.toString().ifEmpty { "0" })
-            put("z2_end", z2End.text.toString().ifEmpty { "0" })
-            put("z3_end", z3End.text.toString().ifEmpty { "0" })
+            put("z1_end", (z1End.text.toString().toIntOrNull() ?: 0) * 1000)
+            put("z2_end", (z2End.text.toString().toIntOrNull() ?: 0) * 1000)
+            put("z3_end", (z3End.text.toString().toIntOrNull() ?: 0) * 1000)
             put("z1_speed", editZ1Speed.text.toString().ifEmpty { "0" })
             put("z2_speed", editZ2Speed.text.toString().ifEmpty { "0" })
             put("z3_speed", editZ3Speed.text.toString().ifEmpty { "0" })

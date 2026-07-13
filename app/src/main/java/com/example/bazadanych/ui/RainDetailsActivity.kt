@@ -86,6 +86,7 @@ class RainDetailsActivity : AppCompatActivity() {
 
             if (diffSec >= 0) {
                 var currentExtension = baseExtension
+                var currentExtension_m = currentExtension / 1000.0
 
                 // Łączny czas, przez który maszyna stoi na starcie i nie zwija węża
                 val totalStartDelay = (if (opoznionyStartPracy == 1) czasOpoznionyStartPracy.toLong() else 0L) +
@@ -113,7 +114,7 @@ class RainDetailsActivity : AppCompatActivity() {
                 // Sekcja aktualizacji widoków tekstowych (workTimeText, extensionText, itp.)
                 val prefix = if (currentIsOffline) getString(R.string.offline_label) + " " else ""
                 workTimeText.text = prefix + getString(R.string.work_time, formatSecondsToTimeStr(currentWorkTimeSec))
-                extensionText.text = prefix + getString(R.string.extension, currentExtension)
+                extensionText.text = prefix + getString(R.string.extension, currentExtension_m)
                 timeFinishText.text = prefix + getString(R.string.time_to_finish, formatSecondsToTimeStr(timeToFinishSec))
 
                 // Odwrócone warunki sprawdzania strefy dla tickera
@@ -382,10 +383,10 @@ class RainDetailsActivity : AppCompatActivity() {
                     } catch (e: Exception) {
                         Log.e("TICKER_ERROR", "Błąd parsowania czasu dla tickera: ${e.message}")
                     }
-
+                    var ActualExtension_m = latest.extension / 1000.0
                     refreshStatusUI(
                         latest.isWorking, latest.currentSpeed, latest.timeToFinish,
-                        latest.workTime, latest.extension.toString(), currentIsOffline, latest.signalStrength, latest.battery
+                        latest.workTime, ActualExtension_m.toString(), currentIsOffline, latest.signalStrength, latest.battery
                     )
 
                     CacheHelper.saveObject(this, "RAIN_LIVE_STATUS_$currentRainId", latest)
