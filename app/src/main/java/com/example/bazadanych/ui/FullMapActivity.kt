@@ -2,8 +2,11 @@ package com.example.bazadanych.ui
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
-import android.net.ConnectivityManager
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -15,6 +18,7 @@ import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.bazadanych.BuildConfig
 import com.example.bazadanych.R
 import com.example.bazadanych.data.calculation.GeoUtils
 import com.example.bazadanych.data.db.FieldItem
@@ -24,23 +28,21 @@ import com.example.bazadanych.data.repository.RainRemoteRepository
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import org.osmdroid.config.Configuration
+import org.osmdroid.events.MapListener
 import org.osmdroid.events.MapEventsReceiver
-import org.osmdroid.tileprovider.cachemanager.CacheManager
+import org.osmdroid.events.ScrollEvent
+import org.osmdroid.events.ZoomEvent
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.CopyrightOverlay
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.infowindow.BasicInfoWindow
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
-import org.osmdroid.events.MapListener
-import org.osmdroid.events.ScrollEvent
-import org.osmdroid.events.ZoomEvent
+import org.osmdroid.views.overlay.infowindow.InfoWindow
 
 class FullMapActivity : AppCompatActivity() {
 
@@ -54,6 +56,8 @@ class FullMapActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var btnStartDrawing: Button
     private lateinit var btnUndo: Button
+    private val cartoKey = "cb1_3316_1_fcddcff8431eecf79659d2b1"
+    private var hasCenteredOnFields = false
 
     private val originalRainBitmap by lazy {
         BitmapFactory.decodeResource(resources, R.drawable.color_deszczowniav2)
@@ -66,65 +70,95 @@ class FullMapActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val conf = org.osmdroid.config.Configuration.getInstance()
-        val ctx = applicationContext
-
-        Configuration.getInstance().load(ctx, ctx.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
-
-        conf.userAgentValue = packageName
-        conf.tileFileSystemCacheMaxBytes = 1000L * 1024L * 1024L
-
-        val bulkPolicy = org.osmdroid.tileprovider.tilesource.TileSourcePolicy(1, 0)
-
-        val mapnikWithBulk = org.osmdroid.tileprovider.tilesource.XYTileSource(
-            "MapnikBulk",
-            0, 19, 256, ".png",
-            arrayOf(
-                "https://a.tile.openstreetmap.org/",
-                "https://b.tile.openstreetmap.org/",
-                "https://c.tile.openstreetmap.org/"
-            ),
-            "© OpenStreetMap contributors",
-            bulkPolicy
-        )
-
+        setupOsmdroidConfig()
         setContentView(R.layout.activity_full_map)
 
         map = findViewById(R.id.fullMap)
-        map.setTileSource(mapnikWithBulk)
+
+
+       // map.setTileSource(TileSourceFactory.MAPNIK)
+        map.setTileSource(positronTileSource)
         map.setMultiTouchControls(true)
 
         setupToolbar()
         setupMap()
         initUI()
 
-        val lastConfig = CacheHelper.loadObject<CacheHelper.MapConfig>(this, MAP_CONFIG_KEY)
-        if (lastConfig != null) {
-            map.controller.setZoom(lastConfig.zoom)
-            map.controller.setCenter(GeoPoint(lastConfig.lat, lastConfig.lng))
-        } else {
-            map.controller.setZoom(6.0)
-            map.controller.setCenter(GeoPoint(52.0, 19.0))
-        }
+        restoreLastMapPosition()
 
         map.addMapListener(object : MapListener {
             override fun onScroll(event: ScrollEvent?): Boolean = false
 
             override fun onZoom(event: ZoomEvent?): Boolean {
-                val currentZoom = map.zoomLevelDouble
-                val newIcon = getOrCreateScaledDrawable(currentZoom)
-
-                map.overlays.forEach { overlay ->
-                    if (overlay is Marker && overlay.id?.startsWith("rain_") == true) {
-                        overlay.icon = newIcon
-                    }
-                }
-                map.invalidate()
+                rescaleRainMarkers()
                 return true
             }
         })
 
         loadData()
+    }
+
+    private val positronTileSource = object : org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase(
+        "CartoPositron", 0, 20, 256, ".png",
+        arrayOf(
+            "https://a.basemaps.cartocdn.com/light_all/",
+            "https://b.basemaps.cartocdn.com/light_all/",
+            "https://c.basemaps.cartocdn.com/light_all/"
+        ),
+        "© OpenStreetMap contributors, © CARTO"
+    ) {
+        override fun getTileURLString(pMapTileIndex: Long): String {
+            val z = org.osmdroid.util.MapTileIndex.getZoom(pMapTileIndex)
+            val x = org.osmdroid.util.MapTileIndex.getX(pMapTileIndex)
+            val y = org.osmdroid.util.MapTileIndex.getY(pMapTileIndex)
+            return "${getBaseUrl()}$z/$x/$y.png?key=$cartoKey"
+        }
+    }
+
+    private fun setupOsmdroidConfig() {
+        val ctx = applicationContext
+        val prefs = ctx.getSharedPreferences("osmdroid", Context.MODE_PRIVATE)
+        val conf = Configuration.getInstance()
+
+        conf.load(ctx, prefs)
+
+        conf.osmdroidBasePath = java.io.File(ctx.getExternalFilesDir(null), "osmdroid").apply { mkdirs() }
+        conf.osmdroidTileCache = java.io.File(conf.osmdroidBasePath, "tiles").apply { mkdirs() }
+
+        conf.userAgentValue = "RainTech-BazaDanych/1.0 (kontakt@raintech.pl)"
+        conf.tileDownloadThreads = 2
+        conf.tileDownloadMaxQueueSize = 32
+        conf.tileFileSystemCacheMaxBytes = 200L * 1024L * 1024L
+        conf.tileFileSystemCacheTrimBytes = 150L * 1024L * 1024L
+
+        conf.save(ctx, prefs)
+    }
+
+    private fun restoreLastMapPosition() {
+        val lastConfig = CacheHelper.loadObject<CacheHelper.MapConfig>(this, MAP_CONFIG_KEY)
+
+        val validZoom = lastConfig != null &&
+                lastConfig.zoom >= 5.0 &&
+                lastConfig.lat != 0.0 &&
+                lastConfig.lng != 0.0
+
+        if (validZoom) {
+            map.controller.setZoom(lastConfig!!.zoom)
+            map.controller.setCenter(GeoPoint(lastConfig.lat, lastConfig.lng))
+        } else {
+            map.controller.setZoom(6.0)
+            map.controller.setCenter(GeoPoint(52.0, 19.0))
+        }
+    }
+
+    private fun rescaleRainMarkers() {
+        val newIcon = getOrCreateScaledDrawable(map.zoomLevelDouble)
+        map.overlays.forEach { overlay ->
+            if (overlay is Marker && overlay.id?.startsWith("rain_") == true) {
+                overlay.icon = newIcon
+            }
+        }
+        map.invalidate()
     }
 
     private fun getOrCreateScaledDrawable(zoom: Double): Drawable {
@@ -146,7 +180,9 @@ class FullMapActivity : AppCompatActivity() {
             if (targetWidth <= 0) targetWidth = 1
             if (targetHeight <= 0) targetHeight = 1
 
-            val scaledBitmap = Bitmap.createScaledBitmap(originalRainBitmap, targetWidth, targetHeight, true)
+            val scaledBitmap = Bitmap.createScaledBitmap(
+                originalRainBitmap, targetWidth, targetHeight, true
+            )
             BitmapDrawable(resources, scaledBitmap)
         }
     }
@@ -161,6 +197,10 @@ class FullMapActivity : AppCompatActivity() {
     }
 
     private fun setupMap() {
+        // Atrybucja "© OpenStreetMap contributors" — wymagana przez licencję ODbL
+        // i przez politykę użycia kafelków.
+        map.overlays.add(CopyrightOverlay(this))
+
         val eventsOverlay = MapEventsOverlay(object : MapEventsReceiver {
             override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
                 if (isDrawingMode && p != null) {
@@ -175,18 +215,23 @@ class FullMapActivity : AppCompatActivity() {
                     return true
                 }
 
-                org.osmdroid.views.overlay.infowindow.InfoWindow.closeAllInfoWindowsOn(map)
+                InfoWindow.closeAllInfoWindowsOn(map)
                 return false
             }
+
             override fun longPressHelper(p: GeoPoint?): Boolean = false
         })
         map.overlays.add(eventsOverlay)
     }
 
     private fun saveRainManualLocation(rainId: String, p: GeoPoint) {
-        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+        val email = getSharedPreferences("user_session", MODE_PRIVATE)
+            .getString("user_email", "") ?: ""
 
-        Log.d("FullMapDebug", "Próba zapisu dla RainID: $rainId, Email: $email na koordynatach: ${p.latitude}, ${p.longitude}")
+        Log.d(
+            "FullMapDebug",
+            "Próba zapisu dla RainID: $rainId, Email: $email na koordynatach: ${p.latitude}, ${p.longitude}"
+        )
 
         remoteRepo.updateRainManualLocation(rainId, email, p.latitude, p.longitude) { success ->
             runOnUiThread {
@@ -221,7 +266,11 @@ class FullMapActivity : AppCompatActivity() {
             }
         }
 
-        findViewById<FloatingActionButton>(R.id.btnCenterAll).setOnClickListener { loadData() }
+        // Przycisk centrowania: wymusza ponowne dopasowanie widoku do pól.
+        findViewById<FloatingActionButton>(R.id.btnCenterAll).setOnClickListener {
+            hasCenteredOnFields = false
+            loadData()
+        }
 
         findViewById<Button>(R.id.menuRainsHeader).setOnClickListener {
             val rec = findViewById<RecyclerView>(R.id.recyclerRains)
@@ -251,7 +300,6 @@ class FullMapActivity : AppCompatActivity() {
             outlinePaint.color = Color.BLACK
             outlinePaint.strokeWidth = 2f
 
-            // Tłumaczenie tytułu i wstrzyknięcie zmiennych do zasobu HTML (snippet)
             title = field.name ?: getString(R.string.full_map_default_field_name)
             snippet = getString(R.string.full_map_field_snippet, field.cropType, field.areaHa)
 
@@ -274,7 +322,7 @@ class FullMapActivity : AppCompatActivity() {
                 }
                 startActivity(intent)
             } else {
-                org.osmdroid.views.overlay.infowindow.InfoWindow.closeAllInfoWindowsOn(map)
+                InfoWindow.closeAllInfoWindowsOn(map)
                 polygon.showInfoWindow()
             }
             true
@@ -283,11 +331,13 @@ class FullMapActivity : AppCompatActivity() {
     }
 
     private fun addRainMarker(rain: Rain) {
-        val HISTORY_KEY = "HISTORY_${rain.id}"
-        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+        val historyKey = "HISTORY_${rain.id}"
+        val email = getSharedPreferences("user_session", MODE_PRIVATE)
+            .getString("user_email", "") ?: ""
 
         Thread {
-            val cachedHistory = CacheHelper.loadList<com.example.bazadanych.data.db.RainStatus>(this, HISTORY_KEY)
+            val cachedHistory =
+                CacheHelper.loadList<com.example.bazadanych.data.db.RainStatus>(this, historyKey)
 
             if (cachedHistory != null && cachedHistory.isNotEmpty()) {
                 runOnUiThread {
@@ -296,7 +346,7 @@ class FullMapActivity : AppCompatActivity() {
             }
 
             remoteRepo.getRainHistory(rain.id, email) { history ->
-                CacheHelper.saveList(this, HISTORY_KEY, history)
+                CacheHelper.saveList(this, historyKey, history)
 
                 runOnUiThread {
                     if (history.isNotEmpty()) {
@@ -328,7 +378,10 @@ class FullMapActivity : AppCompatActivity() {
 
             setOnMarkerClickListener { m, _ ->
                 if (m.isInfoWindowOpen) {
-                    startActivity(Intent(this@FullMapActivity, RainDetailsActivity::class.java).putExtra("id", rain.id))
+                    startActivity(
+                        Intent(this@FullMapActivity, RainDetailsActivity::class.java)
+                            .putExtra("id", rain.id)
+                    )
                 } else m.showInfoWindow()
                 true
             }
@@ -390,21 +443,30 @@ class FullMapActivity : AppCompatActivity() {
     }
 
     private fun centerMapOnFields(fields: List<FieldItem>) {
+        if (hasCenteredOnFields) return
+
         val allPoints = mutableListOf<GeoPoint>()
         fields.forEach { field ->
             field.coordinates.split(";").forEach {
                 val latLng = it.split(",")
-                if (latLng.size == 2) allPoints.add(GeoPoint(latLng[0].toDouble(), latLng[1].toDouble()))
+                if (latLng.size == 2) {
+                    val lat = latLng[0].toDoubleOrNull()
+                    val lng = latLng[1].toDoubleOrNull()
+                    if (lat != null && lng != null) allPoints.add(GeoPoint(lat, lng))
+                }
             }
         }
-        if (allPoints.isNotEmpty()) {
-            val box = BoundingBox.fromGeoPoints(allPoints)
+        if (allPoints.isEmpty()) return
 
-            val center = box.centerWithDateLine
-            val config = CacheHelper.MapConfig(center.latitude, center.longitude, 14.0)
-            CacheHelper.saveObject(this, MAP_CONFIG_KEY, config)
+        hasCenteredOnFields = true
+        val box = BoundingBox.fromGeoPoints(allPoints)
 
-            map.zoomToBoundingBox(box, true, 150)
+        if (map.width > 0 && map.height > 0) {
+            map.zoomToBoundingBox(box, false, 150)
+        } else {
+            map.addOnFirstLayoutListener { _, _, _, _, _ ->
+                map.zoomToBoundingBox(box, false, 150)
+            }
         }
     }
 
@@ -414,18 +476,19 @@ class FullMapActivity : AppCompatActivity() {
             if (parts.isNotEmpty()) {
                 val allPoints = parts.mapNotNull { p ->
                     val latLng = p.split(",")
-                    if (latLng.size == 2) GeoPoint(latLng[0].toDouble(), latLng[1].toDouble()) else null
+                    if (latLng.size == 2) {
+                        val lat = latLng[0].toDoubleOrNull()
+                        val lng = latLng[1].toDoubleOrNull()
+                        if (lat != null && lng != null) GeoPoint(lat, lng) else null
+                    } else null
                 }
 
                 if (allPoints.isNotEmpty()) {
-                    val centerLat = allPoints.map { it.latitude }.average()
-                    val centerLng = allPoints.map { it.longitude }.average()
-
                     MapSidebarAdapter.SidebarItem(
                         field.id.toString(),
                         field.name ?: getString(R.string.full_map_default_field_name),
-                        centerLat,
-                        centerLng
+                        allPoints.map { it.latitude }.average(),
+                        allPoints.map { it.longitude }.average()
                     )
                 } else null
             } else null
@@ -439,12 +502,17 @@ class FullMapActivity : AppCompatActivity() {
             if (field != null) {
                 val pts = field.coordinates.split(";").mapNotNull {
                     val latLng = it.split(",")
-                    if (latLng.size == 2) GeoPoint(latLng[0].toDouble(), latLng[1].toDouble()) else null
+                    if (latLng.size == 2) {
+                        val lat = latLng[0].toDoubleOrNull()
+                        val lng = latLng[1].toDoubleOrNull()
+                        if (lat != null && lng != null) GeoPoint(lat, lng) else null
+                    } else null
                 }
 
                 if (pts.isNotEmpty()) {
                     val box = BoundingBox.fromGeoPoints(pts)
                     map.zoomToBoundingBox(box, true, 150)
+                    hasCenteredOnFields = true
                 }
             }
             drawerLayout.closeDrawers()
@@ -455,7 +523,8 @@ class FullMapActivity : AppCompatActivity() {
         val recycler = findViewById<RecyclerView>(R.id.recyclerRains)
         recycler.layoutManager = LinearLayoutManager(this)
 
-        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+        val email = getSharedPreferences("user_session", MODE_PRIVATE)
+            .getString("user_email", "") ?: ""
 
         val sidebarItems = mutableListOf<MapSidebarAdapter.SidebarItem>()
         val adapter = MapSidebarAdapter(sidebarItems) { item ->
@@ -474,22 +543,22 @@ class FullMapActivity : AppCompatActivity() {
             } else {
                 map.controller.animateTo(GeoPoint(item.lat, item.lng))
                 map.controller.setZoom(18.0)
+                hasCenteredOnFields = true
                 drawerLayout.closeDrawers()
             }
         }
         recycler.adapter = adapter
 
         rains.forEach { rain ->
-            val HISTORY_KEY = "HISTORY_${rain.id}"
+            val historyKey = "HISTORY_${rain.id}"
 
             Thread {
-                val cachedHistory = CacheHelper.loadList<com.example.bazadanych.data.db.RainStatus>(this, HISTORY_KEY)
+                val cachedHistory =
+                    CacheHelper.loadList<com.example.bazadanych.data.db.RainStatus>(this, historyKey)
+
                 if (cachedHistory != null && cachedHistory.isNotEmpty()) {
                     val cachedItem = MapSidebarAdapter.SidebarItem(
-                        rain.id,
-                        rain.name,
-                        cachedHistory[0].lat,
-                        cachedHistory[0].lng
+                        rain.id, rain.name, cachedHistory[0].lat, cachedHistory[0].lng
                     )
 
                     runOnUiThread {
@@ -503,10 +572,7 @@ class FullMapActivity : AppCompatActivity() {
                 remoteRepo.getRainHistory(rain.id, email) { history ->
                     if (history.isNotEmpty()) {
                         val newItem = MapSidebarAdapter.SidebarItem(
-                            rain.id,
-                            rain.name,
-                            history[0].lat,
-                            history[0].lng
+                            rain.id, rain.name, history[0].lat, history[0].lng
                         )
 
                         runOnUiThread {
@@ -524,18 +590,14 @@ class FullMapActivity : AppCompatActivity() {
         }
     }
 
-    private fun isOnline(): Boolean {
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        return cm.activeNetworkInfo?.isConnected ?: false
-    }
-
     private fun loadData() {
-        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
-        val FIELDS_KEY = "CACHED_FIELDS"
-        val RAINS_KEY = "CACHED_RAINS"
+        val email = getSharedPreferences("user_session", MODE_PRIVATE)
+            .getString("user_email", "") ?: ""
+        val fieldsKey = "CACHED_FIELDS"
+        val rainsKey = "CACHED_RAINS"
 
         Thread {
-            val cachedFields = CacheHelper.loadList<FieldItem>(this, FIELDS_KEY)
+            val cachedFields = CacheHelper.loadList<FieldItem>(this, fieldsKey)
             runOnUiThread {
                 if (cachedFields != null) {
                     updateFieldsUI(cachedFields)
@@ -543,7 +605,7 @@ class FullMapActivity : AppCompatActivity() {
                 }
             }
 
-            val cachedRains = CacheHelper.loadList<Rain>(this, RAINS_KEY)
+            val cachedRains = CacheHelper.loadList<Rain>(this, rainsKey)
             runOnUiThread {
                 if (cachedRains != null) {
                     updateRainsUI(cachedRains)
@@ -551,19 +613,15 @@ class FullMapActivity : AppCompatActivity() {
             }
 
             remoteRepo.getAgriculturalFields(email) { fields ->
-                CacheHelper.saveList(this, FIELDS_KEY, fields)
-
+                CacheHelper.saveList(this, fieldsKey, fields)
                 runOnUiThread {
                     updateFieldsUI(fields)
-                    if (isOnline() && fields.isNotEmpty()) {
-                        fields.forEach { downloadFieldTiles(it) }
-                    }
+                    centerMapOnFields(fields)
                 }
             }
 
             remoteRepo.getRains(email) { rains ->
-                CacheHelper.saveList(this, RAINS_KEY, rains)
-
+                CacheHelper.saveList(this, rainsKey, rains)
                 runOnUiThread {
                     updateRainsUI(rains)
                 }
@@ -585,43 +643,15 @@ class FullMapActivity : AppCompatActivity() {
         map.invalidate()
     }
 
-    private fun downloadFieldTiles(field: FieldItem) {
-        val firstCoord = field.coordinates.split(";")[0].split(",")
-        if (firstCoord.size == 2) {
-            val point = GeoPoint(firstCoord[0].toDouble(), firstCoord[1].toDouble())
-            triggerCacheDownload(point, "Pole: ${field.name}")
-        }
-    }
+    private fun saveCurrentMapPosition() {
+        if (map.zoomLevelDouble < 5.0) return
 
-    private fun downloadRainTiles(rain: Rain) {
-        val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
-
-        remoteRepo.getRainHistory(rain.id, email) { history ->
-            if (history.isNotEmpty()) {
-                val latest = history[0]
-                val center = GeoPoint(latest.lat, latest.lng)
-                runOnUiThread {
-                    triggerCacheDownload(center, "Deszczownia: ${rain.name}")
-                }
-            }
-        }
-    }
-
-    private fun triggerCacheDownload(center: GeoPoint, label: String) {
-        val cacheManager = CacheManager(map)
-        val delta = 0.005
-        val bbox = BoundingBox(
-            center.latitude + delta, center.longitude + delta,
-            center.latitude - delta, center.longitude - delta
+        val center = map.mapCenter
+        CacheHelper.saveObject(
+            this,
+            MAP_CONFIG_KEY,
+            CacheHelper.MapConfig(center.latitude, center.longitude, map.zoomLevelDouble)
         )
-
-        cacheManager.downloadAreaAsync(this, bbox, 14, 17, object : CacheManager.CacheManagerCallback {
-            override fun downloadStarted() { Log.d("OFFLINE", "Start: $label") }
-            override fun setPossibleTilesInArea(total: Int) {}
-            override fun updateProgress(progress: Int, currentZoomLevel: Int, x: Int, y: Int) {}
-            override fun onTaskComplete() { Log.d("OFFLINE", "Gotowe: $label") }
-            override fun onTaskFailed(errors: Int) {}
-        })
     }
 
     override fun onResume() {
@@ -632,6 +662,7 @@ class FullMapActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        saveCurrentMapPosition()
         map.onPause()
     }
 }

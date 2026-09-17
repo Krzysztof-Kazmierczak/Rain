@@ -125,7 +125,13 @@ class HomeActivity : AppCompatActivity() {
             Log.e("AGRO_DEBUG", "UWAGA: Email jest pusty! Serwer pewnie dlatego nic nie zwraca.")
         }
 
-        val cachedRains: List<RainTile>? = CacheHelper.loadList(this, "HOME_TILES_CACHE")
+        val cachedRains: List<RainTile>? = try {
+            CacheHelper.loadList(this, "HOME_TILES_CACHE")
+        } catch (e: Exception) {
+            Log.w("AGRO_DEBUG", "Uszkodzony cache, czyszczę: ${e.message}")
+            CacheHelper.saveList(this, "HOME_TILES_CACHE", emptyList<RainTile>())
+            null
+        }
         if (cachedRains != null) {
             tiles.clear()
             tiles.addAll(cachedRains)

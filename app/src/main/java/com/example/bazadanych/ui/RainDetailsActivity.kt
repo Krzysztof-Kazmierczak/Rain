@@ -16,7 +16,6 @@ import com.example.bazadanych.data.db.Rain
 import com.example.bazadanych.data.local_db.CacheHelper
 import com.example.bazadanych.data.repository.RainRemoteRepository
 import com.google.android.material.appbar.MaterialToolbar
-import org.osmdroid.config.Configuration
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -249,7 +248,6 @@ class RainDetailsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Configuration.getInstance().userAgentValue = packageName
         setContentView(R.layout.activity_rain_details)
 
         currentRainId = intent.getStringExtra("id") ?: ""

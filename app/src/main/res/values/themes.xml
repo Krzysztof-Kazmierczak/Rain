@@ -1,6 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <style name="Theme.BazaDanych" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.BazaDanych" parent="Theme.MaterialComponents.Light.NoActionBar">
 
         <item name="android:windowSplashScreenBackground">@color/white</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/logo_5</item>
