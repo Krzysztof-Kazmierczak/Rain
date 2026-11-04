@@ -63,6 +63,9 @@ class AdvancedSettingsActivity : AppCompatActivity() {
         setupInfoButtons()
 
         loadDataFromServer()
+
+        val userEmail = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
+        PhoneNumbersSection(this, currentRainId, userEmail).init()
     }
 
     private fun setupToolbar() {

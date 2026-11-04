@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="phone_section_title">PHONE NUMBERS</string>
+    <string name="phone_admin_number">Main machine number: %1$s</string>
+    <string name="phone_empty">No phone numbers added</string>
+    <string name="phone_add">Add number</string>
+    <string name="phone_dialog_add_title">New number</string>
+    <string name="phone_dialog_edit_title">Edit number</string>
+    <string name="phone_hint_number">Phone number</string>
+    <string name="phone_access_level">Access level</string>
+    <string name="phone_save">Save</string>
+    <string name="phone_cancel">Cancel</string>
+    <string name="phone_delete_title">Delete number</string>
+    <string name="phone_delete_msg">Delete number %1$s?</string>
+    <string name="phone_delete_yes">Delete</string>
+    <string name="phone_saved">Number saved</string>
+    <string name="phone_deleted">Number deleted</string>
+    <string name="phone_error">Error: %1$s</string>
+    <string name="phone_error_network">No connection to the server</string>
+    <string name="phone_invalid_prefix">Country code: 1 to 4 digits</string>
+    <string name="phone_invalid_number">Number: 6 to 15 digits</string>
+    <string name="phone_main_badge">main number</string>
+    <string name="phone_unconfirmed">unconfirmed</string>
+    <string name="phone_edit">Edit</string>
+    <string name="phone_delete">Delete</string>
+</resources>

@@ -16,11 +16,6 @@ object CacheHelper {
     @PublishedApi
     internal val gson = Gson()
 
-    /**
-     * Usuwa uszkodzony wpis z cache. Wywoływane, gdy Gson nie potrafi
-     * odczytać zapisanych danych — zwykle po zmianie modelu (np. pole
-     * isWorking było Boolean, a teraz jest Int).
-     */
     @PublishedApi
     internal fun invalidate(context: Context, key: String, e: Exception) {
         Log.w("CacheHelper", "Uszkodzony cache pod kluczem '$key', usuwam. ${e.message}")
@@ -80,13 +75,11 @@ object CacheHelper {
         }
     }
 
-    /** Ręczne czyszczenie pojedynczego klucza. */
     fun clear(context: Context, key: String) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit().remove(key).apply()
     }
 
-    /** Czyszczenie całego cache — przydatne przy wylogowaniu. */
     fun clearAll(context: Context) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit().clear().apply()
