@@ -17,10 +17,13 @@ interface RainTechApi {
         @Query("email") email: String
     ): Call<FieldHistory>
 
+    // from / to w formacie RRRR-MM-DD. Bez nich (null) serwer zwraca ostatnie 30 dni + prognozę.
     @GET("get_history.php")
     fun getFieldHistory(
         @Query("field_id") fieldId: Int,
-        @Query("email") email: String
+        @Query("email") email: String,
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null
     ): Call<List<FieldHistory>>
 
     // Zakładam, że stworzyłeś skrypt get_devices.php do pobrania maszyn

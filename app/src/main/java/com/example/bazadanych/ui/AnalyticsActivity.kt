@@ -61,6 +61,8 @@ class AnalyticsActivity : AppCompatActivity() {
     private var cachedRawData: List<FieldHistory> = emptyList()
     private var startDateFilter: Long? = null
     private var endDateFilter: Long? = null
+    // Numer ostatniego zapytania o historię - spóźnione odpowiedzi ze starego zakresu ignorujemy
+    private var historyRequestId = 0
     val visibleRange = 40f
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -104,12 +106,14 @@ class AnalyticsActivity : AppCompatActivity() {
                 .build()
 
             datePicker.addOnPositiveButtonClickListener { selection ->
-                startDateFilter = selection.first
-                endDateFilter = selection.second + 86399999L
+                // Kalendarz zwraca północ w UTC - zamieniamy na północ czasu lokalnego
+                startDateFilter = localDayStart(selection.first)
+                endDateFilter = localDayStart(selection.second) + 86399999L
 
                 btnClearDate.visibility = android.view.View.VISIBLE
                 updateForecastButtonState()
-                processAndDisplay(cachedRawData)
+                // Dane z wybranego zakresu pobieramy z serwera
+                refreshDataFromServer(fieldId)
             }
             datePicker.show(supportFragmentManager, "DATE_PICKER")
         }
@@ -119,7 +123,9 @@ class AnalyticsActivity : AppCompatActivity() {
             endDateFilter = null
             btnClearDate.visibility = android.view.View.GONE
             updateForecastButtonState()
-            processAndDisplay(cachedRawData)
+            // Powrót do zwykłego widoku: ostatnie 30 dni + prognoza
+            loadDataFromRoom(fieldId)
+            refreshDataFromServer(fieldId)
         }
 
         findViewById<ChipGroup>(R.id.chipGroupInterval).setOnCheckedStateChangeListener { group, checkedIds ->
@@ -174,9 +180,9 @@ class AnalyticsActivity : AppCompatActivity() {
             val cachedEntities = withContext(Dispatchers.IO) {
                 fieldDao.getHistoryForField(fieldId)
             }
-            if (cachedEntities.isNotEmpty()) {
-                val historyList = cachedEntities.map { it.toDomainModel() }
-                processAndDisplay(historyList)
+            // Pamięć telefonu to zwykły widok; przy wybranym zakresie czekamy na serwer
+            if (cachedEntities.isNotEmpty() && startDateFilter == null) {
+                processAndDisplay(cachedEntities.map { it.toDomainModel() })
             }
         }
     }
@@ -184,22 +190,34 @@ class AnalyticsActivity : AppCompatActivity() {
     private fun refreshDataFromServer(fieldId: Int) {
         val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
 
-        ApiClient.rainTech.getFieldHistory(fieldId, email).enqueue(object : Callback<List<FieldHistory>> {
+        // Zakres z kalendarza -> serwer zwraca te dni; bez zakresu -> ostatnie 30 dni + prognoza
+        val dayFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+        val from = startDateFilter?.let { dayFormat.format(java.util.Date(it)) }
+        val to = endDateFilter?.let { dayFormat.format(java.util.Date(it)) }
+        val isRange = from != null && to != null
+
+        val requestId = ++historyRequestId
+
+        ApiClient.rainTech.getFieldHistory(fieldId, email, from, to).enqueue(object : Callback<List<FieldHistory>> {
             override fun onResponse(call: Call<List<FieldHistory>>, response: Response<List<FieldHistory>>) {
+                if (requestId != historyRequestId) return // zakres zdążył się zmienić
                 if (response.isSuccessful && response.body() != null) {
                     val rawData = response.body()!!
                     lifecycleScope.launch(Dispatchers.IO) {
-                        val entities = rawData.map { it.toEntity(fieldId) }
-                        fieldDao.deleteAndInsert(fieldId, entities)
-
+                        // Dane z wybranego zakresu nie nadpisują zapisu w telefonie
+                        if (!isRange) {
+                            val entities = rawData.map { it.toEntity(fieldId) }
+                            fieldDao.deleteAndInsert(fieldId, entities)
+                        }
                         withContext(Dispatchers.Main) {
-                            processAndDisplay(rawData)
+                            if (requestId == historyRequestId) processAndDisplay(rawData)
                         }
                     }
                 }
             }
 
             override fun onFailure(call: Call<List<FieldHistory>>, t: Throwable) {
+                if (requestId != historyRequestId) return
                 android.widget.Toast.makeText(
                     this@AnalyticsActivity,
                     getString(R.string.analytics_no_connection),
@@ -207,6 +225,15 @@ class AnalyticsActivity : AppCompatActivity() {
                 ).show()
             }
         })
+    }
+
+    // Kalendarz Material zwraca północ w UTC; zamieniamy na północ tego samego dnia w czasie lokalnym
+    private fun localDayStart(utcMillis: Long): Long {
+        val utc = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply { timeInMillis = utcMillis }
+        return java.util.Calendar.getInstance().apply {
+            clear()
+            set(utc.get(java.util.Calendar.YEAR), utc.get(java.util.Calendar.MONTH), utc.get(java.util.Calendar.DAY_OF_MONTH), 0, 0, 0)
+        }.timeInMillis
     }
 
     private fun processAndDisplay(rawData: List<FieldHistory>) {
