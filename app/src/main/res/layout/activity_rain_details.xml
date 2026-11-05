@@ -86,10 +86,17 @@
                 android:padding="4dp"/>
 
             <TextView
-                android:id="@+id/currentSpeedText"
+                android:id="@+id/setSpeedText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/details_speed"
+                android:textSize="16sp"
+                android:padding="4dp"/>
+
+            <TextView
+                android:id="@+id/currentSpeedText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:textSize="16sp"
                 android:padding="4dp"/>
 
@@ -109,13 +116,37 @@
                 android:textSize="16sp"
                 android:padding="4dp"/>
 
-            <TextView
-                android:id="@+id/extensionText"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/details_extension"
-                android:textSize="16sp"
-                android:padding="4dp"/>
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/extensionText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/details_extension"
+                    android:textSize="16sp"
+                    android:padding="4dp"/>
+
+                <!-- Ikonka (i): widoczna, gdy rozwinięcie jest wyliczane na żywo -->
+                <TextView
+                    android:id="@+id/extensionInfoIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_marginStart="4dp"
+                    android:background="@drawable/bg_info_circle"
+                    android:gravity="center"
+                    android:text="i"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    android:contentDescription="@string/extension_info_title"/>
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/signalText"

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="set_speed">Prędkość zadana: %1$.1f m/h</string>
+    <string name="set_speed_zone">Prędkość zadana: %1$.1f m/h (%2$s)</string>
+    <string name="current_speed">Prędkość aktualna: %1$.1f m/h</string>
+    <string name="extension_info_title">Rozwinięcie</string>
+    <string name="extension_info_text">Rozwinięcie obliczone z prędkości i czasu.\nOstatnia zapisana odległość: %1$.2f m, wysłana przez maszynę %2$s.</string>
+    <string name="extension_info_time_today">o godzinie %1$s</string>
+    <string name="extension_info_time_date">%1$s o godzinie %2$s</string>
+</resources>

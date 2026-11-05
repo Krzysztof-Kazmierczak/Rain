@@ -10,6 +10,8 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import android.view.View
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.example.bazadanych.R
 import com.example.bazadanych.data.db.Rain
@@ -31,10 +33,12 @@ class RainDetailsActivity : AppCompatActivity() {
     private lateinit var commentEdit: EditText
     private lateinit var delayEdit: EditText
     private lateinit var statusText: TextView
+    private lateinit var setSpeedText: TextView
     private lateinit var currentSpeedText: TextView
     private lateinit var timeFinishText: TextView
     private lateinit var workTimeText: TextView
     private lateinit var extensionText: TextView
+    private lateinit var extensionInfoIcon: TextView
     private lateinit var signalText: TextView
     private lateinit var batteryText: TextView
     private lateinit var tvLastUpdate: TextView
@@ -76,7 +80,7 @@ class RainDetailsActivity : AppCompatActivity() {
     }
 
     // --- LOGIKA TICKERA (Aktualizacja co 1 sekundę) ---
-    // --- LOGIKA TICKERA (Aktualizacja co 1 sekundę) ---
+    // Rozwinięcie i granice stref w mm (jak na serwerze), prędkości w m/h.
     private val liveTickerRunnable = object : Runnable {
         override fun run() {
             if (!isMachineWorking || lastDataTimestamp == 0L) return
@@ -86,13 +90,12 @@ class RainDetailsActivity : AppCompatActivity() {
             val diffSec = ((now - lastDataTimestamp) / 1000).coerceAtLeast(0L)
 
             var currentExtension = baseExtension
-            val currentExtension_m = currentExtension / 1000.0
 
             // Łączny czas, przez który maszyna stoi na starcie i nie zwija węża
             val totalStartDelay = (if (opoznionyStartPracy == 1) czasOpoznionyStartPracy.toLong() else 0L) +
                     (if (opoznioneRozpoczecieZwijania == 1) czasOpoznioneZwijanie.toLong() else 0L)
 
-            // 1. SYMULACJA ZWIJANIA
+            // 1. SYMULACJA ZWIJANIA (mm na sekundę)
             for (i in 1..diffSec) {
                 val currentWorkTimeInLoop = baseWorkTimeSec + i
                 if (currentWorkTimeInLoop > totalStartDelay) {
@@ -106,13 +109,17 @@ class RainDetailsActivity : AppCompatActivity() {
 
             // 2. AKTUALIZACJA UI
             val currentWorkTimeSec = baseWorkTimeSec + diffSec
+            val currentExtension_m = currentExtension / 1000.0
             val prefix = if (currentIsOffline) getString(R.string.offline_label) + " " else ""
 
             // Czas pracy liczy się zawsze, dopóki maszyna pracuje
             workTimeText.text = prefix + getString(R.string.work_time, formatSecondsToTimeStr(currentWorkTimeSec))
-            extensionText.text = prefix + getString(R.string.extension, currentExtension_m)
 
-            // Czas do końca: przy prędkości poniżej 1 m/h maszyna stoi, więc 00:00:00
+            // Rozwinięcie wyliczone na żywo + ikonka (i) z wyjaśnieniem
+            extensionText.text = prefix + getString(R.string.extension, currentExtension_m)
+            extensionInfoIcon.visibility = View.VISIBLE
+
+            // Czas do końca: przy prędkości aktualnej poniżej 1 m/h maszyna stoi, więc 00:00:00
             timeFinishText.text = if (baseSpeed < 1.0) {
                 prefix + getString(R.string.time_to_finish, formatSecondsToTimeStr(0L)) +
                         " " + getString(R.string.machine_not_moving)
@@ -121,17 +128,8 @@ class RainDetailsActivity : AppCompatActivity() {
                 prefix + getString(R.string.time_to_finish, formatSecondsToTimeStr(timeToFinishSec))
             }
 
-            if (isZonedWatering) {
-                val (currentZone, zoneSpeed) = when {
-                    currentExtension <= zone1Start -> Pair(getString(R.string.zone_1), zone1Speed)
-                    currentExtension <= zone2Start -> Pair(getString(R.string.zone_2), zone2Speed)
-                    currentExtension <= zone3Start -> Pair(getString(R.string.zone_3), zone3Speed)
-                    else -> Pair(getString(R.string.zone_base), setSpeed)
-                }
-                currentSpeedText.text = prefix + getString(R.string.speed_zone, zoneSpeed, currentZone)
-            } else {
-                currentSpeedText.text = prefix + getString(R.string.speed, baseSpeed)
-            }
+            // Prędkość zadana ze strefy, w której jest teraz wąż + prędkość aktualna z serwera
+            renderSpeeds(currentExtension, prefix)
 
             // Zawsze planujemy kolejne tyknięcie - zatrzymuje nas tylko zmiana statusu
             tickerHandler.postDelayed(this, 1000)
@@ -196,6 +194,43 @@ class RainDetailsActivity : AppCompatActivity() {
         return totalRemainingTimeSec.toLong()
     }
 
+    // Prędkość zadana obowiązująca przy danym rozwinięciu (mm) + prędkość aktualna z serwera
+    private fun renderSpeeds(extMm: Double, prefix: String) {
+        if (isZonedWatering) {
+            val (zoneName, zoneSpeed) = when {
+                extMm <= zone1Start -> getString(R.string.zone_1) to zone1Speed
+                extMm <= zone2Start -> getString(R.string.zone_2) to zone2Speed
+                extMm <= zone3Start -> getString(R.string.zone_3) to zone3Speed
+                else -> getString(R.string.zone_base) to setSpeed
+            }
+            setSpeedText.text = prefix + getString(R.string.set_speed_zone, zoneSpeed, zoneName)
+        } else {
+            setSpeedText.text = prefix + getString(R.string.set_speed, setSpeed)
+        }
+        currentSpeedText.text = prefix + getString(R.string.current_speed, baseSpeed)
+    }
+
+    // Okienko po dotknięciu ikonki (i) przy rozwinięciu - ten sam opis co na stronie
+    private fun showExtensionInfo() {
+        if (lastDataTimestamp == 0L) return
+
+        val lastDate = java.util.Date(lastDataTimestamp)
+        val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(lastDate)
+        val dayFormat = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+        val whenText = if (dayFormat.format(lastDate) == dayFormat.format(java.util.Date())) {
+            getString(R.string.extension_info_time_today, time)
+        } else {
+            val date = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(lastDate)
+            getString(R.string.extension_info_time_date, date, time)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.extension_info_title)
+            .setMessage(getString(R.string.extension_info_text, baseExtension / 1000.0, whenText))
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
     private fun pobierzUstawieniaStrefowe(onComplete: () -> Unit) {
         val email = getSharedPreferences("user_session", MODE_PRIVATE).getString("user_email", "") ?: ""
 
@@ -258,10 +293,13 @@ class RainDetailsActivity : AppCompatActivity() {
         commentEdit = findViewById(R.id.commentEdit)
         delayEdit = findViewById(R.id.delayEdit)
         statusText = findViewById(R.id.statusText)
+        setSpeedText = findViewById(R.id.setSpeedText)
         currentSpeedText = findViewById(R.id.currentSpeedText)
         timeFinishText = findViewById(R.id.timeFinishText)
         workTimeText = findViewById(R.id.workTimeText)
         extensionText = findViewById(R.id.extensionText)
+        extensionInfoIcon = findViewById(R.id.extensionInfoIcon)
+        extensionInfoIcon.setOnClickListener { showExtensionInfo() }
         signalText = findViewById(R.id.signalText)
         batteryText = findViewById(R.id.batteryText)
 
@@ -316,19 +354,10 @@ class RainDetailsActivity : AppCompatActivity() {
             }
         }
 
-        // --- LOGIKA WYŚWIETLANIA STREFY I PRĘDKOŚCI ---
+        // --- PRĘDKOŚĆ ZADANA (ze strefy) I AKTUALNA (z serwera) ---
+        // baseExtension jest w mm i jest już ustawione z najnowszych danych
         val extDouble = extension.toDoubleOrNull() ?: 0.0
-        if (isZonedWatering) {
-            val (currentZone, zoneSpeed) = when {
-                extDouble <= zone1Start -> Pair(getString(R.string.zone_1), zone1Speed)
-                extDouble <= zone2Start -> Pair(getString(R.string.zone_2), zone2Speed)
-                extDouble <= zone3Start -> Pair(getString(R.string.zone_3), zone3Speed)
-                else -> Pair(getString(R.string.zone_base), speed)
-            }
-            currentSpeedText.text = prefix + getString(R.string.speed_zone, zoneSpeed, currentZone)
-        } else {
-            currentSpeedText.text = prefix + getString(R.string.speed, speed)
-        }
+        renderSpeeds(baseExtension, prefix)
 
         signalText.text = prefix + getString(R.string.signal, signal)
 
@@ -336,9 +365,11 @@ class RainDetailsActivity : AppCompatActivity() {
         batteryText.text = prefix + getString(R.string.battery, batteryFormatted)
 
         if (isWorking != 2 && isWorking != 6 && isWorking != 9) {
+            // Maszyna nie pracuje: wartości wprost z serwera, więc bez ikonki (i)
             workTimeText.text = prefix + getString(R.string.work_time, workTime)
             extensionText.text = prefix + getString(R.string.extension, extDouble)
             timeFinishText.text = prefix + getString(R.string.time_to_finish, finishTime)
+            extensionInfoIcon.visibility = View.GONE
         }
     }
 
@@ -386,6 +417,7 @@ class RainDetailsActivity : AppCompatActivity() {
                     }
                 } else {
                     tickerHandler.removeCallbacks(liveTickerRunnable)
+                    extensionInfoIcon.visibility = View.GONE
                 }
             }
         }

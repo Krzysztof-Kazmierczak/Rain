@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="set_speed">Set speed: %1$.1f m/h</string>
+    <string name="set_speed_zone">Set speed: %1$.1f m/h (%2$s)</string>
+    <string name="current_speed">Current speed: %1$.1f m/h</string>
+    <string name="extension_info_title">Extension</string>
+    <string name="extension_info_text">Extension calculated from speed and time.\nLast recorded distance: %1$.2f m, sent by the machine %2$s.</string>
+    <string name="extension_info_time_today">at %1$s</string>
+    <string name="extension_info_time_date">on %1$s at %2$s</string>
+</resources>
