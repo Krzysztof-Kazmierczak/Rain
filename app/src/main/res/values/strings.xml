@@ -343,6 +343,7 @@
     <string name="details_advance">ZAAWANSOWANE</string>
     <string name="details_update">Aktualizacja z urządzenia: --:--</string>
     <string name="details_next">Przewidywana następna: --:--</string>
+    <string name="machine_not_moving">(maszyna stoi)</string>
 
 
     <!-- ============================================== -->

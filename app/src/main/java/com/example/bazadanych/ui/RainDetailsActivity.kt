@@ -76,64 +76,64 @@ class RainDetailsActivity : AppCompatActivity() {
     }
 
     // --- LOGIKA TICKERA (Aktualizacja co 1 sekundę) ---
+    // --- LOGIKA TICKERA (Aktualizacja co 1 sekundę) ---
     private val liveTickerRunnable = object : Runnable {
         override fun run() {
             if (!isMachineWorking || lastDataTimestamp == 0L) return
 
             val now = System.currentTimeMillis()
-            val diffSec = (now - lastDataTimestamp) / 1000
+            // Gdyby zegar serwera był przed telefonem, nie liczymy wstecz
+            val diffSec = ((now - lastDataTimestamp) / 1000).coerceAtLeast(0L)
 
-            if (diffSec >= 0) {
-                var currentExtension = baseExtension
-                var currentExtension_m = currentExtension / 1000.0
+            var currentExtension = baseExtension
+            val currentExtension_m = currentExtension / 1000.0
 
-                // Łączny czas, przez który maszyna stoi na starcie i nie zwija węża
-                val totalStartDelay = (if (opoznionyStartPracy == 1) czasOpoznionyStartPracy.toLong() else 0L) +
-                        (if (opoznioneRozpoczecieZwijania == 1) czasOpoznioneZwijanie.toLong() else 0L)
+            // Łączny czas, przez który maszyna stoi na starcie i nie zwija węża
+            val totalStartDelay = (if (opoznionyStartPracy == 1) czasOpoznionyStartPracy.toLong() else 0L) +
+                    (if (opoznioneRozpoczecieZwijania == 1) czasOpoznioneZwijanie.toLong() else 0L)
 
-                // 1. SYMULACJA ZWIJANIA
-                for (i in 1..diffSec) {
-                    val currentWorkTimeInLoop = baseWorkTimeSec + i
-
-                    // Ruszamy ze zwijaniem dopiero gdy miną OBA opóźnienia startowe!
-                    if (currentWorkTimeInLoop > totalStartDelay) {
-                        val activeSpeed = getSpeedForExtension(currentExtension)
-                        if (activeSpeed > 0.0) {
-                            val speedPerSecond = activeSpeed / 3600.0
-                            currentExtension -= speedPerSecond
-                            if (currentExtension <= 0.0) currentExtension = 0.0
-                        }
+            // 1. SYMULACJA ZWIJANIA
+            for (i in 1..diffSec) {
+                val currentWorkTimeInLoop = baseWorkTimeSec + i
+                if (currentWorkTimeInLoop > totalStartDelay) {
+                    val activeSpeed = getSpeedForExtension(currentExtension)
+                    if (activeSpeed > 0.0) {
+                        currentExtension -= activeSpeed / 3600.0 * 1000.0
+                        if (currentExtension <= 0.0) currentExtension = 0.0
                     }
-                }
-
-                // 2. OBLICZENIE CZASÓW I AKTUALIZACJA UI
-                val currentWorkTimeSec = baseWorkTimeSec + diffSec
-                val timeToFinishSec = calculateTimeToFinishAnallytically(currentExtension, currentWorkTimeSec)
-
-                // Sekcja aktualizacji widoków tekstowych (workTimeText, extensionText, itp.)
-                val prefix = if (currentIsOffline) getString(R.string.offline_label) + " " else ""
-                workTimeText.text = prefix + getString(R.string.work_time, formatSecondsToTimeStr(currentWorkTimeSec))
-                extensionText.text = prefix + getString(R.string.extension, currentExtension_m)
-                timeFinishText.text = prefix + getString(R.string.time_to_finish, formatSecondsToTimeStr(timeToFinishSec))
-
-                // Odwrócone warunki sprawdzania strefy dla tickera
-                if (isZonedWatering) {
-                    val (currentZone, zoneSpeed) = when {
-                        currentExtension <= zone1Start -> Pair(getString(R.string.zone_1), zone1Speed)
-                        currentExtension <= zone2Start -> Pair(getString(R.string.zone_2), zone2Speed)
-                        currentExtension <= zone3Start -> Pair(getString(R.string.zone_3), zone3Speed)
-                        else -> Pair(getString(R.string.zone_base), setSpeed)
-                    }
-                    currentSpeedText.text = prefix + getString(R.string.speed_zone, zoneSpeed, currentZone)
-                } else {
-                    currentSpeedText.text = prefix + getString(R.string.speed, baseSpeed)
-                }
-
-                if (timeToFinishSec <= 0L) {
-                    return
                 }
             }
 
+            // 2. AKTUALIZACJA UI
+            val currentWorkTimeSec = baseWorkTimeSec + diffSec
+            val prefix = if (currentIsOffline) getString(R.string.offline_label) + " " else ""
+
+            // Czas pracy liczy się zawsze, dopóki maszyna pracuje
+            workTimeText.text = prefix + getString(R.string.work_time, formatSecondsToTimeStr(currentWorkTimeSec))
+            extensionText.text = prefix + getString(R.string.extension, currentExtension_m)
+
+            // Czas do końca: przy prędkości poniżej 1 m/h maszyna stoi, więc 00:00:00
+            timeFinishText.text = if (baseSpeed < 1.0) {
+                prefix + getString(R.string.time_to_finish, formatSecondsToTimeStr(0L)) +
+                        " " + getString(R.string.machine_not_moving)
+            } else {
+                val timeToFinishSec = calculateTimeToFinishAnallytically(currentExtension, currentWorkTimeSec)
+                prefix + getString(R.string.time_to_finish, formatSecondsToTimeStr(timeToFinishSec))
+            }
+
+            if (isZonedWatering) {
+                val (currentZone, zoneSpeed) = when {
+                    currentExtension <= zone1Start -> Pair(getString(R.string.zone_1), zone1Speed)
+                    currentExtension <= zone2Start -> Pair(getString(R.string.zone_2), zone2Speed)
+                    currentExtension <= zone3Start -> Pair(getString(R.string.zone_3), zone3Speed)
+                    else -> Pair(getString(R.string.zone_base), setSpeed)
+                }
+                currentSpeedText.text = prefix + getString(R.string.speed_zone, zoneSpeed, currentZone)
+            } else {
+                currentSpeedText.text = prefix + getString(R.string.speed, baseSpeed)
+            }
+
+            // Zawsze planujemy kolejne tyknięcie - zatrzymuje nas tylko zmiana statusu
             tickerHandler.postDelayed(this, 1000)
         }
     }
@@ -150,56 +150,47 @@ class RainDetailsActivity : AppCompatActivity() {
         }
     }
 
-    // Precyzyjne obliczanie czasu do końca dla nowej kolejności stref
+    // Odległość w mm (tak jak przychodzi z serwera), prędkość w m/h -> czas w sekundach
+    private fun travelTimeSec(distanceMm: Double, speedMh: Double): Double =
+        if (speedMh > 0.0) (distanceMm / 1000.0) / speedMh * 3600.0 else 0.0
+
+    // Czas do końca. ext i granice stref w mm, prędkości w m/h.
     private fun calculateTimeToFinishAnallytically(ext: Double, czasPracySec: Long): Long {
         var totalRemainingTimeSec = 0.0
 
-        // 1. OBLICZANIE CZASU JAZDY (Logika strefowa)
+        // 1. CZAS JAZDY
         if (ext > 0.0) {
             if (!isZonedWatering) {
-                if (setSpeed > 0) {
-                    totalRemainingTimeSec += ext / (setSpeed / 3600.0)
-                }
+                totalRemainingTimeSec += travelTimeSec(ext, setSpeed)
             } else {
                 var remainingDist = ext
 
                 if (remainingDist > zone3Start) {
-                    val chunk = remainingDist - zone3Start
-                    if (setSpeed > 0) totalRemainingTimeSec += chunk / (setSpeed / 3600.0)
+                    totalRemainingTimeSec += travelTimeSec(remainingDist - zone3Start, setSpeed)
                     remainingDist = zone3Start
                 }
-                if (remainingDist > zone2Start && remainingDist <= zone3Start) {
-                    val chunk = remainingDist - zone2Start
-                    if (zone3Speed > 0) totalRemainingTimeSec += chunk / (zone3Speed / 3600.0)
+                if (remainingDist > zone2Start) {
+                    totalRemainingTimeSec += travelTimeSec(remainingDist - zone2Start, zone3Speed)
                     remainingDist = zone2Start
                 }
-                if (remainingDist > zone1Start && remainingDist <= zone2Start) {
-                    val chunk = remainingDist - zone1Start
-                    if (zone2Speed > 0) totalRemainingTimeSec += chunk / (zone2Speed / 3600.0)
+                if (remainingDist > zone1Start) {
+                    totalRemainingTimeSec += travelTimeSec(remainingDist - zone1Start, zone2Speed)
                     remainingDist = zone1Start
                 }
-                if (remainingDist > 0.0 && remainingDist <= zone1Start) {
-                    val chunk = remainingDist
-                    if (zone1Speed > 0) totalRemainingTimeSec += chunk / (zone1Speed / 3600.0)
+                if (remainingDist > 0.0) {
+                    totalRemainingTimeSec += travelTimeSec(remainingDist, zone1Speed)
                 }
             }
         }
 
-        // 2. ŁĄCZNE OPÓŹNIENIA STARTOWE (Praca + Zwijanie)
-        // Sumujemy oba opóźnienia, które muszą minąć na początku
+        // 2. POZOSTAŁE OPÓŹNIENIA STARTOWE
         val totalStartDelay = (if (opoznionyStartPracy == 1) czasOpoznionyStartPracy.toLong() else 0L) +
                 (if (opoznioneRozpoczecieZwijania == 1) czasOpoznioneZwijanie.toLong() else 0L)
+        totalRemainingTimeSec += maxOf(0L, totalStartDelay - czasPracySec).toDouble()
 
-        // Od łącznego czasu startowego odejmujemy to, co maszyna już przepracowała
-        val remainingStartDelay = maxOf(0L, totalStartDelay - czasPracySec)
-        totalRemainingTimeSec += remainingStartDelay.toDouble()
-
-        // 3. OPÓŹNIENIE KOŃCOWE (Tylko podlewanie na postoju po zwinięciu)
-        // To opóźnienie czeka na maszynę na samym końcu (gdy ext dojdzie do 0.0)
-        if (ext > 0.0) {
-            if (opoznioneZakonczeniePodlewania == 1) {
-                totalRemainingTimeSec += czasOpoznioneZakonczeniePodlewania.toDouble()
-            }
+        // 3. OPÓŹNIENIE KOŃCOWE
+        if (ext > 0.0 && opoznioneZakonczeniePodlewania == 1) {
+            totalRemainingTimeSec += czasOpoznioneZakonczeniePodlewania.toDouble()
         }
 
         return totalRemainingTimeSec.toLong()

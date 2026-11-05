@@ -339,6 +339,7 @@
     <string name="details_advance">ADVANCED</string>
     <string name="details_update">Device update: --:--</string>
     <string name="details_next">Estimated next update: --:--</string>
+    <string name="machine_not_moving">(machine not moving)</string>
 
     <!-- ============================================== -->
     <!-- Register Activity                              -->
